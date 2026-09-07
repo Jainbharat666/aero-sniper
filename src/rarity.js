@@ -14,13 +14,16 @@ export class RarityEngine {
     this.collectionSlug = '';
     this.contractAddress = '';
     this.chain = 'robinhood';
-    this.cacheDir = path.resolve(process.cwd(), 'cache');
+    const isVercel = Boolean(process.env.VERCEL);
+    this.cacheDir = isVercel ? path.join('/tmp', 'cache') : path.resolve(process.cwd(), 'cache');
     this.isDirty = false;
     this.saveTimeout = null;
 
-    if (!fs.existsSync(this.cacheDir)) {
-      fs.mkdirSync(this.cacheDir, { recursive: true });
-    }
+    try {
+      if (!fs.existsSync(this.cacheDir)) {
+        fs.mkdirSync(this.cacheDir, { recursive: true });
+      }
+    } catch (e) {}
 
     // High-speed persistent HTTPS keep-alive agent with pooling
     this.httpsAgent = new https.Agent({

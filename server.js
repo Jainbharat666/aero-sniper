@@ -462,7 +462,9 @@ async function initStream() {
     console.error('⚠ Stream connect error:', err.message);
   }
 }
-initStream();
+if (!process.env.VERCEL) {
+  initStream();
+}
 
 function broadcastToClients(payload) {
   if (!payload) return;
@@ -2882,12 +2884,16 @@ app.post('/api/wallet/send', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`\n======================================================`);
-  console.log(` ⚡ AERO-SNIPER V2: ULTRA LOW-LATENCY PRODUCTION BOT`);
-  console.log(` 👉 http://localhost:${PORT}`);
-  console.log(` ⚡ 6-Key OpenSea Laser Grid (Role-Specialized) ACTIVE`);
-  console.log(` ⚡ AeroMint-Style 1-Sec Unified Collection Scan ACTIVE`);
-  console.log(` ⚡ Multi-RPC Simultaneous Mempool Blast ACTIVE`);
-  console.log(`======================================================\n`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`\n======================================================`);
+    console.log(` ⚡ AERO-SNIPER V2: ULTRA LOW-LATENCY PRODUCTION BOT`);
+    console.log(` 👉 http://localhost:${PORT}`);
+    console.log(` ⚡ 6-Key OpenSea Laser Grid (Role-Specialized) ACTIVE`);
+    console.log(` ⚡ AeroMint-Style 1-Sec Unified Collection Scan ACTIVE`);
+    console.log(` ⚡ Multi-RPC Simultaneous Mempool Blast ACTIVE`);
+    console.log(`======================================================\n`);
+  });
+}
+
+export default app;

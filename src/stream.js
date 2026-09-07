@@ -22,14 +22,16 @@ export class StreamListener {
 
     // 🛡️ Socket Liveness Monitor: Only reconnect if underlying socket is actually disconnected/closed
     // (Never kill connection just because a low-volume collection has no listings for 60s!)
-    this.heartbeatCheckInterval = setInterval(() => {
-      if (this.isConnected && this.client?.socket && typeof this.client.socket.isConnected === 'function') {
-        if (!this.client.socket.isConnected()) {
-          console.warn(`⚠ [STREAM V2] Underlying socket disconnected — reconnecting`);
-          this._scheduleReconnect();
+    if (!process.env.VERCEL) {
+      this.heartbeatCheckInterval = setInterval(() => {
+        if (this.isConnected && this.client?.socket && typeof this.client.socket.isConnected === 'function') {
+          if (!this.client.socket.isConnected()) {
+            console.warn(`⚠ [STREAM V2] Underlying socket disconnected — reconnecting`);
+            this._scheduleReconnect();
+          }
         }
-      }
-    }, 15000);
+      }, 15000);
+    }
   }
 
   onStatusChange(cb) {
