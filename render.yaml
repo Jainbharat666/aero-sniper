@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: aero-sniper-v2
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: SUPABASE_URL
+        value: https://fjxarhcisasyvomfgtxl.supabase.co
+      - key: SUPABASE_KEY
+        value: sb_publishable_QkC4wXZTz_4m8P9zUuwDjg_mUZA1Vqa
+      - key: OPENSEA_API_KEYS
+        value: 5f32ee9b98e84ea184a514f975ad4f3f,840e6b17791d415db3c98657fbc71979,411d0cfd7b294d71a71dc852999dcbfc,a88ffbf11b864b8398af8b2c5e3921fa,4793b5e5637a4a3fa75e81c828970113,7f2b82423f01405eac037f4b1a661027

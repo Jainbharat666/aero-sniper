@@ -1,0 +1,24 @@
+{
+  "name": "nft-sniper-v2",
+  "version": "2.0.0",
+  "description": "Ultra-Advanced NFT Sniper V2 — 6-Key OpenSea Laser Grid, Pre-Indexed OpenRarity, Seaport v1.6 Zero-Hop Multi-RPC Mempool Blast",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@opensea/stream-js": "^0.4.0",
+    "axios": "^1.7.9",
+    "bcryptjs": "^2.4.3",
+    "chalk": "^5.4.1",
+    "cli-table3": "^0.6.5",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.13.5",
+    "express": "^5.2.1",
+    "express-rate-limit": "^7.5.0",
+    "log-update": "^8.0.0",
+    "ws": "^8.18.0"
+  }
+}
