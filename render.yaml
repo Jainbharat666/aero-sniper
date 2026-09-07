@@ -1,6 +1,6 @@
-services:
+﻿services:
   - type: web
-    name: aero-sniper-v2
+    name: aero-sniper
     env: node
     plan: free
     buildCommand: npm install
@@ -18,3 +18,27 @@ services:
         value: sb_publishable_QkC4wXZTz_4m8P9zUuwDjg_mUZA1Vqa
       - key: OPENSEA_API_KEYS
         value: 5f32ee9b98e84ea184a514f975ad4f3f,840e6b17791d415db3c98657fbc71979,411d0cfd7b294d71a71dc852999dcbfc,a88ffbf11b864b8398af8b2c5e3921fa,4793b5e5637a4a3fa75e81c828970113,7f2b82423f01405eac037f4b1a661027
+      - key: OPENSEA_API_KEY_STREAM
+        value: 5f32ee9b98e84ea184a514f975ad4f3f
+      - key: OPENSEA_API_KEY_FULFILLMENT
+        value: 840e6b17791d415db3c98657fbc71979
+      - key: OPENSEA_API_KEY_RARITY
+        value: 411d0cfd7b294d71a71dc852999dcbfc
+      - key: OPENSEA_API_KEY_FLOOR
+        value: a88ffbf11b864b8398af8b2c5e3921fa
+      - key: ROBINHOOD_RPC_URL
+        value: https://robinhood-mainnet.g.alchemy.com/v2/alch_FtrEfyyJYzEBZ0SQ3ctbJ
+      - key: ROBINHOOD_FALLBACK_RPC
+        value: https://rpc.mainnet.chain.robinhood.com
+      - key: ETHEREUM_RPC_URL
+        value: https://eth.llamarpc.com
+      - key: BASE_RPC_URL
+        value: https://mainnet.base.org
+      - key: POLYGON_RPC_URL
+        value: https://polygon-rpc.com
+      - key: ARBITRUM_RPC_URL
+        value: https://arb1.arbitrum.io/rpc
+      - key: SEAPORT_V1_6_ADDRESS
+        value: "0x0000000000000068F116a894984e2DB1123eB395"
+      - key: SEAPORT_V1_5_ADDRESS
+        value: "0x00000000000000ADc04C56Bf30aC9d3c0aAF14dC"
