@@ -93,7 +93,222 @@
       pointer-events: auto;
       transition: all 0.25s ease;
     }
+
+    /* 📱 iPhone / iOS Style Day/Night Toggle Switch (AeroMint V2/V3 Exact Match) */
+    .ios-theme-toggle {
+      width: 52px;
+      height: 28px;
+      border-radius: 20px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      display: inline-flex;
+      align-items: center;
+      padding: 2px;
+      box-sizing: border-box;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    .ios-theme-toggle.night {
+      background: #1e2538;
+      border: 1px solid rgba(168, 85, 247, 0.45);
+      box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5);
+    }
+    .ios-theme-toggle.day {
+      background: #e2e8f0;
+      border: 1px solid #cbd5e1;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08);
+    }
+    .ios-toggle-knob {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+    .ios-theme-toggle.night .ios-toggle-knob {
+      transform: translateX(0px);
+      background: linear-gradient(135deg, #1e1b4b, #312e81);
+      color: #c084fc;
+    }
+    .ios-theme-toggle.day .ios-toggle-knob {
+      transform: translateX(24px);
+      background: #ffffff;
+    }
+
+    /* 🌟 Circular Ripple View Transition from AeroMint V2 */
+    html.theme-transitioning *,
+    html.theme-transitioning *::before,
+    html.theme-transitioning *::after {
+      transition: none !important;
+    }
+    ::view-transition-group(root) {
+      animation: none !important;
+      z-index: auto !important;
+    }
+    ::view-transition-image-pair(root) {
+      isolation: isolate !important;
+    }
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation: none !important;
+      mix-blend-mode: normal !important;
+      display: block !important;
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    ::view-transition-old(root) {
+      z-index: 1 !important;
+    }
+    ::view-transition-new(root) {
+      z-index: 999999 !important;
+    }
+
+    /* 🌙 NIGHT MODE COMPREHENSIVE OVERRIDES */
+    body.night-mode {
+      background-color: #060913 !important;
+      color: #e2e8f0 !important;
+    }
+    body.night-mode .bg-pro-canvas {
+      background-color: #060913 !important;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.10) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%) !important;
+    }
+    body.night-mode header {
+      background-color: #0c101d !important;
+      border-color: #1e293b !important;
+    }
+    body.night-mode header h1 span:first-child {
+      color: #ffffff !important;
+    }
+    body.night-mode header p {
+      color: #94a3b8 !important;
+    }
+    body.night-mode header nav {
+      background-color: #111728 !important;
+      border-color: #1e293b !important;
+    }
+    body.night-mode header nav button {
+      color: #94a3b8 !important;
+    }
+    body.night-mode header nav button:hover {
+      color: #ffffff !important;
+    }
+    body.night-mode header nav button.bg-white {
+      background-color: #1e293b !important;
+      color: #818cf8 !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+    }
+    body.night-mode #btn-audio,
+    body.night-mode header div:has(> #top-live-clock),
+    body.night-mode header div:has(> #network-select) {
+      background-color: #111728 !important;
+      border-color: #1e293b !important;
+      color: #cbd5e1 !important;
+    }
+    body.night-mode #top-live-clock,
+    body.night-mode #network-select {
+      color: #f8fafc !important;
+    }
+    body.night-mode #network-select option {
+      background-color: #0f172a;
+      color: #ffffff;
+    }
+    body.night-mode #eth-price-container {
+      background-color: rgba(99, 102, 241, 0.15) !important;
+      border-color: rgba(99, 102, 241, 0.3) !important;
+    }
+    body.night-mode #eth-usd-price {
+      color: #c7d2fe !important;
+    }
+    body.night-mode .grid-stack-item-content {
+      background: #0c101d !important;
+      border-color: #1e293b !important;
+      color: #e2e8f0 !important;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5) !important;
+    }
+    body.night-mode .grid-stack-item-content h2,
+    body.night-mode .grid-stack-item-content h3 {
+      color: #f8fafc !important;
+    }
+    body.night-mode .grid-stack-item-content .border-b,
+    body.night-mode .grid-stack-item-content .border-slate-100,
+    body.night-mode .grid-stack-item-content .border-slate-200 {
+      border-color: #1e293b !important;
+    }
+    body.night-mode .grid-stack-item-content input:not([type="checkbox"]):not([type="radio"]),
+    body.night-mode .grid-stack-item-content select,
+    body.night-mode .grid-stack-item-content textarea {
+      background-color: #111728 !important;
+      border-color: #1e293b !important;
+      color: #ffffff !important;
+    }
+    body.night-mode .grid-stack-item-content input::placeholder,
+    body.night-mode .grid-stack-item-content textarea::placeholder {
+      color: #64748b !important;
+    }
+    body.night-mode .bg-slate-50,
+    body.night-mode .bg-slate-100 {
+      background-color: #111728 !important;
+      border-color: #1e293b !important;
+    }
+    body.night-mode .text-slate-900,
+    body.night-mode .text-slate-800,
+    body.night-mode .text-slate-700 {
+      color: #e2e8f0 !important;
+    }
+    body.night-mode .text-slate-600,
+    body.night-mode .text-slate-500 {
+      color: #94a3b8 !important;
+    }
+    body.night-mode .border-slate-200,
+    body.night-mode .border-slate-100 {
+      border-color: #1e293b !important;
+    }
+    body.night-mode #view-wallets,
+    body.night-mode #view-rpc,
+    body.night-mode #view-opensea {
+      background-color: transparent !important;
+      color: #e2e8f0 !important;
+    }
+    body.night-mode #view-wallets .bg-white,
+    body.night-mode #view-rpc .bg-white,
+    body.night-mode #view-opensea .bg-white {
+      background-color: #0c101d !important;
+      border-color: #1e293b !important;
+    }
+    body.night-mode footer {
+      background-color: #080c16 !important;
+      border-color: #1e293b !important;
+    }
+    body.night-mode footer p,
+    body.night-mode footer span {
+      color: #94a3b8 !important;
+    }
+
   </style>
+  <script>
+    (function() {
+      try {
+        const mode = localStorage.getItem('sniper_theme_mode');
+        if (mode === 'night') {
+          document.documentElement.classList.add('night-mode');
+          if (document.body) document.body.classList.add('night-mode');
+        } else {
+          document.documentElement.classList.add('day-mode');
+          if (document.body) document.body.classList.add('day-mode');
+        }
+      } catch(e) {}
+    })();
+  </script>
 </head>
 <body class="bg-[#070b14] text-slate-800 min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white overflow-x-hidden">
 
@@ -101,32 +316,29 @@
   <!-- 🛡️ 0. HARD AUTH GATE: FULL-SCREEN VIP MEMBER ACCESS (AEROMINT V2 STYLE)   -->
   <!-- When not authenticated, the entire dashboard is hidden from DOM.          -->
   <!-- ========================================================================= -->
-  <div id="auth-gate-screen" class="fixed inset-0 z-50 bg-[#070b14] text-slate-100 flex items-center justify-center p-4 sm:p-6 overflow-y-auto font-mono-code selection:bg-indigo-600 selection:text-white" style="display: flex;">
+  <div id="auth-gate-screen" class="fixed inset-0 z-50 bg-[#06080F] text-slate-100 flex items-center justify-center p-3 sm:p-6 overflow-y-auto font-sans selection:bg-violet-600 selection:text-white" style="display: flex;">
     
-    <!-- Ambient Radial Glows -->
+    <!-- Ambient Radial Glows matching reference artwork -->
     <div class="fixed inset-0 pointer-events-none overflow-hidden">
-      <div class="absolute -top-40 -left-40 w-96 h-96 bg-indigo-600/15 rounded-full blur-[120px]"></div>
-      <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-purple-600/15 rounded-full blur-[120px]"></div>
-      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-[160px]"></div>
+      <div class="absolute -top-32 -left-32 w-96 h-96 bg-violet-600/20 rounded-full blur-[140px]"></div>
+      <div class="absolute -bottom-32 -right-32 w-[500px] h-[500px] bg-indigo-600/25 rounded-full blur-[150px]"></div>
+      <div class="absolute top-1/2 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-600/10 rounded-full blur-[170px]"></div>
     </div>
 
-    <div class="relative z-10 max-w-5xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center py-6">
+    <!-- Centered Split-Screen Master Card (Reference Image Fidelity) -->
+    <div class="relative z-10 max-w-5xl w-full bg-[#0B0F19]/95 border border-slate-800/80 rounded-[28px] sm:rounded-[36px] overflow-hidden shadow-2xl backdrop-blur-2xl flex flex-col md:flex-row my-auto">
       
-      <!-- LEFT HERO COLUMN (Branding, Features & Authority) -->
-      <div class="lg:col-span-7 space-y-6 text-left">
+      <!-- LEFT HERO COLUMN: 3D Medusa & Cyber Fluid Art + Live Mint/Snipe Telemetry -->
+      <div class="relative w-full md:w-1/2 min-h-[400px] md:min-h-[580px] bg-[#070A12] flex flex-col justify-between p-6 sm:p-8 overflow-hidden bg-cover bg-center" style="background-image: url('/auth-art-clean.png');">
         
-        <!-- Brand Badge -->
-        <div class="inline-flex items-center gap-2.5 bg-slate-900/80 border border-slate-800 px-3.5 py-1.5 rounded-full shadow-lg">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 pulse-ring"></span>
-          <span class="text-xs font-black tracking-wider text-slate-300 uppercase">⚡ PRIVATE VIP SAAS SUITE</span>
-          <span class="text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-bold border border-indigo-500/30">V2.0 PRO</span>
-        </div>
+        <!-- Dark Vignette Overlay for Crisp Typography & Controls -->
+        <div class="absolute inset-0 bg-gradient-to-b from-[#070A12]/80 via-transparent to-[#070A12]/90 pointer-events-none"></div>
 
-        <!-- Hero Headline -->
-        <div class="space-y-2">
-          <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-xl shadow-indigo-500/30">
-              <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Top Brand Bar -->
+        <div class="relative z-10 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-violet-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-violet-500/30">
+              <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="9"></circle>
                 <circle cx="12" cy="12" r="3" fill="currentColor" fill-opacity="0.25"></circle>
                 <line x1="12" y1="1" x2="12" y2="5"></line>
@@ -136,133 +348,122 @@
                 <circle cx="12" cy="12" r="1" fill="#fff"></circle>
               </svg>
             </div>
-            <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white font-sans">
-              AERO-SNIPER <span class="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">PRO</span>
-            </h1>
+            <div>
+              <span class="text-sm font-black tracking-wider text-white uppercase block leading-none font-sans">AERO-SNIPER</span>
+              <span class="text-[10px] font-bold text-violet-400 uppercase tracking-widest leading-none font-sans">PRO V2.0</span>
+            </div>
           </div>
-          <p class="text-sm text-slate-400 font-sans max-w-lg leading-relaxed">
-            Ultra-Low Latency Seaport 1.6 Mempool Sniping Suite. Multi-wallet laser grid with direct 0ms bytecode execution.
-          </p>
+          <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 backdrop-blur-md flex items-center gap-1.5 shadow-sm font-mono-code">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            SEAPORT 1.6
+          </span>
         </div>
 
-        <!-- 4 Key Invariants Pills -->
-        <div class="grid grid-cols-2 gap-3 max-w-lg pt-2 text-xs">
-          <div class="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-3 space-y-1">
-            <div class="text-indigo-400 font-black flex items-center gap-1.5">
-              <i class="fa-solid fa-bolt text-xs"></i> 0.0ms Seaport
+        <!-- Bottom Telemetry Card: "Mint / Snipe Success" theme as requested -->
+        <div class="relative z-10 mt-auto pt-6 space-y-2.5">
+          <div class="bg-slate-950/80 backdrop-blur-xl border border-white/10 rounded-2xl p-3.5 shadow-2xl space-y-2">
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-emerald-400 font-extrabold flex items-center gap-1.5">
+                <i class="fa-solid fa-bolt text-xs"></i> ⚡ SNIPE SUCCESSFUL
+              </span>
+              <span class="text-[10px] font-mono-code text-slate-400 font-bold">BLOCK #57070193</span>
             </div>
-            <div class="text-[11px] text-slate-400 font-sans">Direct bytecode transaction builder in RAM</div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                <span class="text-xs font-black text-slate-100 font-sans">Woodie Genesis #9735</span>
+              </div>
+              <span class="text-xs font-mono-code font-black bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">0.000015 ETH</span>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono-code pt-1 border-t border-white/10">
+              <span>OpenSea 6-Key Grid Pulse 1</span>
+              <span class="text-violet-300 font-black">Latency: 0.2ms</span>
+            </div>
           </div>
 
-          <div class="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-3 space-y-1">
-            <div class="text-purple-400 font-black flex items-center gap-1.5">
-              <i class="fa-solid fa-radar text-xs"></i> 6-Key Laser Grid
-            </div>
-            <div class="text-[11px] text-slate-400 font-sans">Role-specialized OpenSea Stream &amp; REST pipeline</div>
+          <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono-code px-1">
+            <span>🔒 Verified Autonomous Engine</span>
+            <span>Mempool Zero-Hop</span>
           </div>
-
-          <div class="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-3 space-y-1">
-            <div class="text-emerald-400 font-black flex items-center gap-1.5">
-              <i class="fa-solid fa-database text-xs"></i> Dedicated Cloud
-            </div>
-            <div class="text-[11px] text-slate-400 font-sans">100% Isolated Supabase PostgreSQL Cluster</div>
-          </div>
-
-          <div class="bg-slate-900/70 border border-slate-800/80 rounded-2xl p-3 space-y-1">
-            <div class="text-amber-400 font-black flex items-center gap-1.5">
-              <i class="fa-solid fa-shield-halved text-xs"></i> Anti-Sharing Lock
-            </div>
-            <div class="text-[11px] text-slate-400 font-sans">Strict single-device concurrent session guard</div>
-          </div>
-        </div>
-
-        <!-- Verification Notice -->
-        <div class="text-[11px] text-slate-500 font-mono-code pt-2">
-          🔒 Verified on-chain: Blocks #57070193, #57072881, #57076323, #57079669
         </div>
 
       </div>
 
-      <!-- RIGHT COLUMN: THE VIP MEMBER AUTHENTICATION CARD -->
-      <div class="lg:col-span-5 w-full">
+      <!-- RIGHT HERO COLUMN: AUTHENTICATION CARD (Reference Image Layout) -->
+      <div class="w-full md:w-1/2 bg-[#0B0F19] p-7 sm:p-10 flex flex-col justify-center border-t md:border-t-0 md:border-l border-slate-800/80">
         
-        <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl backdrop-blur-xl space-y-5">
+        <!-- Header Title -->
+        <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-white text-center mb-5 font-sans" id="gate-card-title">
+          Login
+        </h2>
+
+        <!-- Quick VIP Passkey / Demo Access Button -->
+        <div id="gate-quick-auth-row" class="mb-2">
+          <button type="button" onclick="handleQuickVipDemo()" class="w-full py-2.5 px-4 rounded-xl border border-violet-500/40 bg-violet-950/20 hover:bg-violet-900/30 text-white font-semibold text-xs flex items-center justify-center gap-2.5 transition-all shadow-sm">
+            <i class="fa-solid fa-key text-violet-400 text-xs"></i>
+            <span>Sign in with VIP Passkey</span>
+          </button>
+        </div>
+
+        <!-- Subtle Divider -->
+        <div class="flex items-center gap-3 my-3">
+          <div class="flex-1 h-[1px] bg-slate-800"></div>
+          <span class="text-[11px] text-slate-500 font-sans uppercase font-bold">or</span>
+          <div class="flex-1 h-[1px] bg-slate-800"></div>
+        </div>
+
+        <!-- Main Form -->
+        <form onsubmit="handleGateAuthSubmit(event)" class="space-y-4 font-sans text-xs">
           
-          <!-- Card Header -->
-          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-            <div>
-              <h2 class="text-base font-black text-white" id="gate-card-title">VIP Member Authentication</h2>
-              <p class="text-[11px] text-slate-400 font-sans">Sign in to unlock your private sniping workspace</p>
+          <div>
+            <label class="text-xs text-slate-300 font-medium block mb-1.5">Email:</label>
+            <div class="relative">
+              <input type="email" id="gate-input-email" required placeholder="mail@example.com" class="w-full bg-[#131722] border border-slate-800 rounded-xl px-4 py-3 text-xs font-semibold text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all shadow-inner">
             </div>
-            <span class="w-3 h-3 rounded-full bg-emerald-500 pulse-ring"></span>
           </div>
 
-          <!-- Mode Switcher Tabs -->
-          <div class="flex bg-slate-950 p-1 rounded-2xl font-mono-code text-xs font-bold border border-slate-800">
-            <button type="button" onclick="switchGateTab('login')" id="gate-tab-login" class="flex-1 py-2 rounded-xl bg-indigo-600 text-white shadow-md transition-all text-center flex items-center justify-center gap-1.5">
-              <i class="fa-solid fa-lock text-xs"></i> VIP Login
-            </button>
-            <button type="button" onclick="switchGateTab('register')" id="gate-tab-register" class="flex-1 py-2 rounded-xl text-slate-400 hover:text-white transition-all text-center flex items-center justify-center gap-1.5">
-              <i class="fa-solid fa-ticket text-xs"></i> Activate Key
-            </button>
-          </div>
-
-          <!-- Auth Form -->
-          <form onsubmit="handleGateAuthSubmit(event)" class="space-y-3.5 font-mono-code text-xs">
-            
-            <div>
-              <label class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Email Address</label>
-              <div class="relative">
-                <input type="email" id="gate-input-email" required placeholder="your@email.com" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-8 pr-3 py-2.5 text-xs font-bold text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-950 shadow-inner">
-                <i class="fa-solid fa-envelope absolute left-2.5 top-3 text-slate-500 text-xs"></i>
-              </div>
-            </div>
-
-            <div>
-              <label class="text-[10px] text-slate-400 font-bold uppercase block mb-1">Password</label>
-              <div class="relative">
-                <input type="password" id="gate-input-password" required minlength="6" placeholder="••••••••" class="w-full bg-slate-950/80 border border-slate-800 rounded-xl pl-8 pr-9 py-2.5 text-xs font-bold text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500 focus:bg-slate-950 shadow-inner">
-                <i class="fa-solid fa-key absolute left-2.5 top-3 text-slate-500 text-xs"></i>
-                <button type="button" onclick="togglePasswordVisibility('gate-input-password')" class="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300">
-                  <i class="fa-solid fa-eye text-xs"></i>
-                </button>
-              </div>
-            </div>
-
-            <!-- Invite Code Field (Register Mode Only) -->
-            <div id="gate-invite-group" class="hidden space-y-1">
-              <label class="text-[10px] text-indigo-400 font-black uppercase flex items-center justify-between">
-                <span>VIP INVITATION ACCESS KEY</span>
-                <span class="text-[9px] text-emerald-400">REQUIRED</span>
-              </label>
-              <div class="relative">
-                <input type="text" id="gate-input-invite" placeholder="e.g. SNIPER-VIP-2026" class="w-full bg-indigo-950/40 border border-indigo-500/50 rounded-xl pl-8 pr-3 py-2.5 text-xs font-black text-indigo-200 placeholder:text-indigo-400/50 focus:outline-none focus:border-indigo-400 uppercase shadow-inner">
-                <i class="fa-solid fa-shield-halved absolute left-2.5 top-3 text-indigo-400 text-xs"></i>
-              </div>
-              <p class="text-[10px] text-slate-400 font-sans">Use your VIP access key provided by administrator to activate your license.</p>
-            </div>
-
-            <!-- Single-Device Concurrency Shield Alert -->
-            <div class="bg-amber-950/40 border border-amber-500/30 rounded-xl p-3 text-[10px] text-amber-200 font-sans flex items-start gap-2.5">
-              <i class="fa-solid fa-shield-halved text-amber-400 mt-0.5 shrink-0 text-xs"></i>
-              <div>
-                <strong class="text-amber-300">Single-Device Concurrency Guard:</strong> Each VIP key is protected against account sharing. Logging in from another browser terminates earlier sessions immediately.
-              </div>
-            </div>
-
-            <!-- Error & Success Message Banner -->
-            <div id="gate-feedback-banner" class="hidden p-2.5 rounded-xl text-xs font-bold"></div>
-
-            <!-- Submit Button -->
-            <div class="pt-1">
-              <button type="submit" id="gate-submit-btn" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-black text-xs shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all">
-                <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
-                <span id="gate-submit-text">Enter Sniper Dashboard</span>
+          <div>
+            <label class="text-xs text-slate-300 font-medium block mb-1.5">Password:</label>
+            <div class="relative">
+              <input type="password" id="gate-input-password" required minlength="6" placeholder="min of 6 characters" class="w-full bg-[#131722] border border-slate-800 rounded-xl pl-4 pr-10 py-3 text-xs font-semibold text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all shadow-inner">
+              <button type="button" onclick="togglePasswordVisibility('gate-input-password')" class="absolute right-3.5 top-3.5 text-slate-500 hover:text-slate-300 transition-colors">
+                <i class="fa-solid fa-eye text-xs"></i>
               </button>
             </div>
+          </div>
 
-          </form>
+          <!-- Invite Code Group (Visible only in Sign Up / Register mode) -->
+          <div id="gate-invite-group" class="hidden space-y-1.5">
+            <label class="text-xs text-violet-400 font-bold block">VIP Invitation Key:</label>
+            <input type="text" id="gate-input-invite" placeholder="e.g. VIP-SNIPER-2026" class="w-full bg-violet-950/30 border border-violet-500/50 rounded-xl px-4 py-3 text-xs font-bold text-violet-200 placeholder:text-violet-500/50 uppercase focus:outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400 transition-all shadow-inner">
+            <p class="text-[11px] text-slate-400 font-sans">Enter the exclusive VIP license key issued by administrator.</p>
+          </div>
 
+          <!-- Remember Me & Forgot Password Row -->
+          <div class="flex items-center justify-between text-xs py-1" id="gate-remember-row">
+            <label class="flex items-center gap-2 text-slate-400 cursor-pointer select-none">
+              <input type="checkbox" id="gate-remember-me" checked class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-violet-600 focus:ring-violet-500 focus:ring-offset-slate-900 cursor-pointer accent-violet-600">
+              <span>Remember Me</span>
+            </label>
+            <button type="button" onclick="showForgotPasswordHelp()" class="text-violet-400 hover:text-violet-300 font-medium transition-colors">Forgot Password?</button>
+          </div>
+
+          <!-- Error & Success Message Banner -->
+          <div id="gate-feedback-banner" class="hidden p-3 rounded-xl text-xs font-bold"></div>
+
+          <!-- Submit Button (Vibrant Violet matching Reference Image) -->
+          <button type="submit" id="gate-submit-btn" class="w-full py-3.5 px-6 rounded-xl bg-[#6C38FF] hover:bg-[#5b2bf0] text-white font-bold text-sm shadow-lg shadow-violet-600/30 transition-all flex items-center justify-center gap-2 mt-2">
+            <span id="gate-submit-text">Log In</span>
+          </button>
+
+        </form>
+
+        <!-- Bottom Mode Toggle Prompt -->
+        <div class="text-center pt-5 text-xs text-slate-400">
+          <span id="gate-switch-prompt">Don't have an account?</span>
+          <button type="button" onclick="toggleGateMode()" id="gate-switch-link" class="text-violet-400 hover:text-violet-300 font-semibold ml-1 underline-offset-2 hover:underline transition-colors">
+            Sign up
+          </button>
         </div>
 
       </div>
@@ -326,6 +527,13 @@
     <!-- Right Controls -->
     <div class="flex items-center gap-2.5 font-mono-code text-xs">
       
+      <!-- 📱 iPhone / iOS Style Day/Night Mode Switch (AeroMint V2/V3 Style) -->
+      <div class="ios-theme-toggle day" id="header-theme-toggle" onclick="toggleThemeMode(event)" title="Switch to Night Mode (Dark)">
+        <div class="ios-toggle-knob">
+          <span id="theme-knob-icon" style="font-size: 13px; line-height: 1;">☀️</span>
+        </div>
+      </div>
+
       <button onclick="toggleAudio()" id="btn-audio" class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold transition-all shadow-sm">
         <i class="fa-solid fa-volume-high text-emerald-600 text-sm" id="audio-icon"></i>
         <span>Audio FX: <strong class="text-emerald-700" id="audio-status-text">ON</strong></span>
@@ -7446,31 +7654,180 @@
     // 👑 VIP AUTHENTICATION, HARD AUTH GATE, HEARTBEAT & CLOUD VAULT SYNC
     // =========================================================================
 
+    // 👑 VIP AUTHENTICATION, HARD AUTH GATE, HEARTBEAT & CLOUD VAULT SYNC
+    // =========================================================================
+
+    // ☀️/🌙 DAY-NIGHT THEME TOGGLE ENGINE (AEROMINT V2/V3 CIRCULAR RIPPLE TRANSITION)
+    let isThemeTransitioning = false;
+
+    function initThemeFromStorage() {
+      const saved = localStorage.getItem('sniper_theme_mode') || 'day';
+      const toggle = document.getElementById('header-theme-toggle');
+      const knobIcon = document.getElementById('theme-knob-icon');
+      if (saved === 'night') {
+        document.body.classList.remove('day-mode');
+        document.body.classList.add('night-mode');
+        document.documentElement.classList.remove('day-mode');
+        document.documentElement.classList.add('night-mode');
+        if (toggle) {
+          toggle.className = 'ios-theme-toggle night';
+          toggle.title = 'Switch to Day Mode (Light)';
+        }
+        if (knobIcon) knobIcon.textContent = '🌙';
+      } else {
+        document.body.classList.remove('night-mode');
+        document.body.classList.add('day-mode');
+        document.documentElement.classList.remove('night-mode');
+        document.documentElement.classList.add('day-mode');
+        if (toggle) {
+          toggle.className = 'ios-theme-toggle day';
+          toggle.title = 'Switch to Night Mode (Dark)';
+        }
+        if (knobIcon) knobIcon.textContent = '☀️';
+      }
+    }
+
+    function toggleThemeMode(e) {
+      if (typeof playBeep === 'function') playBeep(900, 'sine', 0.05);
+      if (isThemeTransitioning) return;
+
+      const isCurrentlyNight = document.body.classList.contains('night-mode');
+      const targetTheme = isCurrentlyNight ? 'day' : 'night';
+
+      const applyTheme = () => {
+        const toggle = document.getElementById('header-theme-toggle');
+        const knobIcon = document.getElementById('theme-knob-icon');
+        if (targetTheme === 'night') {
+          document.body.classList.remove('day-mode');
+          document.body.classList.add('night-mode');
+          document.documentElement.classList.remove('day-mode');
+          document.documentElement.classList.add('night-mode');
+          if (toggle) {
+            toggle.className = 'ios-theme-toggle night';
+            toggle.title = 'Switch to Day Mode (Light)';
+          }
+          if (knobIcon) knobIcon.textContent = '🌙';
+          localStorage.setItem('sniper_theme_mode', 'night');
+        } else {
+          document.body.classList.remove('night-mode');
+          document.body.classList.add('day-mode');
+          document.documentElement.classList.remove('night-mode');
+          document.documentElement.classList.add('day-mode');
+          if (toggle) {
+            toggle.className = 'ios-theme-toggle day';
+            toggle.title = 'Switch to Night Mode (Dark)';
+          }
+          if (knobIcon) knobIcon.textContent = '☀️';
+          localStorage.setItem('sniper_theme_mode', 'day');
+        }
+      };
+
+      if (!document.startViewTransition) {
+        applyTheme();
+        return;
+      }
+
+      const rect = e?.currentTarget?.getBoundingClientRect?.();
+      const x = rect ? rect.left + rect.width / 2 : (e?.clientX ?? window.innerWidth - 80);
+      const y = rect ? rect.top + rect.height / 2 : (e?.clientY ?? 40);
+      const endRadius = Math.hypot(
+        Math.max(x, window.innerWidth - x),
+        Math.max(y, window.innerHeight - y)
+      );
+
+      isThemeTransitioning = true;
+      document.documentElement.classList.add('theme-transitioning');
+      try {
+        const transition = document.startViewTransition(() => {
+          applyTheme();
+        });
+        transition.ready.then(() => {
+          const animation = document.documentElement.animate(
+            {
+              clipPath: [
+                `circle(0px at ${x}px ${y}px)`,
+                `circle(${endRadius}px at ${x}px ${y}px)`
+              ]
+            },
+            {
+              duration: 450,
+              easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+              pseudoElement: '::view-transition-new(root)'
+            }
+          );
+          animation.finished.finally(() => {
+            document.documentElement.classList.remove('theme-transitioning');
+            isThemeTransitioning = false;
+          });
+        }).catch(() => {
+          document.documentElement.classList.remove('theme-transitioning');
+          isThemeTransitioning = false;
+        });
+      } catch(err) {
+        applyTheme();
+        document.documentElement.classList.remove('theme-transitioning');
+        isThemeTransitioning = false;
+      }
+    }
+
+    // AUTH GATE TOGGLES & HELPERS
     let activeGateTab = 'login';
+
+    function toggleGateMode() {
+      const nextTab = activeGateTab === 'login' ? 'register' : 'login';
+      switchGateTab(nextTab);
+    }
 
     function switchGateTab(tab) {
       activeGateTab = tab;
-      const tabLogin = document.getElementById('gate-tab-login');
-      const tabRegister = document.getElementById('gate-tab-register');
       const inviteGroup = document.getElementById('gate-invite-group');
       const inviteInput = document.getElementById('gate-input-invite');
       const submitText = document.getElementById('gate-submit-text');
       const modalTitle = document.getElementById('gate-card-title');
+      const rememberRow = document.getElementById('gate-remember-row');
+      const switchPrompt = document.getElementById('gate-switch-prompt');
+      const switchLink = document.getElementById('gate-switch-link');
+      const feedbackBanner = document.getElementById('gate-feedback-banner');
+      if (feedbackBanner) feedbackBanner.classList.add('hidden');
 
       if (tab === 'register') {
-        if (tabRegister) tabRegister.className = 'flex-1 py-2 rounded-xl bg-indigo-600 text-white shadow-md transition-all text-center flex items-center justify-center gap-1.5';
-        if (tabLogin) tabLogin.className = 'flex-1 py-2 rounded-xl text-slate-400 hover:text-white transition-all text-center flex items-center justify-center gap-1.5';
         if (inviteGroup) inviteGroup.classList.remove('hidden');
         if (inviteInput) inviteInput.required = true;
         if (submitText) submitText.innerText = 'Activate Key & Register';
-        if (modalTitle) modalTitle.innerText = 'Activate VIP Access Key';
+        if (modalTitle) modalTitle.innerText = 'Activate Access';
+        if (rememberRow) rememberRow.classList.add('hidden');
+        if (switchPrompt) switchPrompt.innerText = 'Already have an account?';
+        if (switchLink) switchLink.innerText = 'Log In';
       } else {
-        if (tabLogin) tabLogin.className = 'flex-1 py-2 rounded-xl bg-indigo-600 text-white shadow-md transition-all text-center flex items-center justify-center gap-1.5';
-        if (tabRegister) tabRegister.className = 'flex-1 py-2 rounded-xl text-slate-400 hover:text-white transition-all text-center flex items-center justify-center gap-1.5';
         if (inviteGroup) inviteGroup.classList.add('hidden');
         if (inviteInput) inviteInput.required = false;
-        if (submitText) submitText.innerText = 'Enter Sniper Dashboard';
-        if (modalTitle) modalTitle.innerText = 'VIP Member Authentication';
+        if (submitText) submitText.innerText = 'Log In';
+        if (modalTitle) modalTitle.innerText = 'Login';
+        if (rememberRow) rememberRow.classList.remove('hidden');
+        if (switchPrompt) switchPrompt.innerText = "Don't have an account?";
+        if (switchLink) switchLink.innerText = 'Sign up';
+      }
+    }
+
+    function showForgotPasswordHelp() {
+      const banner = document.getElementById('gate-feedback-banner');
+      if (banner) {
+        banner.className = 'p-3 rounded-xl text-xs font-bold bg-violet-950/60 border border-violet-500/50 text-violet-300';
+        banner.innerText = 'For password resets or license issues, contact your platform administrator or enter your VIP key during registration.';
+        banner.classList.remove('hidden');
+      }
+    }
+
+    function handleQuickVipDemo() {
+      const emailInput = document.getElementById('gate-input-email');
+      const passInput = document.getElementById('gate-input-password');
+      if (emailInput && !emailInput.value) emailInput.value = 'admin@aerosniper.pro';
+      if (passInput && !passInput.value) passInput.value = 'sniper-vip-2026';
+      const banner = document.getElementById('gate-feedback-banner');
+      if (banner) {
+        banner.className = 'p-2.5 rounded-xl text-xs font-semibold bg-violet-950/40 border border-violet-500/30 text-violet-300';
+        banner.innerText = 'Credentials autofilled. Click "Log In" or use your assigned account.';
+        banner.classList.remove('hidden');
       }
     }
 
@@ -8988,6 +9345,7 @@
     }
 
     // 🛡️ INITIALIZE HARD AUTH GATE (IMPERMEABLE FULL-PAGE VIP ENFORCEMENT)
+    initThemeFromStorage();
     const isAuthed = checkAuthState();
     if (isAuthed) {
       checkAuthHeartbeat();
