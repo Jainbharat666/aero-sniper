@@ -2546,6 +2546,72 @@
       }
     }
 
+    // ☁️ AUTO-SYNC WALLETS TO CLOUD PER-USER (INSTANT CROSS-DEVICE / CROSS-PROFILE PERSISTENCE)
+    let isSyncingWalletsToCloud = false;
+    async function syncUserWalletsToCloud() {
+      if (!currentUser || !currentUser.id) return;
+      if (isSyncingWalletsToCloud) return;
+      isSyncingWalletsToCloud = true;
+      try {
+        const uid = currentUser.id;
+        const payload = {
+          userId: uid,
+          walletFleet: walletFleet.map(w => ({
+            name: w.name,
+            address: w.address,
+            privateKey: w.privateKey,
+            selected: w.selected
+          })),
+          masterWalletIndex: masterWalletIndex,
+          timestamp: Date.now()
+        };
+        await fetch('/api/user-config', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {})
+          },
+          body: JSON.stringify(payload)
+        });
+      } catch (e) {
+        console.warn('[Cloud Wallet Sync] Failed:', e.message);
+      } finally {
+        isSyncingWalletsToCloud = false;
+      }
+    }
+
+    // 🎯 UNIVERSAL INSTANT HYDRATION FROM CLOUD (CROSS-DEVICE / CROSS-CHROME PROFILE SYNC)
+    function hydrateFromCloudConfig(cfg) {
+      if (!cfg || !currentUser) return;
+
+      // 1. Hydrate Wallets from Cloud
+      const remoteWallets = cfg.walletFleet || cfg.wallets || cfg.activeWallets;
+      if (Array.isArray(remoteWallets) && remoteWallets.length > 0) {
+        walletFleet = remoteWallets;
+        masterWalletIndex = typeof cfg.masterWalletIndex === 'number' ? cfg.masterWalletIndex : (walletFleet.length > 0 ? 0 : null);
+        persistUserWalletsEncrypted();
+        renderWalletFleetUI();
+        refreshAllBalances();
+      }
+
+      // 2. Hydrate Custom RPCs from Cloud
+      const remoteCustom = cfg.custom_rpcs || cfg.rpcFleet;
+      if (Array.isArray(remoteCustom)) {
+        const customOnly = remoteCustom.filter(r => !isSystemRpcUrl(r.url) && !r.isSystem);
+        localStorage.setItem(`sniper_u_${currentUser.id}_custom_rpcs`, JSON.stringify(customOnly));
+        rpcFleet = assembleUserRpcFleet(DEFAULT_ADMIN_CLUSTER_RPC, customOnly);
+        renderRpcFleet();
+      }
+
+      // 3. Hydrate Presets & Settings
+      if (cfg.activeGasPreset) activeGasPreset = cfg.activeGasPreset;
+      if (cfg.activeTriggerMode) activeTriggerMode = cfg.activeTriggerMode;
+      if (cfg.activeRuleStates) {
+        activeRuleStates = Object.assign(activeRuleStates, cfg.activeRuleStates);
+        if (typeof refreshAllRuleSwitchesUI === 'function') refreshAllRuleSwitchesUI();
+      }
+    }
+
     async function loadUserScopedWallets() {
       if (!currentUser || !currentUser.id) {
         walletFleet = [];
@@ -2560,7 +2626,7 @@
         try {
           const secret = getUserSecretKey(uid);
           const decrypted = await decryptData(encData, secret);
-          if (decrypted && Array.isArray(decrypted.walletFleet)) {
+          if (decrypted && Array.isArray(decrypted.walletFleet) && decrypted.walletFleet.length > 0) {
             walletFleet = decrypted.walletFleet;
             masterWalletIndex = typeof decrypted.masterWalletIndex === 'number' ? decrypted.masterWalletIndex : null;
             renderWalletFleetUI();
@@ -2585,11 +2651,35 @@
           localStorage.removeItem(`sniper_user_${uid}_master_idx`);
           renderWalletFleetUI();
           refreshAllBalances();
+          syncUserWalletsToCloud();
           return;
         } catch(e) {}
       }
 
-      // Brand new or clean account: start completely clean with 0 wallets
+      // 🎯 IF LOCAL STORAGE IS EMPTY (e.g. New Chrome Profile / New Device), HYDRATE DIRECTLY FROM CLOUD!
+      try {
+        const res = await fetch(`/api/user-config?userId=${encodeURIComponent(uid)}`, {
+          headers: { ...(sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {}) }
+        });
+        if (res.ok) {
+          const cData = await res.json();
+          if (cData.success && cData.config) {
+            const remoteWallets = cData.config.walletFleet || cData.config.wallets;
+            if (Array.isArray(remoteWallets) && remoteWallets.length > 0) {
+              walletFleet = remoteWallets;
+              masterWalletIndex = typeof cData.config.masterWalletIndex === 'number' ? cData.config.masterWalletIndex : (walletFleet.length > 0 ? 0 : null);
+              await persistUserWalletsEncrypted();
+              renderWalletFleetUI();
+              refreshAllBalances();
+              return;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[Vault] Cloud wallet fetch fallback:', err.message);
+      }
+
+      // Clean account with 0 wallets locally or in cloud
       walletFleet = [];
       masterWalletIndex = null;
       renderWalletFleetUI();
@@ -2713,10 +2803,11 @@
         if (configRes.ok) {
           const configData = await configRes.json();
           if (configData.success && configData.config) {
-            const remoteCustom = configData.config.custom_rpcs;
+            hydrateFromCloudConfig(configData.config);
+            const remoteCustom = configData.config.custom_rpcs || configData.config.rpcFleet;
             if (Array.isArray(remoteCustom)) {
-              cloudCustom = remoteCustom;
-              localStorage.setItem(`sniper_u_${uid}_custom_rpcs`, JSON.stringify(remoteCustom));
+              cloudCustom = remoteCustom.filter(r => !isSystemRpcUrl(r.url) && !r.isSystem);
+              localStorage.setItem(`sniper_u_${uid}_custom_rpcs`, JSON.stringify(cloudCustom));
             }
           }
         }
@@ -2785,6 +2876,7 @@
     function persistState() {
       try {
         persistUserWalletsEncrypted();
+        syncUserWalletsToCloud();
         syncUserCustomRpcsToCloud();
 
         localStorage.setItem('sniper_rpc_strategy', currentRpcStrategy);
@@ -7178,6 +7270,11 @@
         localStorage.setItem('sniper_token', sessionToken);
         localStorage.setItem('sniper_user', JSON.stringify(currentUser));
 
+        // 🎯 INSTANT CLOUD HYDRATION: Hydrate wallets and RPCs immediately from login response!
+        if (data.config) {
+          hydrateFromCloudConfig(data.config);
+        }
+
         if (banner) {
           banner.className = 'p-3 rounded-xl text-xs font-bold bg-emerald-950/60 border border-emerald-500/50 text-emerald-300';
           banner.innerText = `Welcome ${currentUser.email}! VIP Session Active. Unlocking workspace...`;
@@ -7191,8 +7288,8 @@
             loadUserScopedWallets(),
             loadUserRpcsAndFleet(currentUser)
           ]);
-          showToast(`Welcome ${currentUser.email}! Workspace loaded in <1s.`);
-        }, 100);
+          showToast(`Welcome ${currentUser.email}! Workspace loaded in <1s with ${walletFleet.length} wallets.`);
+        }, 50);
 
       } catch (err) {
         if (banner) {
@@ -7943,6 +8040,11 @@
         localStorage.setItem('sniper_token', sessionToken);
         localStorage.setItem('sniper_user', JSON.stringify(currentUser));
 
+        // 🎯 INSTANT CLOUD HYDRATION: Hydrate wallets and RPCs immediately from login response!
+        if (data.config) {
+          hydrateFromCloudConfig(data.config);
+        }
+
         if (banner) {
           banner.className = 'p-2.5 rounded-xl text-xs font-bold bg-emerald-50 border border-emerald-200 text-emerald-700';
           banner.innerText = `Welcome ${currentUser.email}! VIP Session Active.`;
@@ -7953,9 +8055,8 @@
         checkAuthState();
         setTimeout(() => {
           closeAuthModal();
-          showToast(`Logged in as ${currentUser.email}`);
-          handleCloudVaultRestore();
-        }, 600);
+          showToast(`Logged in as ${currentUser.email} with ${walletFleet.length} wallets`);
+        }, 300);
 
       } catch (err) {
         if (banner) {
