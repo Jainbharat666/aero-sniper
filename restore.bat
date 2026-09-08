@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 > nul
 title NFT Sniper V2 - Universal 1-Click Restore Manager
 color 0B
 cls

@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 > nul
 title Push Aero-Sniper V2 to GitHub
 color 0A
 echo ===================================================================

@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 > nul
 title NFT Sniper V2 - Automated Full Backup Generator
 color 0A
 cls
