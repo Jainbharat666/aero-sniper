@@ -317,13 +317,7 @@ async function adminAuthMiddleware(req, res, next) {
       return res.status(401).json({ success: false, error: 'Empty session token.' });
     }
 
-    // 1. Fast Path: Direct Owner Email Check
-    if (sessionToken.toLowerCase() === OWNER_EMAIL.toLowerCase() || sessionToken.toLowerCase() === 'admin') {
-      req.authenticatedUser = { email: OWNER_EMAIL, role: 'admin' };
-      return next();
-    }
-
-    // 2. Look up session token in sniper_user_configs
+    // 1. Look up session token in sniper_user_configs
     try {
       const configRes = await axios.get(`${SUPABASE_URL}/rest/v1/sniper_user_configs?select=user_id,config&config->>session_token=eq.${encodeURIComponent(sessionToken)}`, {
         headers: supabaseHeaders,
@@ -339,15 +333,6 @@ async function adminAuthMiddleware(req, res, next) {
         }
       }
     } catch (dbErr) {}
-
-    // 3. Direct ID Check in sniper_users
-    try {
-      const user = await dbGetUserById(sessionToken);
-      if (user && (user.email?.toLowerCase() === OWNER_EMAIL || user.role === 'admin')) {
-        req.authenticatedUser = user;
-        return next();
-      }
-    } catch (e) {}
 
     return res.status(403).json({ success: false, error: 'Admin access required.' });
   } catch (err) {
@@ -368,11 +353,6 @@ async function userAuthMiddleware(req, res, next) {
       return res.status(401).json({ success: false, error: 'Empty session token.' });
     }
 
-    if (sessionToken.toLowerCase() === OWNER_EMAIL.toLowerCase() || sessionToken.toLowerCase() === 'admin') {
-      req.authenticatedUser = { email: OWNER_EMAIL, role: 'admin' };
-      return next();
-    }
-
     try {
       const configRes = await axios.get(`${SUPABASE_URL}/rest/v1/sniper_user_configs?select=user_id,config&config->>session_token=eq.${encodeURIComponent(sessionToken)}`, {
         headers: supabaseHeaders,
@@ -388,14 +368,6 @@ async function userAuthMiddleware(req, res, next) {
         }
       }
     } catch (dbErr) {}
-
-    try {
-      const user = await dbGetUserById(sessionToken);
-      if (user && !user.is_banned) {
-        req.authenticatedUser = user;
-        return next();
-      }
-    } catch (e) {}
 
     return res.status(401).json({ success: false, error: 'Invalid or expired session token. Please log in.' });
   } catch (err) {
@@ -1205,16 +1177,16 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     const reqHash = hashPassword(password);
     const sessionToken = `sniper_sess_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
 
-    // Platform Owner Master Override (Bharat)
-    if (isOwner) {
-      if (!user) {
+    // 1. Account existence check
+    if (!user) {
+      if (isOwner) {
         user = {
-          id: 'owner_sniper_001',
+          id: 'owner-sniper-master-001',
           email: cleanEmail,
-          password_hash: reqHash,
+          password_hash: hashPassword(password),
           role: 'admin',
-          invite_code_used: 'MASTER_OWNER_KEY',
-          valid_until: new Date(Date.now() + 3650 * 86400000).toISOString(),
+          invite_code_used: 'ROOT-OWNER',
+          valid_until: '2099-12-31T23:59:59+00:00',
           max_snipes_allowed: 0,
           total_snipes: 0,
           is_banned: false,
@@ -1223,88 +1195,69 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
         };
         await dbUpsertUser(user);
       } else {
-        await dbUpdateUser(user.id, {
-          password_hash: reqHash,
-          role: 'admin',
-          is_banned: false,
-          last_active_at: new Date().toISOString()
-        });
+        return res.status(404).json({ success: false, error: '❌ Account not found. Please register with a VIP Invite Code first.' });
       }
-
-      await dbSaveUserConfig(user.id, { session_token: sessionToken });
-      const userConfig = await dbGetUserConfig(user.id);
-
-      const clientSafeUser = {
-        id: user.id,
-        email: user.email,
-        role: 'admin',
-        invite_code_used: 'MASTER_OWNER_KEY',
-        valid_until: user.valid_until || new Date(Date.now() + 3650 * 86400000).toISOString(),
-        max_snipes_allowed: 0,
-        total_snipes: user.total_snipes || 0,
-        is_banned: false,
-        created_at: user.created_at,
-        user_metadata: { role: 'admin', name: 'Bharat' }
-      };
-      return res.json({ success: true, user: clientSafeUser, sessionToken: sessionToken, config: userConfig });
     }
 
-    // Standard Member Login Verification
-    if (!user) {
-      return res.status(404).json({ success: false, error: '❌ Account not found. Please register with a VIP Invite Code first.' });
-    }
-
+    // 2. STRICT PASSWORD VERIFICATION FOR EVERYONE (INCLUDING OWNER!)
     if (!verifyPassword(password, user.password_hash)) {
       return res.status(401).json({ success: false, error: '❌ Incorrect password. Please try again.' });
     }
 
+    // 3. Auto-upgrade legacy hash if needed
     if (user.password_hash && !user.password_hash.startsWith('$2')) {
       await dbUpdateUser(user.id, { password_hash: hashPassword(password) });
     }
 
-    if (user.is_banned) {
+    // 4. Ban check (Owner is never banned)
+    if (user.is_banned && !isOwner) {
       return res.status(403).json({ success: false, error: '🚫 Account Suspended. Your access has been deactivated by Administrator.' });
     }
 
-    // Check Time Expiry
-    if (user.valid_until && new Date(user.valid_until) < new Date()) {
-      return res.status(403).json({
-        success: false,
-        error: `⏳ VIP Validity Expired. Your subscription ended on ${new Date(user.valid_until).toLocaleDateString()}. Please contact Admin to renew.`
-      });
+    // 5. Expiry & Quota checks (Exempt for owner)
+    if (!isOwner) {
+      if (user.valid_until && new Date(user.valid_until) < new Date()) {
+        return res.status(403).json({
+          success: false,
+          error: `⏳ VIP Validity Expired. Your subscription ended on ${new Date(user.valid_until).toLocaleDateString()}. Please contact Admin to renew.`
+        });
+      }
+
+      if (user.max_snipes_allowed > 0 && user.total_snipes >= user.max_snipes_allowed) {
+        return res.status(403).json({
+          success: false,
+          error: `🎯 Snipes Quota Exhausted. You have completed all ${user.max_snipes_allowed} allocated snipes for this key. Contact Admin to extend quota.`
+        });
+      }
     }
 
-    // Check Snipes Quota Expiry
-    if (user.max_snipes_allowed > 0 && user.total_snipes >= user.max_snipes_allowed) {
-      return res.status(403).json({
-        success: false,
-        error: `🎯 Snipes Quota Exhausted. You have completed all ${user.max_snipes_allowed} allocated snipes for this key. Contact Admin to extend quota.`
-      });
-    }
+    // 6. Update last active timestamp ONLY (NEVER OVERWRITE password_hash!)
+    await dbUpdateUser(user.id, {
+      last_active_at: new Date().toISOString(),
+      ...(isOwner ? { role: 'admin', is_banned: false } : {})
+    });
 
-    await dbUpdateUser(user.id, { last_active_at: new Date().toISOString() });
-
-    // Single-device concurrency lock: overwrite sessionToken
+    // 7. Single-device concurrency lock: overwrite sessionToken
     await dbSaveUserConfig(user.id, { session_token: sessionToken, last_login_ip: req.ip });
     const userConfig = await dbGetUserConfig(user.id);
 
-    const logAllowed = parseInt(user.max_snipes_allowed) || 0;
+    const logAllowed = isOwner ? 0 : (parseInt(user.max_snipes_allowed) || 0);
     const logUsed = user.total_snipes !== undefined ? user.total_snipes : (user.snipes_used || 0);
     const logRem = logAllowed > 0 ? Math.max(0, logAllowed - logUsed) : null;
 
     const clientSafeUser = {
       id: user.id,
       email: user.email,
-      role: user.role || 'vip_member',
+      role: isOwner ? 'admin' : (user.role || 'vip_member'),
       invite_code_used: user.invite_code_used,
-      valid_until: user.valid_until,
+      valid_until: isOwner ? '2099-12-31T23:59:59+00:00' : user.valid_until,
       max_snipes_allowed: logAllowed,
       total_snipes: logUsed,
       snipes_used: logUsed,
       snipes_remaining: logRem,
-      is_banned: user.is_banned,
+      is_banned: false,
       created_at: user.created_at,
-      user_metadata: { role: user.role || 'vip_member', name: cleanEmail.split('@')[0] }
+      user_metadata: isOwner ? { role: 'admin', name: 'Bharat' } : { role: user.role || 'vip_member', name: cleanEmail.split('@')[0] }
     };
 
     return res.json({ success: true, user: clientSafeUser, sessionToken: sessionToken, config: userConfig });
@@ -1336,17 +1289,6 @@ app.get('/api/auth/heartbeat', async (req, res) => {
     const cleanEmail = (email || '').trim().toLowerCase();
     const isOwner = cleanEmail === OWNER_EMAIL;
     
-    if (isOwner) {
-      return res.json({
-        valid: true,
-        valid_until: new Date(Date.now() + 3650 * 86400000).toISOString(),
-        max_snipes_allowed: 0,
-        total_snipes: 0,
-        is_banned: false,
-        role: 'admin'
-      });
-    }
-
     let user = null;
     if (userId) user = await dbGetUserById(userId);
     if (!user && cleanEmail) user = await dbGetUserByEmail(cleanEmail);
@@ -1356,6 +1298,27 @@ app.get('/api/auth/heartbeat', async (req, res) => {
         valid: false,
         reason: 'USER_DELETED',
         message: '🚫 Session terminated. User account was deleted by Administrator.'
+      });
+    }
+
+    if (isOwner) {
+      if (sessionToken && user.id) {
+        const config = await dbGetUserConfig(user.id);
+        if (config && config.session_token && config.session_token !== sessionToken) {
+          return res.json({
+            valid: false,
+            reason: 'CONCURRENT_LOGIN',
+            message: '⚠️ Session Overwritten: Your admin account was accessed from another browser or window.'
+          });
+        }
+      }
+      return res.json({
+        valid: true,
+        valid_until: '2099-12-31T23:59:59+00:00',
+        max_snipes_allowed: 0,
+        total_snipes: 0,
+        is_banned: false,
+        role: 'admin'
       });
     }
 
@@ -1431,24 +1394,21 @@ app.post('/api/auth/change-password', async (req, res) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const isOwner = cleanEmail === OWNER_EMAIL;
     const user = await dbGetUserByEmail(cleanEmail);
 
-    if (!user && !isOwner) {
+    if (!user) {
       return res.status(404).json({ success: false, error: 'User not found.' });
     }
 
-    if (!isOwner && !verifyPassword(oldPassword, user.password_hash)) {
+    if (!verifyPassword(oldPassword, user.password_hash)) {
       return res.status(401).json({ success: false, error: '❌ Current password is incorrect.' });
     }
 
-    if (user) {
-      await dbUpdateUser(user.id, {
-        password_hash: hashPassword(newPassword)
-      });
-    }
+    await dbUpdateUser(user.id, {
+      password_hash: hashPassword(newPassword)
+    });
 
-    console.log(`[Sniper DB] Password changed for: ${cleanEmail}`);
+    console.log(`[Sniper DB] Password changed successfully for: ${cleanEmail}`);
     return res.json({ success: true, message: '✅ Password changed successfully!' });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
