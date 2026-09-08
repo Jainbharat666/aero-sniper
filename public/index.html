@@ -241,21 +241,241 @@
       color: #e2e8f0 !important;
     }
 
-    /* Rules Deck Views in Dark Mode */
-    body:not(.day-mode) #deck-view-floor,
-    body:not(.day-mode) #deck-view-rarity,
-    body:not(.day-mode) #deck-view-trait,
-    body:not(.day-mode) #deck-view-tokenId,
-    body:not(.day-mode) #deck-view-bento {
-      background: #0f121d !important;
-      border-color: rgba(255, 255, 255, 0.12) !important;
+    /* ═══════════════════════════════════════════════════════════════
+       ⚡ PREMIUM THEMED RULE CARDS — DARK MODE
+       Each rule card gets its own warm themed gradient & glow
+       ═══════════════════════════════════════════════════════════════ */
+
+    /* FLOOR RULE: Warm Amber Dark Gradient */
+    body:not(.day-mode) #deck-view-floor {
+      background: linear-gradient(145deg, rgba(245, 158, 11, 0.08) 0%, rgba(217, 119, 6, 0.04) 50%, rgba(15, 18, 29, 0.95) 100%) !important;
+      border: 2px solid rgba(245, 158, 11, 0.45) !important;
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.08), inset 0 1px 0 rgba(245, 158, 11, 0.1) !important;
       color: #ffffff !important;
     }
-    body:not(.day-mode) #deck-view-floor span,
-    body:not(.day-mode) #deck-view-rarity span,
-    body:not(.day-mode) #deck-view-trait span,
+    body:not(.day-mode) #deck-view-floor span.text-amber-900,
+    body:not(.day-mode) #deck-view-floor .text-amber-900 {
+      color: #fbbf24 !important;
+    }
+    body:not(.day-mode) #deck-view-floor .text-amber-800 {
+      color: #fcd34d !important;
+    }
+    body:not(.day-mode) #deck-view-floor .text-amber-700 {
+      color: #fde68a !important;
+    }
+    body:not(.day-mode) #deck-view-floor .text-amber-600 {
+      color: #fbbf24 !important;
+    }
+    body:not(.day-mode) #deck-view-floor .text-amber-500 {
+      color: #f59e0b !important;
+    }
+    body:not(.day-mode) #deck-view-floor .text-slate-500 {
+      color: #94a3b8 !important;
+    }
+    body:not(.day-mode) #deck-view-floor .text-slate-600 {
+      color: #cbd5e1 !important;
+    }
+    body:not(.day-mode) #deck-view-floor .text-slate-900 {
+      color: #ffffff !important;
+    }
+    /* Floor ACTIVE badge */
+    body:not(.day-mode) #switch-rule-floor {
+      background-color: rgba(245, 158, 11, 0.25) !important;
+      border-color: rgba(245, 158, 11, 0.6) !important;
+      color: #fbbf24 !important;
+    }
+    /* Floor input fields */
+    body:not(.day-mode) #deck-view-floor input[type="number"] {
+      background-color: rgba(0, 0, 0, 0.4) !important;
+      border: 1px solid rgba(245, 158, 11, 0.4) !important;
+      color: #fef3c7 !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+    }
+    body:not(.day-mode) #deck-view-floor input[type="number"]:focus {
+      border-color: #f59e0b !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(245, 158, 11, 0.25) !important;
+    }
+    body:not(.day-mode) #deck-view-floor label {
+      color: #fde68a !important;
+    }
+    body:not(.day-mode) #deck-view-floor .text-amber-700.font-black {
+      color: #fbbf24 !important;
+    }
+    body:not(.day-mode) #floor-discount-tag {
+      color: #fcd34d !important;
+    }
+    body:not(.day-mode) #floor-discount-tag span {
+      color: #fcd34d !important;
+    }
+
+    /* RARITY RULE: Royal Purple Dark Gradient */
+    body:not(.day-mode) #deck-view-rarity {
+      background: linear-gradient(145deg, rgba(168, 85, 247, 0.08) 0%, rgba(124, 58, 237, 0.04) 50%, rgba(15, 18, 29, 0.95) 100%) !important;
+      border: 2px solid rgba(168, 85, 247, 0.45) !important;
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.08), inset 0 1px 0 rgba(168, 85, 247, 0.1) !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #deck-view-rarity .text-purple-900 {
+      color: #d8b4fe !important;
+    }
+    body:not(.day-mode) #deck-view-rarity .text-purple-800 {
+      color: #e9d5ff !important;
+    }
+    body:not(.day-mode) #deck-view-rarity .text-purple-600 {
+      color: #c084fc !important;
+    }
+    body:not(.day-mode) #switch-rule-rarity {
+      background-color: rgba(168, 85, 247, 0.25) !important;
+      border-color: rgba(168, 85, 247, 0.6) !important;
+      color: #c084fc !important;
+    }
+    body:not(.day-mode) #deck-view-rarity input[type="number"] {
+      background-color: rgba(0, 0, 0, 0.4) !important;
+      border: 1px solid rgba(168, 85, 247, 0.4) !important;
+      color: #e9d5ff !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+    }
+    body:not(.day-mode) #deck-view-rarity input[type="number"]:focus {
+      border-color: #a855f7 !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(168, 85, 247, 0.25) !important;
+    }
+    body:not(.day-mode) #deck-view-rarity label {
+      color: #e9d5ff !important;
+    }
+    body:not(.day-mode) #deck-view-rarity span {
+      color: #f3e8ff !important;
+    }
+
+    /* TRAIT RULE: Hot Pink Dark Gradient */
+    body:not(.day-mode) #deck-view-trait {
+      background: linear-gradient(145deg, rgba(236, 72, 153, 0.08) 0%, rgba(219, 39, 119, 0.04) 50%, rgba(15, 18, 29, 0.95) 100%) !important;
+      border: 2px solid rgba(236, 72, 153, 0.45) !important;
+      box-shadow: 0 0 20px rgba(236, 72, 153, 0.08), inset 0 1px 0 rgba(236, 72, 153, 0.1) !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #deck-view-trait .text-pink-900 {
+      color: #fce7f3 !important;
+    }
+    body:not(.day-mode) #deck-view-trait .text-pink-800 {
+      color: #fbcfe8 !important;
+    }
+    body:not(.day-mode) #deck-view-trait .text-pink-600 {
+      color: #f472b6 !important;
+    }
+    body:not(.day-mode) #switch-rule-trait {
+      background-color: rgba(236, 72, 153, 0.25) !important;
+      border-color: rgba(236, 72, 153, 0.6) !important;
+      color: #f472b6 !important;
+    }
+    body:not(.day-mode) #deck-view-trait input {
+      background-color: rgba(0, 0, 0, 0.4) !important;
+      border: 1px solid rgba(236, 72, 153, 0.4) !important;
+      color: #fce7f3 !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+    }
+    body:not(.day-mode) #deck-view-trait input:focus {
+      border-color: #ec4899 !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(236, 72, 153, 0.25) !important;
+    }
+    body:not(.day-mode) #deck-view-trait label {
+      color: #fbcfe8 !important;
+    }
+    body:not(.day-mode) #deck-view-trait span {
+      color: #fce7f3 !important;
+    }
+
+    /* TOKEN ID RULE: Electric Cyan Dark Gradient */
+    body:not(.day-mode) #deck-view-tokenId {
+      background: linear-gradient(145deg, rgba(6, 182, 212, 0.08) 0%, rgba(8, 145, 178, 0.04) 50%, rgba(15, 18, 29, 0.95) 100%) !important;
+      border: 2px solid rgba(6, 182, 212, 0.45) !important;
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.08), inset 0 1px 0 rgba(6, 182, 212, 0.1) !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #deck-view-tokenId .text-cyan-900 {
+      color: #cffafe !important;
+    }
+    body:not(.day-mode) #deck-view-tokenId .text-cyan-800 {
+      color: #a5f3fc !important;
+    }
+    body:not(.day-mode) #deck-view-tokenId .text-cyan-600 {
+      color: #22d3ee !important;
+    }
+    body:not(.day-mode) #switch-rule-tokenId {
+      background-color: rgba(6, 182, 212, 0.25) !important;
+      border-color: rgba(6, 182, 212, 0.6) !important;
+      color: #22d3ee !important;
+    }
+    body:not(.day-mode) #deck-view-tokenId input {
+      background-color: rgba(0, 0, 0, 0.4) !important;
+      border: 1px solid rgba(6, 182, 212, 0.4) !important;
+      color: #cffafe !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+    }
+    body:not(.day-mode) #deck-view-tokenId input:focus {
+      border-color: #06b6d4 !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(6, 182, 212, 0.25) !important;
+    }
+    body:not(.day-mode) #deck-view-tokenId label {
+      color: #a5f3fc !important;
+    }
     body:not(.day-mode) #deck-view-tokenId span {
-      color: #f1f5f9 !important;
+      color: #cffafe !important;
+    }
+
+    /* BENTO (2x2) VIEW */
+    body:not(.day-mode) #deck-view-bento {
+      background: #0c0f1a !important;
+      border: 2px solid rgba(255, 255, 255, 0.1) !important;
+      color: #ffffff !important;
+    }
+
+    /* ─── Controls Strip: MAX, FLEET selects ─── */
+    body:not(.day-mode) #widget-rules select {
+      background-color: #0d1017 !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: #e2e8f0 !important;
+    }
+    body:not(.day-mode) #widget-rules select option {
+      background-color: #0d1017 !important;
+      color: #e2e8f0 !important;
+    }
+    body:not(.day-mode) #widget-rules .text-slate-700 {
+      color: #e2e8f0 !important;
+    }
+
+    /* ─── Gas War Engine buttons: non-selected state ─── */
+    body:not(.day-mode) #widget-rules .bg-slate-50 {
+      background-color: #141824 !important;
+      border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    body:not(.day-mode) #widget-rules .text-amber-600 {
+      color: #fbbf24 !important;
+    }
+    body:not(.day-mode) #widget-rules .text-amber-500 {
+      color: #f59e0b !important;
+    }
+
+    /* ─── Custom Gwei link ─── */
+    body:not(.day-mode) #widget-rules a[onclick*="customGwei"],
+    body:not(.day-mode) #widget-rules [onclick*="customGwei"] {
+      color: #94a3b8 !important;
+    }
+    body:not(.day-mode) #widget-rules a[onclick*="customGwei"]:hover,
+    body:not(.day-mode) #widget-rules [onclick*="customGwei"]:hover {
+      color: #e2e8f0 !important;
+    }
+
+    /* ─── RADAR bar in dark mode ─── */
+    body:not(.day-mode) #widget-rules .bg-emerald-900\/80 {
+      background-color: rgba(6, 78, 59, 0.6) !important;
+    }
+    body:not(.day-mode) #widget-rules .bg-emerald-400 {
+      background-color: #10b981 !important;
+    }
+
+    /* ─── PAPER/REAL badges ─── */
+    body:not(.day-mode) #widget-rules .bg-indigo-50 {
+      background-color: rgba(99, 102, 241, 0.15) !important;
     }
 
     /* ⚡ LIVE STREAM FEED & ORDER BOOK IN DARK MODE */
@@ -1249,23 +1469,68 @@
       color: #ffffff !important;
       box-shadow: 0 0 14px rgba(168, 85, 247, 0.5) !important;
     }
+    /* Floor rule inputs — warm amber themed */
+    body:not(.day-mode) #param-floor-eth,
+    body:not(.day-mode) #param-floor-usd {
+      background-color: rgba(0, 0, 0, 0.4) !important;
+      border: 1px solid rgba(245, 158, 11, 0.4) !important;
+      color: #fef3c7 !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+    }
+    body:not(.day-mode) #param-floor-eth:focus,
+    body:not(.day-mode) #param-floor-usd:focus {
+      border-color: #f59e0b !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(245, 158, 11, 0.25) !important;
+    }
+    /* Rarity rule inputs — royal purple themed */
     body:not(.day-mode) #param-rare-rank,
     body:not(.day-mode) #param-rare-eth,
-    body:not(.day-mode) #param-rare-usd,
-    body:not(.day-mode) #param-floor-eth,
-    body:not(.day-mode) #param-floor-usd,
+    body:not(.day-mode) #param-rare-usd {
+      background-color: rgba(0, 0, 0, 0.4) !important;
+      border: 1px solid rgba(168, 85, 247, 0.4) !important;
+      color: #e9d5ff !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+    }
+    body:not(.day-mode) #param-rare-rank:focus,
+    body:not(.day-mode) #param-rare-eth:focus,
+    body:not(.day-mode) #param-rare-usd:focus {
+      border-color: #a855f7 !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(168, 85, 247, 0.25) !important;
+    }
+    /* Trait rule inputs — hot pink themed */
     body:not(.day-mode) #param-trait-max-eth,
-    body:not(.day-mode) #param-token-ids,
-    body:not(.day-mode) #param-token-max-eth,
     body:not(.day-mode) #param-trait-type,
     body:not(.day-mode) #param-trait-value {
-      background-color: #0d1017 !important;
-      border: 1px solid rgba(255, 255, 255, 0.15) !important;
-      color: #ffffff !important;
+      background-color: rgba(0, 0, 0, 0.4) !important;
+      border: 1px solid rgba(236, 72, 153, 0.4) !important;
+      color: #fce7f3 !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3) !important;
     }
-    body:not(.day-mode) #param-floor-usd,
+    body:not(.day-mode) #param-trait-max-eth:focus,
+    body:not(.day-mode) #param-trait-type:focus,
+    body:not(.day-mode) #param-trait-value:focus {
+      border-color: #ec4899 !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(236, 72, 153, 0.25) !important;
+    }
+    /* Token ID rule inputs — electric cyan themed */
+    body:not(.day-mode) #param-token-ids,
+    body:not(.day-mode) #param-token-max-eth {
+      background-color: rgba(0, 0, 0, 0.4) !important;
+      border: 1px solid rgba(6, 182, 212, 0.4) !important;
+      color: #cffafe !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+    }
+    body:not(.day-mode) #param-token-ids:focus,
+    body:not(.day-mode) #param-token-max-eth:focus {
+      border-color: #06b6d4 !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(6, 182, 212, 0.25) !important;
+    }
+    /* USD fields — keep dollar sign brightness */
+    body:not(.day-mode) #param-floor-usd {
+      color: #fcd34d !important;
+    }
     body:not(.day-mode) #param-rare-usd {
-      color: #38bdf8 !important;
+      color: #c4b5fd !important;
     }
     /* Day Mode Presets */
     body.day-mode .pct-btn {
