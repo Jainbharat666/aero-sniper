@@ -36,7 +36,15 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api', (req, res) => {
-  res.json({ status: 'online', service: 'Aero-Sniper V2 API', timestamp: Date.now() });
+  res.json({
+    status: 'online',
+    service: 'Aero-Sniper V2 API',
+    url: req.url,
+    originalUrl: req.originalUrl,
+    matchedPath: req.headers['x-matched-path'],
+    vercelMatchedPath: req.headers['x-vercel-matched-path'],
+    allHeaders: req.headers
+  });
 });
 
 // High-performance HTTP Keep-Alive Agent for OpenSea REST calls
