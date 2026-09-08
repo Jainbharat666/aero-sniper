@@ -697,9 +697,22 @@ async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
     activeSniperEngine.snipedTokenIds.add(tokenId);
     activeSniperEngine.snipesExecutedCount++;
 
-    // Record on-chain snipe in user's cloud account
+    // Record on-chain snipe in user's cloud account & enforce quota lock
     if (!isSim && activeSniperEngine.authenticatedUserId) {
-      dbRecordUserSnipe(activeSniperEngine.authenticatedUserId, 1).catch(() => {});
+      dbRecordUserSnipe(activeSniperEngine.authenticatedUserId, 1).then(async () => {
+        try {
+          const u = await dbGetUserById(activeSniperEngine.authenticatedUserId);
+          if (u && u.email !== OWNER_EMAIL && u.max_snipes_allowed > 0 && (u.total_snipes || 0) >= u.max_snipes_allowed) {
+            activeSniperEngine.isArmed = false;
+            console.log(`🛑 [QUOTA HARD-LOCK] User ${u.email} reached limit of ${u.max_snipes_allowed} snipes. Disarming engine.`);
+            broadcastSnipeLog(`🛑 [QUOTA EXHAUSTED] Allocated limit of ${u.max_snipes_allowed} snipes reached. Engine auto-disarmed.`);
+            broadcastToClients({
+              type: 'quota_exhausted_disarm',
+              message: `You have completed all ${u.max_snipes_allowed} allocated snipes. Sniper engine has been locked. Please renew in profile.`
+            });
+          }
+        } catch (e) {}
+      }).catch(() => {});
     }
 
     broadcastToClients({
@@ -1147,14 +1160,20 @@ app.post('/api/auth/register', authLimiter, async (req, res) => {
 
     console.log(`[Sniper DB] Registered new user: ${cleanEmail}`);
 
+    const regAllowed = parseInt(newUser.max_snipes_allowed) || 0;
+    const regUsed = newUser.total_snipes || 0;
+    const regRem = regAllowed > 0 ? Math.max(0, regAllowed - regUsed) : null;
+
     const clientSafeUser = {
       id: newUser.id,
       email: newUser.email,
       role: newUser.role,
       invite_code_used: newUser.invite_code_used,
       valid_until: newUser.valid_until,
-      max_snipes_allowed: newUser.max_snipes_allowed,
-      total_snipes: newUser.total_snipes,
+      max_snipes_allowed: regAllowed,
+      total_snipes: regUsed,
+      snipes_used: regUsed,
+      snipes_remaining: regRem !== null ? regRem : 0,
       is_banned: newUser.is_banned,
       created_at: newUser.created_at,
       user_metadata: { role: newUser.role, name: cleanEmail.split('@')[0] }
@@ -1264,14 +1283,20 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     await dbSaveUserConfig(user.id, { session_token: sessionToken, last_login_ip: req.ip });
     const userConfig = await dbGetUserConfig(user.id);
 
+    const logAllowed = parseInt(user.max_snipes_allowed) || 0;
+    const logUsed = user.total_snipes !== undefined ? user.total_snipes : (user.snipes_used || 0);
+    const logRem = logAllowed > 0 ? Math.max(0, logAllowed - logUsed) : null;
+
     const clientSafeUser = {
       id: user.id,
       email: user.email,
       role: user.role || 'vip_member',
       invite_code_used: user.invite_code_used,
       valid_until: user.valid_until,
-      max_snipes_allowed: user.max_snipes_allowed || 0,
-      total_snipes: user.total_snipes || 0,
+      max_snipes_allowed: logAllowed,
+      total_snipes: logUsed,
+      snipes_used: logUsed,
+      snipes_remaining: logRem,
       is_banned: user.is_banned,
       created_at: user.created_at,
       user_metadata: { role: user.role || 'vip_member', name: cleanEmail.split('@')[0] }
@@ -1367,11 +1392,16 @@ app.get('/api/auth/heartbeat', async (req, res) => {
       });
     }
 
+    const hbMax = user.max_snipes_allowed !== undefined ? parseInt(user.max_snipes_allowed) : 0;
+    const hbUsed = user.total_snipes !== undefined ? user.total_snipes : (user.snipes_used || 0);
+    const hbRem = hbMax > 0 ? Math.max(0, hbMax - hbUsed) : null;
     return res.json({
       valid: true,
       valid_until: user.valid_until,
-      max_snipes_allowed: user.max_snipes_allowed || 0,
-      total_snipes: user.total_snipes || 0,
+      max_snipes_allowed: hbMax,
+      snipes_remaining: hbRem,
+      snipes_used: hbUsed,
+      total_snipes: hbUsed,
       is_banned: false,
       role: user.role
     });
@@ -1747,21 +1777,28 @@ app.post('/api/users/toggle-ban', adminAuthMiddleware, async (req, res) => {
 
 // Permanently Delete User
 app.post('/api/users/delete', adminAuthMiddleware, async (req, res) => {
-  const { user_id } = req.body;
-  const user = await dbGetUserById(user_id);
-  if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+  try {
+    const target = req.body.userId || req.body.user_id || req.body.id || req.body.email;
+    if (!target) return res.status(400).json({ success: false, error: 'User ID or email is required' });
 
-  if (user.email === OWNER_EMAIL) {
-    return res.status(400).json({ success: false, error: 'Cannot delete platform owner account' });
-  }
+    let user = await dbGetUserById(target);
+    if (!user) user = await dbGetUserByEmail(target);
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
 
-  const ok = await dbDeleteUser(user.id);
-  await dbDeleteUserConfig(user.id);
-  if (ok) {
-    console.log(`[Sniper DB] Permanently deleted user ${user.email}`);
-    return res.json({ success: true, message: 'User deleted permanently' });
+    if (user.email === OWNER_EMAIL) {
+      return res.status(400).json({ success: false, error: 'Cannot delete platform owner account' });
+    }
+
+    const ok = await dbDeleteUser(user.id);
+    await dbDeleteUserConfig(user.id);
+    if (ok) {
+      console.log(`[Sniper DB] Permanently deleted user ${user.email} (${user.id})`);
+      return res.json({ success: true, message: 'User deleted permanently' });
+    }
+    return res.status(500).json({ success: false, error: 'Delete failed' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
   }
-  return res.status(500).json({ success: false, error: 'Delete failed' });
 });
 
 // Record on-chain snipe operation

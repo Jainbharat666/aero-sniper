@@ -296,7 +296,7 @@
         <button onclick="switchTab('rpc')" id="tab-btn-rpc" class="px-3.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition-all">
           <i class="fa-solid fa-server text-xs"></i> Custom RPCs (<span id="tab-rpc-count">4</span>)
         </button>
-        <button onclick="switchTab('opensea')" id="tab-btn-opensea" class="px-3.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition-all">
+        <button onclick="switchTab('opensea')" id="tab-btn-opensea" class="hidden px-3.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition-all">
           <i class="fa-solid fa-key text-xs text-indigo-600"></i> OpenSea APIs (<span id="tab-opensea-count">6</span>)
         </button>
       </nav>
@@ -413,7 +413,7 @@
             <label class="text-[9px] font-bold text-slate-500 uppercase">WEBSITE URL / OPENSEA SLUG</label>
             <div class="flex gap-1.5">
               <div class="relative flex-1">
-                <input type="text" id="scan-input" placeholder="Paste OpenSea URL or Slug (e.g. bulls-runners-genesis, rhmachines...)" onkeydown="if(event.key==='Enter') scanProject()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1 text-xs text-slate-900 font-mono-code font-bold focus:outline-none focus:border-indigo-500 focus:bg-white pl-7 shadow-inner">
+                <input type="text" id="scan-input" name="search_collection_slug_noautofill" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" placeholder="Paste OpenSea URL or Slug (e.g. bulls-runners-genesis, rhmachines...)" onkeydown="if(event.key==='Enter') scanProject()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1 text-xs text-slate-900 font-mono-code font-bold focus:outline-none focus:border-indigo-500 focus:bg-white pl-7 shadow-inner">
                 <i class="fa-solid fa-link absolute left-2 top-2 text-indigo-500 text-xs"></i>
               </div>
               <button onclick="scanProject()" id="btn-scan" class="px-3.5 py-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-xs rounded-xl shadow-sm flex items-center gap-1 transition-all">
@@ -898,7 +898,7 @@
 
             <div class="flex items-center gap-2 font-mono-code text-xs">
               <div class="relative flex-1">
-                <input type="text" id="stream-search" oninput="filterStreamTable()" placeholder="Search Token ID (#793)..." class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500 pl-7 shadow-inner">
+                <input type="text" id="stream-search" name="stream_token_search_noautofill" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" oninput="filterStreamTable()" placeholder="Search Token ID (#793)..." class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500 pl-7 shadow-inner">
                 <i class="fa-solid fa-magnifying-glass absolute left-2 top-2 text-slate-400 text-[10px]"></i>
               </div>
               <select id="stream-sort" onchange="sortStreamTable(this.value)" class="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-[11px] font-bold text-slate-700 focus:outline-none cursor-pointer">
@@ -4962,6 +4962,11 @@
     }
 
     function switchTab(tabId) {
+      const isOwnerAdmin = currentUser && (currentUser.role === 'admin' || currentUser.email === 'jainbharat666@gmail.com');
+      if (tabId === 'opensea' && !isOwnerAdmin) {
+        showToast('OpenSea API grid is restricted to platform administration', true);
+        tabId = 'dashboard';
+      }
       currentTab = tabId;
       const vDash = document.getElementById('view-dashboard');
       const vWallets = document.getElementById('view-wallets');
@@ -4972,6 +4977,7 @@
       const btnWallets = document.getElementById('tab-btn-wallets');
       const btnRpc = document.getElementById('tab-btn-rpc');
       const btnOpenSea = document.getElementById('tab-btn-opensea');
+      if (btnOpenSea) btnOpenSea.classList.toggle('hidden', !isOwnerAdmin);
 
       [vDash, vWallets, vRpc, vOpenSea].forEach(v => v.classList.add('hidden'));
       [btnDash, btnWallets, btnRpc, btnOpenSea].forEach(b => b.className = 'px-3.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition-all');
@@ -5461,8 +5467,10 @@
             return;
           }
           // Check Snipes Quota
-          if (currentUser.snipes_remaining !== null && currentUser.snipes_remaining !== undefined && currentUser.snipes_remaining <= 0 && currentUser.snipes_remaining !== 0) {
-            showToast('⚠️ Snipes Quota Exhausted! Please top-up in your profile.', true);
+          const maxAllowed = currentUser.max_snipes_allowed !== undefined ? parseInt(currentUser.max_snipes_allowed) : 0;
+          const used = currentUser.snipes_used !== undefined ? currentUser.snipes_used : (currentUser.total_snipes || 0);
+          if (maxAllowed > 0 && used >= maxAllowed) {
+            showToast(`⚠️ Snipes Quota Limit of ${maxAllowed} reached! Please redeem a renewal voucher in profile.`, true);
             openUserProfileModal('renew');
             return;
           }
@@ -7048,7 +7056,19 @@
     let allAdminFleetRpcs = [];
 
     // --- 1. USERNAV PILL IN HEADER ---
+    function purgeAutofilledEmail() {
+      const scanInp = document.getElementById('scan-input');
+      if (scanInp && (scanInp.value.includes('@') || scanInp.value === currentUser?.email)) {
+        scanInp.value = '';
+      }
+      const streamInp = document.getElementById('stream-search');
+      if (streamInp && (streamInp.value.includes('@') || streamInp.value === currentUser?.email)) {
+        streamInp.value = '';
+      }
+    }
+
     function renderAuthHeaderUI() {
+      purgeAutofilledEmail();
       const container = document.getElementById('header-auth-container');
       if (!container) return;
 
@@ -7063,6 +7083,11 @@
       }
 
       const isOwnerAdmin = currentUser.role === 'admin' || currentUser.email === 'jainbharat666@gmail.com';
+      
+      // Ensure OpenSea tab visibility is locked strictly to admin
+      const btnOpenSea = document.getElementById('tab-btn-opensea');
+      if (btnOpenSea) btnOpenSea.classList.toggle('hidden', !isOwnerAdmin);
+
       const roleBadge = isOwnerAdmin 
         ? `<span class="bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase">👑 ADMIN</span>`
         : `<span class="bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase">⚡ VIP</span>`;
@@ -7071,6 +7096,13 @@
       const emailShort = currentUser.email && currentUser.email.length > 16 
         ? currentUser.email.substring(0, 14) + '...' 
         : (currentUser.email || 'VIP Member');
+
+      const maxAllowed = currentUser.max_snipes_allowed !== undefined ? parseInt(currentUser.max_snipes_allowed) : 0;
+      const used = currentUser.snipes_used !== undefined ? currentUser.snipes_used : (currentUser.total_snipes || 0);
+      let remaining = currentUser.snipes_remaining;
+      if (remaining === undefined || remaining === null) {
+        remaining = maxAllowed > 0 ? Math.max(0, maxAllowed - used) : null;
+      }
 
       let accessMetric = '';
       if (isOwnerAdmin) {
@@ -7082,8 +7114,10 @@
           const d = Math.ceil(diff / (1000 * 60 * 60 * 24));
           daysStr = d > 0 ? `${d}d left` : `<span class="text-rose-600 font-black">EXPIRED</span>`;
         }
-        const snipesStr = (currentUser.snipes_remaining === 0 || currentUser.snipes_remaining === null || currentUser.snipes_remaining === undefined) 
-          ? '∞' : `${currentUser.snipes_remaining} snipes`;
+        let snipesStr = '∞';
+        if (maxAllowed > 0) {
+          snipesStr = remaining > 0 ? `${remaining} snipes left` : `<span class="text-rose-600 font-black">0 snipes</span>`;
+        }
         accessMetric = `<span class="text-[10px] text-slate-500 font-bold">⏳ ${daysStr} • ⚡ ${snipesStr}</span>`;
       }
 
@@ -7144,25 +7178,30 @@
       if (ownerBtn) ownerBtn.classList.toggle('hidden', !isOwnerAdmin);
 
       // Snipes Quota Calculation
-      const rem = currentUser.snipes_remaining;
-      const used = currentUser.snipes_used || currentUser.total_snipes || 0;
+      const maxAllowed = currentUser.max_snipes_allowed !== undefined ? parseInt(currentUser.max_snipes_allowed) : 0;
+      const used = currentUser.snipes_used !== undefined ? currentUser.snipes_used : (currentUser.total_snipes || 0);
+      let rem = currentUser.snipes_remaining;
+      if (rem === undefined || rem === null) {
+        rem = maxAllowed > 0 ? Math.max(0, maxAllowed - used) : null;
+      }
       const quotaLabel = document.getElementById('prof-quota-label');
       const quotaProgress = document.getElementById('prof-quota-progress');
       const quotaRemaining = document.getElementById('prof-quota-remaining');
       const inviteUsed = document.getElementById('prof-invite-used');
 
-      if (rem === null || rem === undefined || rem === 0) {
+      if (maxAllowed > 0) {
+        const pct = Math.min(100, Math.round((used / maxAllowed) * 100));
+        if (quotaLabel) quotaLabel.innerText = `${used} / ${maxAllowed} Snipes (${pct}%)`;
+        if (quotaProgress) quotaProgress.style.width = pct + '%';
+        if (quotaRemaining) {
+          quotaRemaining.innerHTML = rem > 0 ? `Remaining: ${rem} Snipes` : `<span class="text-rose-400 font-bold">Remaining: 0 Snipes (Exhausted)</span>`;
+        }
+        if (inviteUsed) inviteUsed.innerText = 'Snipes Completed: ' + used;
+      } else {
         if (quotaLabel) quotaLabel.innerText = 'Unlimited Snipes ⚡';
         if (quotaProgress) quotaProgress.style.width = '100%';
         if (quotaRemaining) quotaRemaining.innerText = 'Remaining: Unlimited';
-        if (inviteUsed) inviteUsed.innerText = 'Snipes Mined: ' + used;
-      } else {
-        const total = used + rem;
-        const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
-        if (quotaLabel) quotaLabel.innerText = `${used} / ${total} Snipes (${pct}%)`;
-        if (quotaProgress) quotaProgress.style.width = pct + '%';
-        if (quotaRemaining) quotaRemaining.innerText = `Remaining: ${rem} Snipes`;
-        if (inviteUsed) inviteUsed.innerText = 'Snipes Mined: ' + used;
+        if (inviteUsed) inviteUsed.innerText = 'Snipes Completed: ' + used;
       }
 
       // Populate Cloud Vault counters
@@ -7878,7 +7917,9 @@
         
         const isBanned = !!u.is_banned;
         const isExpiredTime = u.valid_until && new Date(u.valid_until).getTime() <= Date.now();
-        const isExhaustedQuota = u.snipes_remaining !== null && u.snipes_remaining !== undefined && u.snipes_remaining <= 0 && u.snipes_remaining !== 0;
+        const fMax = u.max_snipes_allowed !== undefined ? parseInt(u.max_snipes_allowed) : 0;
+        const fUsed = u.snipes_used !== undefined ? u.snipes_used : (u.total_snipes || 0);
+        const isExhaustedQuota = fMax > 0 && fUsed >= fMax;
 
         if (filter === 'active') return !isBanned && !isExpiredTime && !isExhaustedQuota;
         if (filter === 'expired') return isExpiredTime;
@@ -7911,7 +7952,12 @@
           validStr = diffDays > 0 ? `${diffDays}d (${expDate.toLocaleDateString()})` : `<span class="text-rose-400 font-bold">Expired</span>`;
         }
 
-        const quotaStr = (u.snipes_remaining === 0 || u.snipes_remaining === null || u.snipes_remaining === undefined) ? '∞ Unlimited' : `${u.snipes_remaining} left`;
+        const uMax = u.max_snipes_allowed !== undefined ? parseInt(u.max_snipes_allowed) : 0;
+        const uUsed = u.snipes_used !== undefined ? u.snipes_used : (u.total_snipes || 0);
+        const uRem = uMax > 0 ? Math.max(0, uMax - uUsed) : null;
+        const quotaStr = (uMax === 0)
+          ? '<span class="text-slate-400 font-bold">∞ Unlimited</span>'
+          : (uRem > 0 ? `${uRem} left (${uUsed}/${uMax})` : `<span class="text-rose-400 font-bold">0 left (${uUsed}/${uMax} Exhausted)</span>`);
         const statusBadge = isBanned 
           ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-rose-500/20 text-rose-400 border border-rose-500/30">SUSPENDED</span>`
           : `<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ACTIVE</span>`;
@@ -8113,14 +8159,16 @@
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${sessionToken}`
           },
-          body: JSON.stringify({ userId })
+          body: JSON.stringify({ userId, user_id: userId, id: userId })
         });
         const d = await res.json();
         if (d.success) {
-          showToast('User deleted');
+          showToast('User deleted permanently');
+          allAdminUsers = allAdminUsers.filter(u => u.id !== userId && u.user_id !== userId && u.email !== userId);
+          filterAdminUsers();
           refreshAdminData();
         } else {
-          showToast(d.error || 'Failed', true);
+          showToast(d.error || 'Failed to delete user', true);
         }
       } catch(e) { showToast(e.message, true); }
     }
