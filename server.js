@@ -35,6 +35,10 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('/api', (req, res) => {
+  res.json({ status: 'online', service: 'Aero-Sniper V2 API', timestamp: Date.now() });
+});
+
 // High-performance HTTP Keep-Alive Agent for OpenSea REST calls
 const httpsAgent = new https.Agent({
   keepAlive: true,
