@@ -46,12 +46,19 @@ echo.
 if exist "%BACKUP_DIR%\%TARGET_VER%\RESTORE_THIS_BACKUP.bat" (
     call "%BACKUP_DIR%\%TARGET_VER%\RESTORE_THIS_BACKUP.bat"
 ) else (
-    echo [1/1] Restoring Local PC Codebase from [%TARGET_VER%]...
+    echo [1/2] Restoring Local PC Codebase from [%TARGET_VER%]...
     robocopy "%BACKUP_DIR%\%TARGET_VER%" "%ROOT%" /E /XD "node_modules" ".git" > nul
     echo       [OK] Sniper V2 codebase restored successfully!
     echo.
     echo ===================================================================
     echo   🎉 SUCCESS: VERSION [%TARGET_VER%] RESTORED TO SNIPER V2!
     echo ===================================================================
+    echo.
+    set /p PUSH_GHT="🚀 Do you want to push this restored version to GitHub & Vercel? (Y/N, default Y): "
+    if /i "%PUSH_GHT%"=="" set PUSH_GHT=Y
+    if /i "%PUSH_GHT%"=="Y" (
+        if exist "%ROOT%\push_to_github.bat" call "%ROOT%\push_to_github.bat" --auto
+    )
+    echo.
     pause
 )
