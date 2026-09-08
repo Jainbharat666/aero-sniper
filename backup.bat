@@ -38,7 +38,7 @@ set DEST_ZIP=%BACKUP_DIR%\%NEXT_NUM%.zip
 
 :: Step 2: Complete 1:1 Copy of ALL Files (Including node_modules, cache, configs, assets)
 echo [2/3] Copying complete project files (30+ MB full bundle) to folder [%NEXT_NUM%]...
-robocopy "%ROOT%" "%DEST_FOLDER%" /E /XD ".git" > nul
+robocopy "%ROOT%" "%DEST_FOLDER%" /E /XD ".git" /MT:16 > nul
 if %ERRORLEVEL% GTR 7 (
     echo ❌ ERROR: Failed to copy files to backup folder!
     pause
@@ -72,7 +72,7 @@ echo echo ===================================================================
 echo pause ^> nul
 echo echo.
 echo echo [1/2] Restoring Complete Local Codebase ^& Dependencies...
-echo robocopy "%%~dp0." "%ROOT%" /E /XD ".git" ^> nul
+echo robocopy "%%~dp0." "%ROOT%" /E /XD ".git" /MT:16 ^> nul
 echo echo.
 echo echo ===================================================================
 echo echo   🎉 SUCCESS: 100%%%% FULL PROJECT VERSION [%NEXT_NUM%] RESTORED!
@@ -111,9 +111,12 @@ echo - auth-art-clean.png, supabase_schema_sniper.sql, vercel.json, render.yaml
 echo ===================================================================
 ) > "%DEST_FOLDER%\SNAPSHOT_INFO.txt"
 
-:: Step 3: Create Zip Archive
+:: Step 3: Create Zip Archive (Ultra-Fast 1-Sec Native Tar with PowerShell Fallback)
 echo [3/3] Creating complete compressed archive [%NEXT_NUM%.zip]...
-powershell -NoProfile -Command "Compress-Archive -Path '%DEST_FOLDER%\*' -DestinationPath '%DEST_ZIP%' -CompressionLevel Optimal -Force"
+tar -acf "%DEST_ZIP%" -C "%DEST_FOLDER%" . > nul 2>&1
+if not exist "%DEST_ZIP%" (
+    powershell -NoProfile -Command "Compress-Archive -Path '%DEST_FOLDER%\*' -DestinationPath '%DEST_ZIP%' -CompressionLevel Fastest -Force"
+)
 
 if exist "%DEST_ZIP%" (
     echo    ✅ Zip created:    %DEST_ZIP%
