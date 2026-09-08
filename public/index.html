@@ -1872,43 +1872,43 @@
   </div>
 
   <!-- ================= 5A-2. 5-TAB CYBER USER PROFILE & VAULT MODAL (AEROMINT V2 STANDARD) ================= -->
-  <div id="user-profile-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl max-w-xl w-full p-6 space-y-4 animate-in fade-in zoom-in duration-200 text-slate-100 font-mono-code">
+  <div id="user-profile-modal" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white border border-slate-200 rounded-3xl shadow-2xl max-w-xl w-full p-6 space-y-4 animate-in fade-in zoom-in duration-200 text-slate-900 font-mono-code">
       
       <!-- Modal Header -->
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <div class="flex items-center gap-3">
-          <div id="prof-avatar" class="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 font-black text-lg">
+          <div id="prof-avatar" class="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 font-black text-lg">
             👤
           </div>
           <div>
-            <h3 class="text-sm font-black text-white" id="prof-modal-email">user@email.com</h3>
+            <h3 class="text-sm font-black text-slate-900" id="prof-modal-email">user@email.com</h3>
             <div class="flex items-center gap-2">
-              <span id="prof-modal-role-badge" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">VIP MEMBER</span>
-              <span class="text-[10px] text-slate-400" id="prof-modal-uid">UID: --</span>
+              <span id="prof-modal-role-badge" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-indigo-50 text-indigo-700 border border-indigo-200">VIP MEMBER</span>
+              <span class="text-[10px] text-slate-500 font-mono-code" id="prof-modal-uid">UID: --</span>
             </div>
           </div>
         </div>
-        <button onclick="closeUserProfileModal()" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-xs font-bold transition-colors">
+        <button onclick="closeUserProfileModal()" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 flex items-center justify-center text-xs font-bold transition-colors">
           ✕
         </button>
       </div>
 
       <!-- 5 Tab Switcher -->
-      <div class="flex bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs font-bold gap-1">
-        <button onclick="switchProfileTab('overview')" id="prof-tab-btn-overview" class="flex-1 py-1.5 rounded-xl bg-indigo-600 text-white shadow-sm transition-all text-center">
+      <div class="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-bold gap-1">
+        <button onclick="switchProfileTab('overview')" id="prof-tab-btn-overview" class="flex-1 py-1.5 rounded-xl bg-white text-indigo-600 shadow-sm transition-all text-center">
           📊 Overview
         </button>
-        <button onclick="switchProfileTab('cloud_vault')" id="prof-tab-btn-cloud_vault" class="flex-1 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all text-center">
+        <button onclick="switchProfileTab('cloud_vault')" id="prof-tab-btn-cloud_vault" class="flex-1 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition-all text-center">
           ☁️ Cloud Vault
         </button>
-        <button onclick="switchProfileTab('rpcs')" id="prof-tab-btn-rpcs" class="flex-1 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all text-center">
+        <button onclick="switchProfileTab('rpcs')" id="prof-tab-btn-rpcs" class="flex-1 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition-all text-center">
           ⚡ Custom RPCs
         </button>
-        <button onclick="switchProfileTab('security')" id="prof-tab-btn-security" class="flex-1 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all text-center">
+        <button onclick="switchProfileTab('security')" id="prof-tab-btn-security" class="flex-1 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition-all text-center">
           🔐 Security
         </button>
-        <button onclick="switchProfileTab('renew')" id="prof-tab-btn-renew" class="flex-1 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all text-center">
+        <button onclick="switchProfileTab('renew')" id="prof-tab-btn-renew" class="flex-1 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition-all text-center">
           🎁 Renew
         </button>
       </div>
@@ -1916,44 +1916,44 @@
       <!-- TAB 1: OVERVIEW -->
       <div id="prof-view-overview" class="space-y-3">
         <!-- Live Second-by-Second Countdown Clock -->
-        <div class="bg-gradient-to-br from-indigo-950/60 to-purple-950/60 border border-indigo-500/30 rounded-2xl p-4 text-center space-y-2">
-          <div class="text-[10px] font-black uppercase tracking-wider text-indigo-300 flex items-center justify-center gap-1.5">
-            <i class="fa-regular fa-clock text-amber-400"></i> Subscription Remaining (Live Ticker)
+        <div class="bg-gradient-to-br from-indigo-50/70 via-purple-50/70 to-pink-50/70 border border-indigo-100 rounded-2xl p-4 text-center space-y-2">
+          <div class="text-[10px] font-black uppercase tracking-wider text-indigo-700 flex items-center justify-center gap-1.5">
+            <i class="fa-regular fa-clock text-amber-600"></i> Subscription Remaining (Live Ticker)
           </div>
           <div id="prof-clock-container" class="grid grid-cols-4 gap-2 py-1">
-            <div class="bg-slate-950/80 border border-indigo-500/20 rounded-xl p-2">
-              <div id="prof-clock-days" class="text-xl font-black text-indigo-400">00</div>
-              <div class="text-[9px] text-slate-400 uppercase font-bold">Days</div>
+            <div class="bg-white border border-indigo-100 rounded-xl p-2 shadow-sm">
+              <div id="prof-clock-days" class="text-xl font-black text-indigo-600">00</div>
+              <div class="text-[9px] text-slate-500 uppercase font-bold">Days</div>
             </div>
-            <div class="bg-slate-950/80 border border-indigo-500/20 rounded-xl p-2">
-              <div id="prof-clock-hours" class="text-xl font-black text-indigo-400">00</div>
-              <div class="text-[9px] text-slate-400 uppercase font-bold">Hours</div>
+            <div class="bg-white border border-indigo-100 rounded-xl p-2 shadow-sm">
+              <div id="prof-clock-hours" class="text-xl font-black text-indigo-600">00</div>
+              <div class="text-[9px] text-slate-500 uppercase font-bold">Hours</div>
             </div>
-            <div class="bg-slate-950/80 border border-indigo-500/20 rounded-xl p-2">
-              <div id="prof-clock-mins" class="text-xl font-black text-indigo-400">00</div>
-              <div class="text-[9px] text-slate-400 uppercase font-bold">Mins</div>
+            <div class="bg-white border border-indigo-100 rounded-xl p-2 shadow-sm">
+              <div id="prof-clock-mins" class="text-xl font-black text-indigo-600">00</div>
+              <div class="text-[9px] text-slate-500 uppercase font-bold">Mins</div>
             </div>
-            <div class="bg-slate-950/80 border border-indigo-500/20 rounded-xl p-2">
-              <div id="prof-clock-secs" class="text-xl font-black text-pink-400">00</div>
-              <div class="text-[9px] text-slate-400 uppercase font-bold">Secs</div>
+            <div class="bg-white border border-indigo-100 rounded-xl p-2 shadow-sm">
+              <div id="prof-clock-secs" class="text-xl font-black text-pink-600">00</div>
+              <div class="text-[9px] text-slate-500 uppercase font-bold">Secs</div>
             </div>
           </div>
-          <div id="prof-clock-lifetime" class="hidden text-sm font-black text-emerald-400 py-2">
+          <div id="prof-clock-lifetime" class="hidden text-sm font-black text-emerald-700 py-2">
             👑 Permanent Lifetime Master Access (No Expiry)
           </div>
-          <div class="text-[10px] text-slate-400" id="prof-valid-until-label">Valid until: --</div>
+          <div class="text-[10px] text-slate-500" id="prof-valid-until-label">Valid until: --</div>
         </div>
 
         <!-- Snipes Quota Usage -->
-        <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-3.5 space-y-2">
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2">
           <div class="flex items-center justify-between text-xs">
-            <span class="text-[10px] uppercase font-black text-slate-400">Snipes Quota Consumption</span>
-            <span id="prof-quota-label" class="font-black text-purple-400">0 / 0 Snipes</span>
+            <span class="text-[10px] uppercase font-black text-slate-600">Snipes Quota Consumption</span>
+            <span id="prof-quota-label" class="font-black text-purple-700">0 / 0 Snipes</span>
           </div>
-          <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
-            <div id="prof-quota-progress" class="bg-gradient-to-r from-emerald-500 via-indigo-500 to-purple-500 h-2.5 rounded-full transition-all" style="width: 0%"></div>
+          <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+            <div id="prof-quota-progress" class="bg-gradient-to-r from-emerald-500 via-indigo-500 to-purple-600 h-2.5 rounded-full transition-all" style="width: 0%"></div>
           </div>
-          <div class="flex items-center justify-between text-[10px] text-slate-400">
+          <div class="flex items-center justify-between text-[10px] text-slate-500">
             <span id="prof-quota-remaining">Remaining: --</span>
             <span id="prof-invite-used">Invite: --</span>
           </div>
@@ -1962,25 +1962,25 @@
 
       <!-- TAB 2: CLOUD VAULT -->
       <div id="prof-view-cloud_vault" class="space-y-3 hidden">
-        <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-3.5 space-y-2">
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <i class="fa-solid fa-shield-halved text-indigo-400 text-lg"></i>
+              <i class="fa-solid fa-shield-halved text-indigo-600 text-lg"></i>
               <div>
-                <div class="text-xs font-bold text-white">Non-Custodial Cloud Vault</div>
-                <div class="text-[10px] text-slate-400">Securely sync your wallet fleet and custom presets across devices.</div>
+                <div class="text-xs font-bold text-slate-900">Non-Custodial Cloud Vault</div>
+                <div class="text-[10px] text-slate-500">Securely sync your wallet fleet and custom presets across devices.</div>
               </div>
             </div>
-            <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">AES-GCM</span>
+            <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">AES-GCM</span>
           </div>
           <div class="grid grid-cols-2 gap-2 text-xs pt-2">
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-2.5">
+            <div class="bg-white border border-slate-200 rounded-xl p-2.5 shadow-sm">
               <div class="text-[9px] uppercase text-slate-500 font-bold">Local Wallets</div>
-              <div id="prof-vault-wallets-count" class="text-base font-black text-indigo-400">0</div>
+              <div id="prof-vault-wallets-count" class="text-base font-black text-indigo-600">0</div>
             </div>
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-2.5">
+            <div class="bg-white border border-slate-200 rounded-xl p-2.5 shadow-sm">
               <div class="text-[9px] uppercase text-slate-500 font-bold">Custom RPCs</div>
-              <div id="prof-vault-rpcs-count" class="text-base font-black text-purple-400">0</div>
+              <div id="prof-vault-rpcs-count" class="text-base font-black text-purple-600">0</div>
             </div>
           </div>
           <div class="text-[10px] text-slate-500" id="prof-vault-last-sync">Last synced: Never</div>
@@ -1990,30 +1990,30 @@
           <button onclick="handleCloudVaultBackup()" class="py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20 transition-all">
             <i class="fa-solid fa-cloud-arrow-up"></i> ⚡ Backup to Cloud Vault
           </button>
-          <button onclick="handleCloudVaultRestore()" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all">
-            <i class="fa-solid fa-cloud-arrow-down text-emerald-400"></i> 📥 Restore from Cloud
+          <button onclick="handleCloudVaultRestore()" class="py-2.5 px-3 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm">
+            <i class="fa-solid fa-cloud-arrow-down text-emerald-600"></i> 📥 Restore from Cloud
           </button>
         </div>
-        <button onclick="handleCloudVaultWipe()" class="w-full py-2 px-3 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 border border-rose-800/40 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all">
-          <i class="fa-solid fa-trash-can text-rose-400"></i> 🗑️ Wipe Remote Cloud Data
+        <button onclick="handleCloudVaultWipe()" class="w-full py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all">
+          <i class="fa-solid fa-trash-can text-rose-600"></i> 🗑️ Wipe Remote Cloud Data
         </button>
       </div>
 
       <!-- TAB 3: CUSTOM RPCS MANAGER -->
       <div id="prof-view-rpcs" class="space-y-3 hidden">
         <!-- Add RPC Form -->
-        <form onsubmit="handleAddUserCustomRpc(event)" class="bg-slate-950/60 border border-slate-800 rounded-2xl p-3 space-y-2">
-          <div class="text-[10px] uppercase font-black text-indigo-400 flex items-center gap-1">
+        <form onsubmit="handleAddUserCustomRpc(event)" class="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-2">
+          <div class="text-[10px] uppercase font-black text-indigo-700 flex items-center gap-1">
             <i class="fa-solid fa-plus-circle"></i> Add Private Node
           </div>
           <div class="grid grid-cols-2 gap-2 text-xs">
             <div>
-              <label class="text-[9px] text-slate-400 block mb-0.5">Node Name</label>
-              <input type="text" id="user-rpc-name" required placeholder="e.g. My Alchemy Node" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+              <label class="text-[9px] text-slate-600 font-bold block mb-0.5">Node Name</label>
+              <input type="text" id="user-rpc-name" required placeholder="e.g. My Alchemy Node" class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-600 shadow-inner">
             </div>
             <div>
-              <label class="text-[9px] text-slate-400 block mb-0.5">Network</label>
-              <select id="user-rpc-network" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+              <label class="text-[9px] text-slate-600 font-bold block mb-0.5">Network</label>
+              <select id="user-rpc-network" class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-600 shadow-inner">
                 <option value="robinhood">Robinhood Chain (4663)</option>
                 <option value="ethereum">Ethereum (1)</option>
                 <option value="base">Base (8453)</option>
@@ -2023,11 +2023,11 @@
             </div>
           </div>
           <div>
-            <label class="text-[9px] text-slate-400 block mb-0.5">RPC URL (HTTPS / WSS)</label>
-            <input type="url" id="user-rpc-url" required placeholder="https://robinhood-mainnet.g.alchemy.com/v2/..." class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+            <label class="text-[9px] text-slate-600 font-bold block mb-0.5">RPC URL (HTTPS / WSS)</label>
+            <input type="url" id="user-rpc-url" required placeholder="https://robinhood-mainnet.g.alchemy.com/v2/..." class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-600 shadow-inner">
           </div>
           <div class="flex justify-end pt-1">
-            <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs flex items-center gap-1 shadow-md">
+            <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs flex items-center gap-1 shadow-md shadow-indigo-500/20">
               <i class="fa-solid fa-bolt"></i> Add Node
             </button>
           </div>
@@ -2035,36 +2035,36 @@
 
         <!-- Custom Nodes List Header -->
         <div class="flex items-center justify-between pt-1">
-          <span class="text-[10px] uppercase font-black text-slate-400">Your Private Nodes (<span id="user-rpcs-count">0</span>)</span>
-          <button onclick="testUserCustomRpcLatencies()" class="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1">
+          <span class="text-[10px] uppercase font-black text-slate-600">Your Private Nodes (<span id="user-rpcs-count">0</span>)</span>
+          <button onclick="testUserCustomRpcLatencies()" class="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1">
             <i class="fa-solid fa-gauge-high"></i> Benchmark Latencies
           </button>
         </div>
-        <div id="user-rpcs-list" class="max-h-36 overflow-y-auto space-y-1.5 divide-y divide-slate-800/50">
+        <div id="user-rpcs-list" class="max-h-36 overflow-y-auto space-y-1.5 divide-y divide-slate-100">
           <!-- Dynamically populated -->
         </div>
       </div>
 
       <!-- TAB 4: SECURITY -->
       <div id="prof-view-security" class="space-y-3 hidden">
-        <form onsubmit="handleUserProfileChangePassword(event)" class="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-3">
-          <div class="text-[11px] font-black uppercase text-indigo-400 flex items-center gap-1.5">
+        <form onsubmit="handleUserProfileChangePassword(event)" class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+          <div class="text-[11px] font-black uppercase text-indigo-700 flex items-center gap-1.5">
             <i class="fa-solid fa-lock"></i> Change Account Password
           </div>
           <div>
-            <label class="text-[9px] text-slate-400 block mb-0.5 uppercase font-bold">Current Password</label>
-            <input type="password" id="prof-cp-current" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+            <label class="text-[9px] text-slate-600 block mb-0.5 uppercase font-bold">Current Password</label>
+            <input type="password" id="prof-cp-current" required class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-600 shadow-inner">
           </div>
           <div>
-            <label class="text-[9px] text-slate-400 block mb-0.5 uppercase font-bold">New Password (min 6 chars)</label>
-            <input type="password" id="prof-cp-new" required minlength="6" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+            <label class="text-[9px] text-slate-600 block mb-0.5 uppercase font-bold">New Password (min 6 chars)</label>
+            <input type="password" id="prof-cp-new" required minlength="6" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-600 shadow-inner">
           </div>
           <div>
-            <label class="text-[9px] text-slate-400 block mb-0.5 uppercase font-bold">Confirm New Password</label>
-            <input type="password" id="prof-cp-confirm" required minlength="6" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+            <label class="text-[9px] text-slate-600 block mb-0.5 uppercase font-bold">Confirm New Password</label>
+            <input type="password" id="prof-cp-confirm" required minlength="6" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-600 shadow-inner">
           </div>
           <div class="pt-1 flex justify-end">
-            <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-md">
+            <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-md shadow-indigo-600/20">
               Update Password
             </button>
           </div>
@@ -2073,30 +2073,30 @@
 
       <!-- TAB 5: RENEW / TOP-UP -->
       <div id="prof-view-renew" class="space-y-3 hidden">
-        <form onsubmit="handleUserProfileRedeemTopup(event)" class="bg-gradient-to-br from-purple-950/50 to-indigo-950/50 border border-purple-500/30 rounded-2xl p-4 space-y-3">
-          <div class="text-[11px] font-black uppercase text-purple-300 flex items-center gap-1.5">
-            <i class="fa-solid fa-gift text-purple-400"></i> Redeem VIP Top-up / Renewal Voucher
+        <form onsubmit="handleUserProfileRedeemTopup(event)" class="bg-gradient-to-br from-purple-50 via-indigo-50 to-pink-50 border border-purple-200 rounded-2xl p-4 space-y-3">
+          <div class="text-[11px] font-black uppercase text-purple-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-gift text-purple-600"></i> Redeem VIP Top-up / Renewal Voucher
           </div>
-          <p class="text-[10px] text-slate-400 font-sans">Enter a renewal key purchased from the Administrator to immediately add validity days or increase your allowed snipes quota without losing your wallets.</p>
+          <p class="text-[10px] text-slate-600 font-sans">Enter a renewal key purchased from the Administrator to immediately add validity days or increase your allowed snipes quota without losing your wallets.</p>
           <div>
-            <label class="text-[9px] text-purple-300 uppercase font-bold block mb-0.5">Top-up Voucher Key</label>
-            <input type="text" id="prof-topup-code" required placeholder="e.g. SNIPER-PRO-30D" class="w-full bg-slate-950 border border-purple-500/40 rounded-xl px-3 py-2.5 text-xs font-black text-purple-200 uppercase focus:outline-none focus:border-purple-400">
+            <label class="text-[9px] text-purple-900 uppercase font-bold block mb-0.5">Top-up Voucher Key</label>
+            <input type="text" id="prof-topup-code" required placeholder="e.g. SNIPER-PRO-30D" class="w-full bg-white border border-purple-300 rounded-xl px-3 py-2.5 text-xs font-black text-purple-950 uppercase focus:outline-none focus:border-purple-600 shadow-inner">
           </div>
-          <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs shadow-md shadow-purple-600/25 flex items-center justify-center gap-1.5">
+          <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs shadow-md shadow-purple-600/25 flex items-center justify-center gap-1.5">
             <i class="fa-solid fa-bolt"></i> Redeem Key &amp; Extend Access
           </button>
         </form>
       </div>
 
       <!-- Footer Actions -->
-      <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+      <div class="flex items-center justify-between pt-2 border-t border-slate-100">
         <div id="prof-owner-btn-container" class="hidden">
-          <button onclick="closeUserProfileModal(); openAdminModal();" class="py-2 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 font-bold text-xs flex items-center gap-1.5">
+          <button onclick="closeUserProfileModal(); openAdminModal();" class="py-2 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-300 font-bold text-xs flex items-center gap-1.5">
             👑 Master Admin
           </button>
         </div>
-        <button onclick="logoutUser()" class="py-2 px-3.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 font-bold text-xs flex items-center gap-1.5 ml-auto">
-          <i class="fa-solid fa-power-off text-rose-400"></i> Logout Account
+        <button onclick="logoutUser()" class="py-2 px-3.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold text-xs flex items-center gap-1.5 ml-auto">
+          <i class="fa-solid fa-power-off text-rose-600"></i> Logout Account
         </button>
       </div>
 
@@ -2164,48 +2164,48 @@
   </div>
 
   <!-- ================= 5A-5. 👑 MASTER ADMIN CONTROLS MODAL (EXCLUSIVE FOR OWNER) ================= -->
-  <div id="admin-panel-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden font-mono-code text-xs">
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl max-w-5xl w-full h-[88vh] flex flex-col p-6 space-y-4 animate-in fade-in zoom-in duration-200 overflow-hidden text-slate-100">
+  <div id="admin-panel-modal" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 hidden font-mono-code text-xs">
+    <div class="bg-white border border-slate-200 rounded-3xl shadow-2xl max-w-5xl w-full h-[88vh] flex flex-col p-6 space-y-4 animate-in fade-in zoom-in duration-200 overflow-hidden text-slate-900">
       
       <!-- Modal Header -->
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-xl text-amber-400 font-black shadow-sm">
+          <div class="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-xl text-amber-600 font-black shadow-sm">
             👑
           </div>
           <div>
             <div class="flex items-center gap-2">
-              <h2 class="text-base font-black text-white">Aero-Sniper V2 Master Admin Console</h2>
-              <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-500/20 text-amber-400 border border-amber-500/40">PLATFORM OWNER</span>
+              <h2 class="text-base font-black text-slate-900">Aero-Sniper V2 Master Admin Console</h2>
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-50 text-amber-800 border border-amber-200">PLATFORM OWNER</span>
             </div>
-            <p class="text-[11px] text-slate-400 font-mono-code font-bold">jainbharat666@gmail.com • Isolated Supabase Database</p>
+            <p class="text-[11px] text-slate-500 font-mono-code font-bold">jainbharat666@gmail.com • Isolated Supabase Database</p>
           </div>
         </div>
 
-        <button onclick="closeAdminModal()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-sm font-bold transition-colors">
+        <button onclick="closeAdminModal()" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 flex items-center justify-center text-sm font-bold transition-colors">
           ✕
         </button>
       </div>
 
       <!-- Admin Tab Switcher -->
       <div class="flex items-center justify-between gap-2 shrink-0">
-        <div class="flex bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs font-bold gap-1">
-          <button type="button" onclick="switchAdminTab('users')" id="admin-tab-btn-users" class="px-4 py-1.5 rounded-xl bg-indigo-600 text-white shadow-sm transition-all flex items-center gap-1.5">
+        <div class="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-bold gap-1">
+          <button type="button" onclick="switchAdminTab('users')" id="admin-tab-btn-users" class="px-4 py-1.5 rounded-xl bg-white text-indigo-600 shadow-sm transition-all flex items-center gap-1.5 font-bold">
             <i class="fa-solid fa-users text-xs"></i> Registered Members (<span id="admin-user-count">0</span>)
           </button>
-          <button type="button" onclick="switchAdminTab('invites')" id="admin-tab-btn-invites" class="px-4 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+          <button type="button" onclick="switchAdminTab('invites')" id="admin-tab-btn-invites" class="px-4 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5 font-bold">
             <i class="fa-solid fa-ticket text-xs"></i> VIP Invite Generator (<span id="admin-invite-count">0</span>)
           </button>
-          <button type="button" onclick="switchAdminTab('fleet')" id="admin-tab-btn-fleet" class="px-4 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+          <button type="button" onclick="switchAdminTab('fleet')" id="admin-tab-btn-fleet" class="px-4 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5 font-bold">
             <i class="fa-solid fa-server text-xs"></i> Fleet RPC Cluster
           </button>
-          <button type="button" onclick="switchAdminTab('telemetry')" id="admin-tab-btn-telemetry" class="px-4 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+          <button type="button" onclick="switchAdminTab('telemetry')" id="admin-tab-btn-telemetry" class="px-4 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5 font-bold">
             <i class="fa-solid fa-heart-pulse text-xs"></i> Cloud Health
           </button>
         </div>
 
-        <button onclick="refreshAdminData()" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-mono-code text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all">
-          <i class="fa-solid fa-rotate text-xs text-indigo-400"></i> Refresh
+        <button onclick="refreshAdminData()" class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 font-mono-code text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all border border-slate-200">
+          <i class="fa-solid fa-rotate text-xs text-indigo-600"></i> Refresh
         </button>
       </div>
 
@@ -2215,24 +2215,24 @@
         <!-- Search & Filter Badges -->
         <div class="flex items-center justify-between gap-3 shrink-0">
           <div class="relative flex-1">
-            <input type="text" id="admin-user-search" oninput="filterAdminUsers()" placeholder="Search users by email, ID or invite code..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-8 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" name="admin_user_search_noautofill">
-            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2 text-slate-500 text-xs"></i>
-            <button id="admin-search-clear-btn" type="button" onclick="clearAdminUserSearch()" class="hidden absolute right-2.5 top-1.5 text-slate-500 hover:text-white text-xs px-1">✕</button>
+            <input type="text" id="admin-user-search" oninput="filterAdminUsers()" placeholder="Search users by email, ID or invite code..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-8 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-600 focus:bg-white shadow-inner" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" name="admin_user_search_noautofill">
+            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2 text-slate-400 text-xs"></i>
+            <button id="admin-search-clear-btn" type="button" onclick="clearAdminUserSearch()" class="hidden absolute right-2.5 top-1.5 text-slate-400 hover:text-slate-700 text-xs px-1">✕</button>
           </div>
           <!-- Filter Buttons (AeroMint V2 Standard) -->
-          <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-[10px] font-bold">
-            <button onclick="setAdminUserFilter('all')" id="uf-btn-all" class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white">All</button>
-            <button onclick="setAdminUserFilter('active')" id="uf-btn-active" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white">Active</button>
-            <button onclick="setAdminUserFilter('expired')" id="uf-btn-expired" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white">Expired Time</button>
-            <button onclick="setAdminUserFilter('exhausted')" id="uf-btn-exhausted" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white">Expired Quota</button>
-            <button onclick="setAdminUserFilter('banned')" id="uf-btn-banned" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white">Suspended</button>
+          <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-[10px] font-bold">
+            <button onclick="setAdminUserFilter('all')" id="uf-btn-all" class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-bold shadow-sm">All</button>
+            <button onclick="setAdminUserFilter('active')" id="uf-btn-active" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 font-bold">Active</button>
+            <button onclick="setAdminUserFilter('expired')" id="uf-btn-expired" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 font-bold">Expired Time</button>
+            <button onclick="setAdminUserFilter('exhausted')" id="uf-btn-exhausted" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 font-bold">Expired Quota</button>
+            <button onclick="setAdminUserFilter('banned')" id="uf-btn-banned" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 font-bold">Suspended</button>
           </div>
         </div>
 
         <!-- Users Table Container -->
-        <div class="flex-1 border border-slate-800 rounded-2xl overflow-y-auto bg-slate-950/60">
+        <div class="flex-1 border border-slate-200 rounded-2xl overflow-y-auto bg-white shadow-sm">
           <table class="w-full text-left font-mono-code text-xs border-collapse">
-            <thead class="bg-slate-900 sticky top-0 z-10 text-[10px] text-slate-400 uppercase font-black tracking-wider border-b border-slate-800">
+            <thead class="bg-slate-50 sticky top-0 z-10 text-[10px] text-slate-500 uppercase font-black tracking-wider border-b border-slate-200">
               <tr>
                 <th class="py-2.5 px-3">Email / UID</th>
                 <th class="py-2.5 px-3">Role / Code</th>
@@ -2242,7 +2242,7 @@
                 <th class="py-2.5 px-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody id="admin-users-tbody" class="divide-y divide-slate-800/60">
+            <tbody id="admin-users-tbody" class="divide-y divide-slate-100">
               <!-- Dynamically populated -->
             </tbody>
           </table>
@@ -2254,48 +2254,48 @@
       <div id="admin-view-invites" class="flex-1 flex flex-col space-y-3 overflow-hidden hidden">
         
         <!-- Create New Invite Code Card -->
-        <form onsubmit="handleCreateInviteSubmit(event)" class="bg-slate-950/60 border border-slate-800 rounded-2xl p-3.5 space-y-2.5 shrink-0 font-mono-code text-xs">
-          <div class="flex items-center justify-between text-[11px] font-black uppercase text-indigo-400">
-            <span class="flex items-center gap-1.5"><i class="fa-solid fa-plus-circle"></i> Generate VIP Access Key (Dual Constraint)</span>
-            <button type="button" onclick="generateDiceInviteCode()" class="text-[10px] bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1 transition-all">
+        <form onsubmit="handleCreateInviteSubmit(event)" class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2.5 shrink-0 font-mono-code text-xs">
+          <div class="flex items-center justify-between text-[11px] font-black uppercase text-indigo-700">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-plus-circle text-indigo-600"></i> Generate VIP Access Key (Dual Constraint)</span>
+            <button type="button" onclick="generateDiceInviteCode()" class="text-[10px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-lg flex items-center gap-1 transition-all font-bold">
               🎲 Auto Generate Random Key
             </button>
           </div>
 
           <div class="grid grid-cols-4 gap-2 text-xs">
             <div>
-              <label class="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Invite Code</label>
-              <input type="text" id="gen-invite-code" required placeholder="e.g. SNIPER-VIP-2026" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-black uppercase text-indigo-300 focus:outline-none focus:border-indigo-500" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" name="gen_invite_code_noautofill">
+              <label class="text-[9px] text-slate-600 uppercase font-bold block mb-0.5">Invite Code</label>
+              <input type="text" id="gen-invite-code" required placeholder="e.g. SNIPER-VIP-2026" class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-black uppercase text-indigo-700 focus:outline-none focus:border-indigo-600 shadow-inner" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" name="gen_invite_code_noautofill">
             </div>
             <div>
-              <label class="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Validity Days</label>
-              <input type="number" id="gen-invite-days" required value="30" min="1" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none focus:border-indigo-500">
+              <label class="text-[9px] text-slate-600 uppercase font-bold block mb-0.5">Validity Days</label>
+              <input type="number" id="gen-invite-days" required value="30" min="1" class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-600 shadow-inner">
             </div>
             <div>
-              <label class="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Snipes Limit (0=Unltd)</label>
-              <input type="number" id="gen-invite-snipes" required value="0" min="0" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none focus:border-indigo-500">
+              <label class="text-[9px] text-slate-600 uppercase font-bold block mb-0.5">Snipes Limit (0=Unltd)</label>
+              <input type="number" id="gen-invite-snipes" required value="0" min="0" class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-600 shadow-inner">
             </div>
             <div>
-              <label class="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Max Registrations</label>
-              <input type="number" id="gen-invite-uses" required value="1" min="1" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none focus:border-indigo-500">
+              <label class="text-[9px] text-slate-600 uppercase font-bold block mb-0.5">Max Registrations</label>
+              <input type="number" id="gen-invite-uses" required value="1" min="1" class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-600 shadow-inner">
             </div>
           </div>
 
           <!-- Quick Presets -->
           <div class="flex items-center justify-between pt-1 text-[10px]">
             <div class="flex items-center gap-1">
-              <span class="text-slate-500">Days:</span>
-              <button type="button" onclick="setQuickInviteDays(7)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">+7d</button>
-              <button type="button" onclick="setQuickInviteDays(30)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">+30d</button>
-              <button type="button" onclick="setQuickInviteDays(90)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">+90d</button>
-              <button type="button" onclick="setQuickInviteDays(365)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">+365d</button>
+              <span class="text-slate-500 font-bold">Days:</span>
+              <button type="button" onclick="setQuickInviteDays(7)" class="px-2 py-0.5 rounded bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold shadow-xs">+7d</button>
+              <button type="button" onclick="setQuickInviteDays(30)" class="px-2 py-0.5 rounded bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold shadow-xs">+30d</button>
+              <button type="button" onclick="setQuickInviteDays(90)" class="px-2 py-0.5 rounded bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold shadow-xs">+90d</button>
+              <button type="button" onclick="setQuickInviteDays(365)" class="px-2 py-0.5 rounded bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold shadow-xs">+365d</button>
             </div>
             <div class="flex items-center gap-1">
-              <span class="text-slate-500">Snipes:</span>
-              <button type="button" onclick="setQuickInviteSnipes(10)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">10</button>
-              <button type="button" onclick="setQuickInviteSnipes(50)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">50</button>
-              <button type="button" onclick="setQuickInviteSnipes(100)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">100</button>
-              <button type="button" onclick="setQuickInviteSnipes(0)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-indigo-300">Unlimited (0)</button>
+              <span class="text-slate-500 font-bold">Snipes:</span>
+              <button type="button" onclick="setQuickInviteSnipes(10)" class="px-2 py-0.5 rounded bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold shadow-xs">10</button>
+              <button type="button" onclick="setQuickInviteSnipes(50)" class="px-2 py-0.5 rounded bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold shadow-xs">50</button>
+              <button type="button" onclick="setQuickInviteSnipes(100)" class="px-2 py-0.5 rounded bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold shadow-xs">100</button>
+              <button type="button" onclick="setQuickInviteSnipes(0)" class="px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold shadow-xs">Unlimited (0)</button>
             </div>
             <button type="submit" class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-md shadow-indigo-500/20 flex items-center gap-1.5 transition-all">
               <i class="fa-solid fa-magic text-xs"></i> Mint VIP Access Code
@@ -2304,9 +2304,9 @@
         </form>
 
         <!-- Invites Table -->
-        <div class="flex-1 border border-slate-800 rounded-2xl overflow-y-auto bg-slate-950/60">
+        <div class="flex-1 border border-slate-200 rounded-2xl overflow-y-auto bg-white shadow-sm">
           <table class="w-full text-left font-mono-code text-xs border-collapse">
-            <thead class="bg-slate-900 sticky top-0 z-10 text-[10px] text-slate-400 uppercase font-black tracking-wider border-b border-slate-800">
+            <thead class="bg-slate-50 sticky top-0 z-10 text-[10px] text-slate-500 uppercase font-black tracking-wider border-b border-slate-200">
               <tr>
                 <th class="py-2.5 px-3">Invite Code</th>
                 <th class="py-2.5 px-3">Days</th>
@@ -2316,7 +2316,7 @@
                 <th class="py-2.5 px-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody id="admin-invites-tbody" class="divide-y divide-slate-800/60">
+            <tbody id="admin-invites-tbody" class="divide-y divide-slate-100">
               <!-- Dynamically populated -->
             </tbody>
           </table>
@@ -2326,14 +2326,14 @@
 
       <!-- TAB 3: FLEET RPC CLUSTER (AEROMINT V2 CLOUD SYNCD) -->
       <div id="admin-view-fleet" class="flex-1 flex flex-col space-y-3 overflow-hidden hidden">
-        <form onsubmit="handleAddFleetRpcSubmit(event)" class="bg-slate-950/60 border border-slate-800 rounded-2xl p-3.5 space-y-2.5 shrink-0 font-mono-code text-xs">
-          <div class="text-[11px] font-black uppercase text-amber-400 flex items-center gap-1.5">
-            <i class="fa-solid fa-network-wired"></i> Add System-Wide Fleet Node (Shared by All VIPs)
+        <form onsubmit="handleAddFleetRpcSubmit(event)" class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2.5 shrink-0 font-mono-code text-xs">
+          <div class="text-[11px] font-black uppercase text-amber-700 flex items-center gap-1.5">
+            <i class="fa-solid fa-network-wired text-amber-600"></i> Add System-Wide Fleet Node (Shared by All VIPs)
           </div>
           <div class="grid grid-cols-4 gap-2">
             <div>
-              <label class="text-[9px] text-slate-400 block mb-0.5">Network</label>
-              <select id="fleet-rpc-network" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white">
+              <label class="text-[9px] text-slate-600 block mb-0.5 font-bold">Network</label>
+              <select id="fleet-rpc-network" class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-amber-600 shadow-inner">
                 <option value="robinhood">Robinhood Chain (4663)</option>
                 <option value="ethereum">Ethereum (1)</option>
                 <option value="base">Base (8453)</option>
@@ -2342,14 +2342,14 @@
               </select>
             </div>
             <div>
-              <label class="text-[9px] text-slate-400 block mb-0.5">Node Name</label>
-              <input type="text" id="fleet-rpc-name" required placeholder="e.g. Robinhood Alchemy Dedicated" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white">
+              <label class="text-[9px] text-slate-600 block mb-0.5 font-bold">Node Name</label>
+              <input type="text" id="fleet-rpc-name" required placeholder="e.g. Robinhood Alchemy Dedicated" class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-amber-600 shadow-inner">
             </div>
             <div class="col-span-2">
-              <label class="text-[9px] text-slate-400 block mb-0.5">RPC URL (HTTPS)</label>
+              <label class="text-[9px] text-slate-600 block mb-0.5 font-bold">RPC URL (HTTPS)</label>
               <div class="flex gap-2">
-                <input type="url" id="fleet-rpc-url" required placeholder="https://robinhood-mainnet.g.alchemy.com/v2/..." class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white">
-                <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs">
+                <input type="url" id="fleet-rpc-url" required placeholder="https://robinhood-mainnet.g.alchemy.com/v2/..." class="flex-1 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-amber-600 shadow-inner">
+                <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs shadow-sm">
                   Add Node
                 </button>
               </div>
@@ -2359,14 +2359,14 @@
 
         <!-- Fleet RPCs Table -->
         <div class="flex items-center justify-between pt-1">
-          <span class="text-[10px] uppercase font-black text-slate-400">System Managed RPC Cluster</span>
-          <button onclick="testFleetRpcLatencies()" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1">
+          <span class="text-[10px] uppercase font-black text-slate-600">System Managed RPC Cluster</span>
+          <button onclick="testFleetRpcLatencies()" class="text-[10px] text-amber-600 hover:text-amber-800 font-bold flex items-center gap-1">
             <i class="fa-solid fa-gauge-high"></i> Benchmark Cluster Latency
           </button>
         </div>
-        <div class="flex-1 border border-slate-800 rounded-2xl overflow-y-auto bg-slate-950/60">
+        <div class="flex-1 border border-slate-200 rounded-2xl overflow-y-auto bg-white shadow-sm">
           <table class="w-full text-left font-mono-code text-xs border-collapse">
-            <thead class="bg-slate-900 sticky top-0 z-10 text-[10px] text-slate-400 uppercase font-black tracking-wider border-b border-slate-800">
+            <thead class="bg-slate-50 sticky top-0 z-10 text-[10px] text-slate-500 uppercase font-black tracking-wider border-b border-slate-200">
               <tr>
                 <th class="py-2.5 px-3">Network</th>
                 <th class="py-2.5 px-3">Node Name</th>
@@ -2376,7 +2376,7 @@
                 <th class="py-2.5 px-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody id="admin-fleet-tbody" class="divide-y divide-slate-800/60">
+            <tbody id="admin-fleet-tbody" class="divide-y divide-slate-100">
               <!-- Dynamically populated -->
             </tbody>
           </table>
@@ -2386,29 +2386,29 @@
       <!-- TAB 4: TELEMETRY & CLOUD HEALTH -->
       <div id="admin-view-telemetry" class="flex-1 flex flex-col space-y-3 overflow-hidden hidden">
         <div class="grid grid-cols-3 gap-3">
-          <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-1">
-            <div class="text-[10px] text-slate-400 uppercase font-bold">Supabase Status</div>
-            <div class="text-sm font-black text-emerald-400 flex items-center gap-1.5">
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-1 shadow-sm">
+            <div class="text-[10px] text-slate-500 uppercase font-bold">Supabase Status</div>
+            <div class="text-sm font-black text-slate-800 flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Connected &amp; Isolated
             </div>
             <div class="text-[10px] text-slate-500">https://fjxarhcisasyvomfgtxl.supabase.co</div>
           </div>
-          <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-1">
-            <div class="text-[10px] text-slate-400 uppercase font-bold">OpenSea Laser Grid</div>
-            <div class="text-sm font-black text-indigo-400 flex items-center gap-1.5">
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-1 shadow-sm">
+            <div class="text-[10px] text-slate-500 uppercase font-bold">OpenSea Laser Grid</div>
+            <div class="text-sm font-black text-slate-800 flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-indigo-500"></span> 6 Keys Armed
             </div>
             <div class="text-[10px] text-slate-500">Dedicated Stream + Multi-Rest Grid</div>
           </div>
-          <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-1">
-            <div class="text-[10px] text-slate-400 uppercase font-bold">Seaport Protocol</div>
-            <div class="text-sm font-black text-purple-400 flex items-center gap-1.5">
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-1 shadow-sm">
+            <div class="text-[10px] text-slate-500 uppercase font-bold">Seaport Protocol</div>
+            <div class="text-sm font-black text-slate-800 flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-purple-500"></span> Seaport v1.6 Zero-Hop
             </div>
             <div class="text-[10px] text-slate-500">0x0000000000000068F116a894984e2DB1123eB395</div>
           </div>
         </div>
-        <div class="flex-1 bg-slate-950/80 border border-slate-800 rounded-2xl p-4 font-mono-code text-[11px] overflow-y-auto space-y-1.5 text-slate-400" id="admin-telemetry-log">
+        <div class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 font-mono-code text-[11px] overflow-y-auto space-y-1.5 text-slate-600 shadow-inner" id="admin-telemetry-log">
           <div>✔ [DATABASE] Connected to Supabase Cloud PostgreSQL.</div>
           <div>✔ [SEAPORT] Seaport 1.6 contract verified on Robinhood Chain (4663).</div>
           <div>✔ [AUTHENTICATION] Admin session authenticated: jainbharat666@gmail.com</div>
@@ -4978,10 +4978,19 @@
       const btnWallets = document.getElementById('tab-btn-wallets');
       const btnRpc = document.getElementById('tab-btn-rpc');
       const btnOpenSea = document.getElementById('tab-btn-opensea');
-      if (btnOpenSea) btnOpenSea.classList.toggle('hidden', !isOwnerAdmin);
 
-      [vDash, vWallets, vRpc, vOpenSea].forEach(v => v.classList.add('hidden'));
-      [btnDash, btnWallets, btnRpc, btnOpenSea].forEach(b => b.className = 'px-3.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition-all');
+      [vDash, vWallets, vRpc, vOpenSea].forEach(v => { if (v) v.classList.add('hidden'); });
+      [btnDash, btnWallets, btnRpc].forEach(b => {
+        if (b) b.className = 'px-3.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition-all';
+      });
+
+      if (btnOpenSea) {
+        if (!isOwnerAdmin) {
+          btnOpenSea.className = 'hidden';
+        } else {
+          btnOpenSea.className = 'px-3.5 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition-all';
+        }
+      }
 
       if (tabId === 'dashboard') {
         vDash.classList.remove('hidden');
@@ -4996,7 +5005,7 @@
         vRpc.classList.remove('hidden');
         btnRpc.className = 'px-3.5 py-1.5 rounded-xl bg-white text-indigo-600 shadow-sm flex items-center gap-1.5 transition-all';
         renderRpcFleet();
-      } else {
+      } else if (isOwnerAdmin) {
         vOpenSea.classList.remove('hidden');
         btnOpenSea.className = 'px-3.5 py-1.5 rounded-xl bg-white text-purple-700 shadow-sm flex items-center gap-1.5 transition-all';
         fetchOpenSeaKeys();
@@ -7206,7 +7215,7 @@
         if (quotaLabel) quotaLabel.innerText = `${used} / ${maxAllowed} Snipes (${pct}%)`;
         if (quotaProgress) quotaProgress.style.width = pct + '%';
         if (quotaRemaining) {
-          quotaRemaining.innerHTML = rem > 0 ? `Remaining: ${rem} Snipes` : `<span class="text-rose-400 font-bold">Remaining: 0 Snipes (Exhausted)</span>`;
+          quotaRemaining.innerHTML = rem > 0 ? `Remaining: ${rem} Snipes` : `<span class="text-rose-600 font-bold">Remaining: 0 Snipes (Exhausted)</span>`;
         }
         if (inviteUsed) inviteUsed.innerText = 'Snipes Completed: ' + used;
       } else {
@@ -7252,9 +7261,9 @@
         const view = document.getElementById(`prof-view-${t}`);
         if (btn) {
           if (t === tab) {
-            btn.className = 'flex-1 py-1.5 rounded-xl bg-indigo-600 text-white shadow-sm transition-all text-center';
+            btn.className = 'flex-1 py-1.5 rounded-xl bg-white text-indigo-600 font-bold shadow-sm transition-all text-center';
           } else {
-            btn.className = 'flex-1 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all text-center';
+            btn.className = 'flex-1 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 font-bold transition-all text-center';
           }
         }
         if (view) {
@@ -7316,7 +7325,7 @@
         if (hEl) hEl.innerText = '00';
         if (mEl) mEl.innerText = '00';
         if (sEl) sEl.innerText = '00';
-        if (lblValid) lblValid.innerHTML = '<span class="text-rose-400 font-bold">⚠️ Access Expired! Please redeem renewal key in Renew tab.</span>';
+        if (lblValid) lblValid.innerHTML = '<span class="text-rose-600 font-bold">⚠️ Access Expired! Please redeem renewal key in Renew tab.</span>';
         return;
       }
 
@@ -7517,19 +7526,19 @@
       }
 
       listEl.innerHTML = customRpcs.map(r => `
-        <div class="py-2 flex items-center justify-between gap-2">
+        <div class="py-2.5 px-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2 shadow-sm">
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-1.5">
-              <span class="font-bold text-xs text-white truncate">${r.name}</span>
-              <span class="px-1.5 py-0.2 rounded text-[8px] uppercase bg-indigo-500/20 text-indigo-300 font-mono-code">${r.network || '4663'}</span>
+              <span class="font-bold text-xs text-slate-900 truncate">${r.name}</span>
+              <span class="px-1.5 py-0.5 rounded text-[8px] uppercase bg-indigo-50 text-indigo-700 font-mono-code font-bold border border-indigo-200">${r.network || '4663'}</span>
             </div>
-            <div class="text-[10px] text-slate-400 font-mono-code truncate">${r.url}</div>
+            <div class="text-[10px] text-slate-500 font-mono-code truncate">${r.url}</div>
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
-            <span id="user-rpc-ping-${r.id}" class="px-2 py-0.5 rounded-lg text-[9px] font-black ${r.pingMs && r.pingMs < 150 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'}">
+            <span id="user-rpc-ping-${r.id}" class="px-2 py-0.5 rounded-lg text-[9px] font-black border ${r.pingMs && r.pingMs < 150 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}">
               ${r.pingMs ? r.pingMs + ' MS' : '--'}
             </span>
-            <button onclick="deleteUserCustomRpc('${r.id}')" class="w-6 h-6 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 flex items-center justify-center text-[10px] cursor-pointer">
+            <button onclick="deleteUserCustomRpc('${r.id}')" class="w-6 h-6 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 flex items-center justify-center text-[10px] cursor-pointer font-bold transition-colors">
               ✕
             </button>
           </div>
@@ -7556,7 +7565,7 @@
       if (custom.length === 0) return;
       for (const r of custom) {
         const el = document.getElementById(`user-rpc-ping-${r.id}`);
-        if (el) el.innerHTML = `<span class="text-amber-400 animate-pulse">...</span>`;
+        if (el) el.innerHTML = `<span class="text-amber-600 animate-pulse font-bold">...</span>`;
         const t0 = performance.now();
         try {
           const controller = new AbortController();
@@ -7571,12 +7580,12 @@
           const lat = Math.round(performance.now() - t0);
           r.pingMs = lat;
           if (el) {
-            el.className = `px-2 py-0.5 rounded-lg text-[9px] font-black ${lat < 150 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'}`;
+            el.className = `px-2 py-0.5 rounded-lg text-[9px] font-black border ${lat < 150 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`;
             el.innerText = `${lat} MS`;
           }
         } catch(e) {
           if (el) {
-            el.className = `px-2 py-0.5 rounded-lg text-[9px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/40`;
+            el.className = `px-2 py-0.5 rounded-lg text-[9px] font-black bg-rose-50 text-rose-600 border border-rose-200`;
             el.innerText = 'TIMEOUT';
           }
         }
@@ -7863,8 +7872,8 @@
       const viewFleet = document.getElementById('admin-view-fleet');
       const viewTele = document.getElementById('admin-view-telemetry');
 
-      const activeCls = 'px-4 py-1.5 rounded-xl bg-indigo-600 text-white shadow-sm transition-all flex items-center gap-1.5';
-      const inactiveCls = 'px-4 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all flex items-center gap-1.5';
+      const activeCls = 'px-4 py-1.5 rounded-xl bg-white text-indigo-600 font-bold shadow-sm transition-all flex items-center gap-1.5';
+      const inactiveCls = 'px-4 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 font-bold transition-all flex items-center gap-1.5';
 
       if (tabUsers) tabUsers.className = tab === 'users' ? activeCls : inactiveCls;
       if (tabInvites) tabInvites.className = tab === 'invites' ? activeCls : inactiveCls;
@@ -7923,9 +7932,9 @@
         const btn = document.getElementById(`uf-btn-${f}`);
         if (btn) {
           if (f === filter) {
-            btn.className = 'px-2.5 py-1 rounded-lg bg-indigo-600 text-white';
+            btn.className = 'px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-bold border border-indigo-200 shadow-sm';
           } else {
-            btn.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white';
+            btn.className = 'px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 font-medium transition-colors';
           }
         }
       });
@@ -7988,48 +7997,48 @@
         const isBanned = !!u.is_banned;
         const uidShort = u.id ? u.id.substring(0, 8) : '--';
         
-        let validStr = '<span class="text-indigo-300 font-bold">Lifetime</span>';
+        let validStr = '<span class="text-indigo-700 font-bold">Lifetime</span>';
         if (u.valid_until) {
           const expDate = new Date(u.valid_until);
           const diffDays = Math.ceil((expDate - Date.now()) / (1000 * 60 * 60 * 24));
-          validStr = diffDays > 0 ? `${diffDays}d (${expDate.toLocaleDateString()})` : `<span class="text-rose-400 font-bold">Expired</span>`;
+          validStr = diffDays > 0 ? `<span class="text-slate-800 font-bold">${diffDays}d</span> <span class="text-slate-400 font-normal">(${expDate.toLocaleDateString()})</span>` : `<span class="text-rose-600 font-bold">Expired</span>`;
         }
 
         const uMax = u.max_snipes_allowed !== undefined ? parseInt(u.max_snipes_allowed) : 0;
         const uUsed = u.snipes_used !== undefined ? u.snipes_used : (u.total_snipes || 0);
         const uRem = uMax > 0 ? Math.max(0, uMax - uUsed) : null;
         const quotaStr = (uMax === 0)
-          ? '<span class="text-slate-400 font-bold">∞ Unlimited</span>'
-          : (uRem > 0 ? `${uRem} left (${uUsed}/${uMax})` : `<span class="text-rose-400 font-bold">0 left (${uUsed}/${uMax} Exhausted)</span>`);
+          ? '<span class="text-emerald-700 font-bold">∞ Unlimited</span>'
+          : (uRem > 0 ? `<span class="text-purple-700 font-bold">${uRem} left</span> <span class="text-slate-500 font-normal">(${uUsed}/${uMax})</span>` : `<span class="text-rose-600 font-bold">0 left (${uUsed}/${uMax} Exhausted)</span>`);
         const statusBadge = isBanned 
-          ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-rose-500/20 text-rose-400 border border-rose-500/30">SUSPENDED</span>`
-          : `<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ACTIVE</span>`;
+          ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-rose-50 text-rose-700 border border-rose-200">SUSPENDED</span>`
+          : `<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">ACTIVE</span>`;
 
         return `
-          <tr class="hover:bg-slate-800/40 transition-colors">
+          <tr class="hover:bg-slate-50 transition-colors">
             <td class="py-2.5 px-3">
-              <div class="font-black text-white">${u.email}</div>
-              <div class="text-[10px] text-slate-400 font-mono-code">UID: ${uidShort}</div>
+              <div class="font-black text-slate-900">${u.email}</div>
+              <div class="text-[10px] text-slate-500 font-mono-code">UID: ${uidShort}</div>
             </td>
             <td class="py-2.5 px-3">
-              <div class="font-bold text-indigo-300">${u.role || 'user'}</div>
+              <div class="font-bold text-indigo-700">${u.role || 'user'}</div>
               <div class="text-[10px] text-slate-500">${u.invite_code || 'Direct'}</div>
             </td>
-            <td class="py-2.5 px-3 font-bold">${validStr}</td>
+            <td class="py-2.5 px-3">${validStr}</td>
             <td class="py-2.5 px-3">
-              <div class="font-black text-purple-300">${quotaStr}</div>
-              <div class="text-[10px] text-slate-400">Used: ${u.snipes_used || u.total_snipes || 0}</div>
+              <div class="font-black">${quotaStr}</div>
+              <div class="text-[10px] text-slate-500">Used: ${u.snipes_used || u.total_snipes || 0}</div>
             </td>
             <td class="py-2.5 px-3">${statusBadge}</td>
             <td class="py-2.5 px-3 text-right">
-              ${isOwner ? `<span class="text-[10px] text-slate-500 italic">Master Owner</span>` : `
+              ${isOwner ? `<span class="text-[10px] text-slate-500 font-bold italic">Master Owner</span>` : `
                 <div class="flex items-center justify-end gap-1.5">
-                  <button onclick="adminExtendValidity('${u.id}', 30)" title="Add +30 Days" class="px-2 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 rounded-lg text-[10px] font-black border border-indigo-500/40">+30d</button>
-                  <button onclick="adminExtendSnipes('${u.id}', 10)" title="Add +10 Snipes" class="px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-lg text-[10px] font-black border border-purple-500/40">+10🎯</button>
-                  <button onclick="adminToggleBan('${u.id}')" title="${isBanned ? 'Unban' : 'Suspend'}" class="px-2 py-1 ${isBanned ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border-amber-500/40'} rounded-lg text-[10px] font-black border">
+                  <button onclick="adminExtendValidity('${u.id}', 30)" title="Add +30 Days" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-black border border-indigo-200 shadow-sm transition-colors">+30d</button>
+                  <button onclick="adminExtendSnipes('${u.id}', 10)" title="Add +10 Snipes" class="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-[10px] font-black border border-purple-200 shadow-sm transition-colors">+10🎯</button>
+                  <button onclick="adminToggleBan('${u.id}')" title="${isBanned ? 'Unban' : 'Suspend'}" class="px-2 py-1 ${isBanned ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200'} rounded-lg text-[10px] font-black border shadow-sm transition-colors">
                     ${isBanned ? 'Unban' : 'Suspend'}
                   </button>
-                  <button onclick="adminDeleteUser('${u.id}')" title="Delete User" class="px-2 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-lg text-[10px] font-black border border-rose-500/40">✕</button>
+                  <button onclick="adminDeleteUser('${u.id}')" title="Delete User" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-black border border-rose-200 shadow-sm transition-colors">✕</button>
                 </div>
               `}
             </td>
@@ -8052,28 +8061,28 @@
         const isActive = inv.is_active !== false;
         const usesStr = `${inv.used_count || 0} / ${inv.max_uses || 1}`;
         const maxSnipes = inv.max_snipes_limit !== undefined ? inv.max_snipes_limit : (inv.snipes_quota !== undefined ? inv.snipes_quota : 0);
-        const snipesStr = (maxSnipes === 0 || !maxSnipes) ? '∞ Unlimited' : `${maxSnipes}`;
+        const snipesStr = (maxSnipes === 0 || !maxSnipes) ? '<span class="text-emerald-700 font-bold">∞ Unlimited</span>' : `<span class="text-purple-700 font-bold">${maxSnipes}</span>`;
         const targetId = inv.id || inviteCode;
 
         return `
-          <tr class="hover:bg-slate-800/40 transition-colors">
+          <tr class="hover:bg-slate-50 transition-colors">
             <td class="py-2.5 px-3">
-              <span class="font-black text-indigo-300 bg-indigo-950/60 px-2 py-1 rounded-md border border-indigo-500/40">${inviteCode}</span>
+              <span class="font-black text-indigo-700 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-200">${inviteCode}</span>
             </td>
-            <td class="py-2.5 px-3 font-bold">${inv.validity_days || 30} Days</td>
-            <td class="py-2.5 px-3 font-black text-purple-300">${snipesStr}</td>
-            <td class="py-2.5 px-3 font-mono-code">${usesStr}</td>
+            <td class="py-2.5 px-3 font-bold text-slate-800">${inv.validity_days || 30} Days</td>
+            <td class="py-2.5 px-3">${snipesStr}</td>
+            <td class="py-2.5 px-3 font-mono-code text-slate-600 font-bold">${usesStr}</td>
             <td class="py-2.5 px-3">
-              <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${isActive ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-slate-800 text-slate-400 border border-slate-700'}">
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}">
                 ${isActive ? 'ACTIVE' : 'DISABLED'}
               </span>
             </td>
             <td class="py-2.5 px-3 text-right">
               <div class="flex items-center justify-end gap-1.5">
-                <button onclick="adminToggleInvite('${targetId}', ${!isActive})" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-black border border-slate-700">
+                <button onclick="adminToggleInvite('${targetId}', ${!isActive})" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-bold border border-slate-200 shadow-sm transition-colors">
                   ${isActive ? 'Disable' : 'Enable'}
                 </button>
-                <button onclick="adminDeleteInvite('${targetId}')" class="px-2 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-lg text-[10px] font-black border border-rose-500/40">
+                <button onclick="adminDeleteInvite('${targetId}')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold border border-rose-200 shadow-sm transition-colors">
                   ✕
                 </button>
               </div>
@@ -8284,26 +8293,26 @@
       tbody.innerHTML = fleetList.map(r => {
         const isActive = r.isActive !== false && r.is_active !== false;
         return `
-          <tr class="hover:bg-slate-800/50 transition-colors">
+          <tr class="hover:bg-slate-50 transition-colors">
             <td class="py-2.5 px-3">
-              <span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">${r.network || r.network_key || 'robinhood'}</span>
+              <span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold">${r.network || r.network_key || 'robinhood'}</span>
             </td>
-            <td class="py-2.5 px-3 font-bold text-white">${r.name}</td>
-            <td class="py-2.5 px-3 font-mono-code text-slate-400 max-w-[200px] truncate" title="${r.url}">${r.url}</td>
+            <td class="py-2.5 px-3 font-bold text-slate-900">${r.name}</td>
+            <td class="py-2.5 px-3 font-mono-code text-slate-500 max-w-[200px] truncate" title="${r.url}">${r.url}</td>
             <td class="py-2.5 px-3" id="fleet-ping-${r.id}">
-              <span class="px-2 py-0.5 rounded-lg text-[9px] font-black ${r.pingMs && r.pingMs < 150 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'}">${r.pingMs ? r.pingMs + ' MS' : '--'}</span>
+              <span class="px-2 py-0.5 rounded-lg text-[9px] font-black border ${r.pingMs && r.pingMs < 150 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'}">${r.pingMs ? r.pingMs + ' MS' : '--'}</span>
             </td>
             <td class="py-2.5 px-3">
-              <button onclick="toggleFleetRpcActive('${r.id}', ${!isActive})" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${isActive ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}">
+              <button onclick="toggleFleetRpcActive('${r.id}', ${!isActive})" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}">
                 ${isActive ? '● ACTIVE' : '○ DISABLED'}
               </button>
             </td>
             <td class="py-2.5 px-3 text-right">
               <div class="flex items-center justify-end gap-1.5">
-                <button onclick="pingSingleFleetRpc('${r.id}', '${r.url}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg text-[10px] font-bold border border-slate-700" title="Ping Node">
+                <button onclick="pingSingleFleetRpc('${r.id}', '${r.url}')" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg text-[10px] font-bold border border-amber-200 shadow-sm transition-colors" title="Ping Node">
                   <i class="fa-solid fa-bolt"></i>
                 </button>
-                <button onclick="deleteFleetRpc('${r.id}')" class="px-2 py-1 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 rounded-lg text-[10px] font-bold border border-rose-800/40" title="Delete Node">
+                <button onclick="deleteFleetRpc('${r.id}')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-bold border border-rose-200 shadow-sm transition-colors" title="Delete Node">
                   ✕
                 </button>
               </div>
@@ -8398,7 +8407,7 @@
 
     async function pingSingleFleetRpc(id, url) {
       const cell = document.getElementById(`fleet-ping-${id}`);
-      if (cell) cell.innerHTML = `<span class="text-[9px] text-amber-400 font-bold animate-pulse">Pinging...</span>`;
+      if (cell) cell.innerHTML = `<span class="text-[9px] text-amber-600 font-bold animate-pulse">Pinging...</span>`;
       const t0 = performance.now();
       try {
         const controller = new AbortController();
@@ -8412,11 +8421,11 @@
         clearTimeout(timeoutId);
         const lat = Math.round(performance.now() - t0);
         if (cell) {
-          cell.innerHTML = `<span class="px-2 py-0.5 rounded-lg text-[9px] font-black ${lat < 150 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'}">${lat} MS</span>`;
+          cell.innerHTML = `<span class="px-2 py-0.5 rounded-lg text-[9px] font-black border ${lat < 150 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}">${lat} MS</span>`;
         }
       } catch(e) {
         if (cell) {
-          cell.innerHTML = `<span class="px-2 py-0.5 rounded-lg text-[9px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/40">TIMEOUT</span>`;
+          cell.innerHTML = `<span class="px-2 py-0.5 rounded-lg text-[9px] font-black bg-rose-50 text-rose-600 border border-rose-200">TIMEOUT</span>`;
         }
       }
     }
