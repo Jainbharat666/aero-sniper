@@ -1894,16 +1894,13 @@
         </button>
       </div>
 
-      <!-- 5 Tab Switcher -->
+      <!-- 4 Tab Switcher -->
       <div class="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-bold gap-1">
         <button onclick="switchProfileTab('overview')" id="prof-tab-btn-overview" class="flex-1 py-1.5 rounded-xl bg-white text-indigo-600 shadow-sm transition-all text-center">
           📊 Overview
         </button>
         <button onclick="switchProfileTab('cloud_vault')" id="prof-tab-btn-cloud_vault" class="flex-1 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition-all text-center">
           ☁️ Cloud Vault
-        </button>
-        <button onclick="switchProfileTab('rpcs')" id="prof-tab-btn-rpcs" class="flex-1 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition-all text-center">
-          ⚡ Custom RPCs
         </button>
         <button onclick="switchProfileTab('security')" id="prof-tab-btn-security" class="flex-1 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition-all text-center">
           🔐 Security
@@ -1997,52 +1994,6 @@
         <button onclick="handleCloudVaultWipe()" class="w-full py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all">
           <i class="fa-solid fa-trash-can text-rose-600"></i> 🗑️ Wipe Remote Cloud Data
         </button>
-      </div>
-
-      <!-- TAB 3: CUSTOM RPCS MANAGER -->
-      <div id="prof-view-rpcs" class="space-y-3 hidden">
-        <!-- Add RPC Form -->
-        <form onsubmit="handleAddUserCustomRpc(event)" class="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-2">
-          <div class="text-[10px] uppercase font-black text-indigo-700 flex items-center gap-1">
-            <i class="fa-solid fa-plus-circle"></i> Add Private Node
-          </div>
-          <div class="grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <label class="text-[9px] text-slate-600 font-bold block mb-0.5">Node Name</label>
-              <input type="text" id="user-rpc-name" required placeholder="e.g. My Alchemy Node" class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-600 shadow-inner">
-            </div>
-            <div>
-              <label class="text-[9px] text-slate-600 font-bold block mb-0.5">Network</label>
-              <select id="user-rpc-network" class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-600 shadow-inner">
-                <option value="robinhood">Robinhood Chain (4663)</option>
-                <option value="ethereum">Ethereum (1)</option>
-                <option value="base">Base (8453)</option>
-                <option value="arbitrum">Arbitrum One (42161)</option>
-                <option value="polygon">Polygon (137)</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label class="text-[9px] text-slate-600 font-bold block mb-0.5">RPC URL (HTTPS / WSS)</label>
-            <input type="url" id="user-rpc-url" required placeholder="https://robinhood-mainnet.g.alchemy.com/v2/..." class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-600 shadow-inner">
-          </div>
-          <div class="flex justify-end pt-1">
-            <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs flex items-center gap-1 shadow-md shadow-indigo-500/20">
-              <i class="fa-solid fa-bolt"></i> Add Node
-            </button>
-          </div>
-        </form>
-
-        <!-- Custom Nodes List Header -->
-        <div class="flex items-center justify-between pt-1">
-          <span class="text-[10px] uppercase font-black text-slate-600">Your Private Nodes (<span id="user-rpcs-count">0</span>)</span>
-          <button onclick="testUserCustomRpcLatencies()" class="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-1">
-            <i class="fa-solid fa-gauge-high"></i> Benchmark Latencies
-          </button>
-        </div>
-        <div id="user-rpcs-list" class="max-h-36 overflow-y-auto space-y-1.5 divide-y divide-slate-100">
-          <!-- Dynamically populated -->
-        </div>
       </div>
 
       <!-- TAB 4: SECURITY -->
@@ -7230,13 +7181,12 @@
       const elRpcsCount = document.getElementById('prof-vault-rpcs-count');
       const elLastSync = document.getElementById('prof-vault-last-sync');
       if (elWalletsCount) elWalletsCount.innerText = walletFleet.length;
-      if (elRpcsCount) elRpcsCount.innerText = getUserCustomRpcs().length;
+      if (elRpcsCount) elRpcsCount.innerText = rpcFleet.length;
       if (elLastSync) {
         const lastSync = localStorage.getItem('sniper_last_cloud_sync');
         elLastSync.innerText = lastSync ? ('Last synced: ' + lastSync) : 'Last synced: Never';
       }
 
-      renderUserCustomRpcs();
       switchProfileTab(tab);
       startProfileCountdownClock();
 
@@ -7255,7 +7205,7 @@
 
     function switchProfileTab(tab) {
       activeProfileTab = tab;
-      const tabs = ['overview', 'cloud_vault', 'rpcs', 'security', 'renew'];
+      const tabs = ['overview', 'cloud_vault', 'security', 'renew'];
       tabs.forEach(t => {
         const btn = document.getElementById(`prof-tab-btn-${t}`);
         const view = document.getElementById(`prof-view-${t}`);
@@ -7271,13 +7221,11 @@
         }
       });
 
-      if (tab === 'rpcs') {
-        renderUserCustomRpcs();
-      } else if (tab === 'cloud_vault') {
+      if (tab === 'cloud_vault') {
         const elWalletsCount = document.getElementById('prof-vault-wallets-count');
         const elRpcsCount = document.getElementById('prof-vault-rpcs-count');
         if (elWalletsCount) elWalletsCount.innerText = walletFleet.length;
-        if (elRpcsCount) elRpcsCount.innerText = getUserCustomRpcs().length;
+        if (elRpcsCount) elRpcsCount.innerText = rpcFleet.length;
       }
     }
 
@@ -7356,7 +7304,7 @@
           selected: w.selected
         })),
         masterWalletIndex,
-        customRpcs: getUserCustomRpcs(),
+        rpcFleet,
         activeFloorPercentPreset,
         activeRarityMultiplier,
         activeGasPreset,
@@ -7415,9 +7363,10 @@
             masterWalletIndex = cfg.masterWalletIndex;
             persistState();
           }
-          if (Array.isArray(cfg.customRpcs)) {
-            saveUserCustomRpcs(cfg.customRpcs);
-            renderUserCustomRpcs();
+          if (Array.isArray(cfg.rpcFleet) && cfg.rpcFleet.length > 0) {
+            rpcFleet = cfg.rpcFleet;
+            persistState();
+            renderRpcFleet();
           }
           if (cfg.activeRuleStates) {
             activeRuleStates = Object.assign(activeRuleStates, cfg.activeRuleStates);
