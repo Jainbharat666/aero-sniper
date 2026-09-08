@@ -47,9 +47,9 @@ echo.
 if exist "%BACKUP_DIR%\%TARGET_VER%\RESTORE_THIS_BACKUP.bat" (
     call "%BACKUP_DIR%\%TARGET_VER%\RESTORE_THIS_BACKUP.bat"
 ) else (
-    echo [1/2] Restoring Local PC Codebase from [%TARGET_VER%]...
-    robocopy "%BACKUP_DIR%\%TARGET_VER%" "%ROOT%" /E /XD "node_modules" ".git" > nul
-    echo       [OK] Sniper V2 codebase restored successfully!
+    echo [1/2] Restoring 100%% Complete Codebase ^& Dependencies from [%TARGET_VER%]...
+    robocopy "%BACKUP_DIR%\%TARGET_VER%" "%ROOT%" /E /XD ".git" > nul
+    echo       [OK] Entire Sniper V2 project restored successfully!
     echo.
     echo ===================================================================
     echo   🎉 SUCCESS: VERSION [%TARGET_VER%] RESTORED TO SNIPER V2!
