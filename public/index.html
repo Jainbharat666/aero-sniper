@@ -125,11 +125,19 @@
         <!-- Hero Headline -->
         <div class="space-y-2">
           <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-black text-2xl shadow-xl shadow-indigo-500/30">
-              ⚡
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-xl shadow-indigo-500/30">
+              <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"></circle>
+                <circle cx="12" cy="12" r="3" fill="currentColor" fill-opacity="0.25"></circle>
+                <line x1="12" y1="1" x2="12" y2="5"></line>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="1" y1="12" x2="5" y2="12"></line>
+                <line x1="19" y1="12" x2="23" y2="12"></line>
+                <circle cx="12" cy="12" r="1" fill="#fff"></circle>
+              </svg>
             </div>
             <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white font-sans">
-              AERO-SNIPER <span class="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">V2</span>
+              AERO-SNIPER <span class="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">PRO</span>
             </h1>
           </div>
           <p class="text-sm text-slate-400 font-sans max-w-lg leading-relaxed">
@@ -273,15 +281,28 @@
     
     <div class="flex items-center gap-6">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white font-black text-xl shadow-md shadow-indigo-500/25">
-          ⚡
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/25 shrink-0">
+          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"></circle>
+            <circle cx="12" cy="12" r="3" fill="currentColor" fill-opacity="0.25"></circle>
+            <line x1="12" y1="1" x2="12" y2="5"></line>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="1" y1="12" x2="5" y2="12"></line>
+            <line x1="19" y1="12" x2="23" y2="12"></line>
+            <circle cx="12" cy="12" r="1" fill="#fff"></circle>
+          </svg>
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="text-base font-black tracking-tight text-slate-900">⚡ NFT Sniper V2</h1>
-            <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">100% MAINNET LIVE</span>
+            <h1 class="text-base font-black tracking-tight text-slate-900 flex items-center gap-1.5">
+              <span>AERO-SNIPER</span> <span class="text-indigo-600 font-extrabold">PRO</span>
+            </h1>
+            <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-300 flex items-center gap-1 shadow-sm">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              MAINNET LIVE
+            </span>
           </div>
-          <p class="text-[11px] text-slate-500 font-medium">6-Key OpenSea Laser Grid • AeroMint Multi-RPC Mempool Blast</p>
+          <p class="text-[11px] text-slate-500 font-medium">Institutional High-Frequency NFT Sniper • 6-Key Laser Grid & Seaport 1.6 Engine</p>
         </div>
       </div>
 
@@ -310,26 +331,7 @@
         <span>Audio FX: <strong class="text-emerald-700" id="audio-status-text">ON</strong></span>
       </button>
 
-      <!-- Profile Backup / Clean Share Button -->
-      <div class="relative group">
-        <button class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold transition-all shadow-sm">
-          <i class="fa-solid fa-share-nodes text-indigo-600"></i>
-          <span>Share / Profile</span>
-        </button>
-        <div class="absolute right-0 top-full mt-1.5 w-60 bg-white border border-slate-200 rounded-2xl p-2 shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all z-50 space-y-1 text-[11px]">
-          <button onclick="exportFullProfile()" class="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-download text-indigo-600"></i> Export Profile (.json)
-          </button>
-          <label class="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 font-bold text-slate-800 flex items-center gap-2 cursor-pointer">
-            <i class="fa-solid fa-upload text-emerald-600"></i> Import Profile (.json)
-            <input type="file" accept=".json" onchange="importFullProfile(event)" class="hidden">
-          </label>
-          <div class="border-t border-slate-100 my-1"></div>
-          <button onclick="purgeDataForCleanShare()" class="w-full text-left px-3 py-2 rounded-xl hover:bg-rose-50 font-bold text-rose-600 flex items-center gap-2">
-            <i class="fa-solid fa-broom text-rose-500"></i> Clean Share Mode (Purge)
-          </button>
-        </div>
-      </div>
+      <!-- Profile Backup / Clean Share Button Removed as requested -->
 
       <!-- 👑 USER AUTHENTICATION & ADMIN CONTROLS CONTAINER -->
       <div id="header-auth-container" class="flex items-center gap-2">
@@ -1789,12 +1791,20 @@
       <!-- Header -->
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <div class="flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white font-black text-base shadow-sm">
-            ⚡
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white shadow-sm">
+            <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"></circle>
+              <circle cx="12" cy="12" r="3" fill="currentColor" fill-opacity="0.25"></circle>
+              <line x1="12" y1="1" x2="12" y2="5"></line>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="1" y1="12" x2="5" y2="12"></line>
+              <line x1="19" y1="12" x2="23" y2="12"></line>
+              <circle cx="12" cy="12" r="1" fill="#fff"></circle>
+            </svg>
           </div>
           <div>
             <h3 class="text-sm font-black text-slate-900" id="auth-modal-title">VIP Member Authentication</h3>
-            <p class="text-[11px] text-slate-500 font-medium">NFT Sniper V2 Private Cloud Access</p>
+            <p class="text-[11px] text-slate-500 font-medium">Aero-Sniper Pro Private Access</p>
           </div>
         </div>
         <button onclick="closeAuthModal()" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-xs font-bold transition-colors">
@@ -1868,6 +1878,30 @@
 
       </form>
 
+    </div>
+  </div>
+
+  <!-- ================= 5A-CONFIRM. CUSTOM IN-APP CONFIRMATION MODAL ================= -->
+  <div id="custom-confirm-modal" onclick="if(event.target === this) closeCustomConfirm(false)" class="fixed inset-0 z-[999999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="relative bg-white border border-slate-200 rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in duration-200 font-mono-code text-center">
+      <button type="button" onclick="closeCustomConfirm(false)" class="absolute top-4 right-4 w-7 h-7 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-xs font-bold transition-colors">
+        ✕
+      </button>
+      <div id="custom-confirm-icon-box" class="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center text-2xl mx-auto shadow-sm">
+        <i id="custom-confirm-icon" class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div>
+        <h3 id="custom-confirm-title" class="text-base font-black text-slate-900 tracking-tight">Confirmation Required</h3>
+        <p id="custom-confirm-message" class="text-xs text-slate-600 mt-1.5 leading-relaxed">Are you sure you want to proceed with this action?</p>
+      </div>
+      <div class="flex items-center gap-2.5 pt-2">
+        <button type="button" id="custom-confirm-btn-cancel" onclick="closeCustomConfirm(false)" class="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-all border border-slate-200 cursor-pointer">
+          Cancel
+        </button>
+        <button type="button" id="custom-confirm-btn-ok" onclick="closeCustomConfirm(true)" class="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs transition-all shadow-md shadow-rose-600/20 cursor-pointer">
+          Confirm
+        </button>
+      </div>
     </div>
   </div>
 
@@ -2411,8 +2445,20 @@
   </div>
 
   <!-- ================= 6. FOOTER ================= -->
-  <footer class="bg-white border-t border-slate-200 px-6 py-2.5 text-center text-xs text-slate-500 font-mono-code shrink-0">
-    NFT Sniper Premium • Powered by Antigravity AI • Robinhood Orbit Chain L2 (Chain ID: 4663)
+  <footer class="bg-white border-t border-slate-200 px-6 py-3 text-xs text-slate-500 font-mono-code shrink-0 shadow-sm">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px]">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span class="font-bold text-slate-800">Aero-Sniper Pro</span>
+        <span class="text-slate-300">|</span>
+        <span class="text-slate-600 font-sans">Institutional Grade High-Frequency NFT Trading Protocol</span>
+      </div>
+      <div class="flex items-center gap-3 text-slate-500 font-medium">
+        <span>Robinhood Chain Mainnet (ID: 4663)</span>
+        <span class="text-slate-300">•</span>
+        <span class="text-indigo-600 font-bold">Sub-Second Execution</span>
+      </div>
+    </div>
   </footer>
   </div><!-- End of #authenticated-app -->
 
@@ -2426,6 +2472,64 @@
 
   <!-- ================= 7. SCRIPTS ================= -->
   <script>
+    // ================= 🛡️ CUSTOM IN-APP CONFIRMATION SYSTEM (ZERO BROWSER POPUPS) =================
+    let confirmResolver = null;
+
+    function showCustomConfirm(message, title = 'Confirmation Required', options = {}) {
+      return new Promise((resolve) => {
+        confirmResolver = resolve;
+        const modal = document.getElementById('custom-confirm-modal');
+        const elTitle = document.getElementById('custom-confirm-title');
+        const elMsg = document.getElementById('custom-confirm-message');
+        const elIconBox = document.getElementById('custom-confirm-icon-box');
+        const elIcon = document.getElementById('custom-confirm-icon');
+        const btnOk = document.getElementById('custom-confirm-btn-ok');
+        const btnCancel = document.getElementById('custom-confirm-btn-cancel');
+
+        if (elTitle) elTitle.innerText = title;
+        if (elMsg) elMsg.innerText = message;
+
+        const isDanger = options.isDanger !== false;
+        if (btnOk) {
+          btnOk.innerText = options.confirmText || (isDanger ? 'Delete / Proceed' : 'Confirm');
+          btnOk.className = isDanger 
+            ? 'flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs transition-all shadow-md shadow-rose-600/20 cursor-pointer'
+            : 'flex-1 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs transition-all shadow-md shadow-indigo-600/20 cursor-pointer';
+        }
+        if (btnCancel) {
+          btnCancel.innerText = options.cancelText || 'Cancel';
+        }
+
+        if (elIconBox && elIcon) {
+          if (isDanger) {
+            elIconBox.className = 'w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center text-2xl mx-auto shadow-sm';
+            elIcon.className = 'fa-solid fa-triangle-exclamation';
+          } else {
+            elIconBox.className = 'w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center text-2xl mx-auto shadow-sm';
+            elIcon.className = 'fa-solid fa-circle-question';
+          }
+        }
+
+        if (modal) modal.classList.remove('hidden');
+      });
+    }
+
+    function closeCustomConfirm(result = false) {
+      const modal = document.getElementById('custom-confirm-modal');
+      if (modal) modal.classList.add('hidden');
+      if (typeof confirmResolver === 'function') {
+        const res = confirmResolver;
+        confirmResolver = null;
+        res(result);
+      }
+    }
+
+    // Bulletproof: Override native window.confirm so NO browser dialog ever appears
+    window.confirm = function(msg) {
+      console.warn('[Custom Confirm]: Native confirm blocked:', msg);
+      return false;
+    };
+
     // ================= VIP AUTHENTICATION & SINGLE-DEVICE SESSION STATE =================
     let currentUser = null;
     let sessionToken = localStorage.getItem('sniper_token') || null;
@@ -3992,8 +4096,9 @@
       showToast(`Deleted ${removed.name}`);
     }
 
-    function clearAllWallets() {
-      if (!confirm('⚠️ DANGER: Are you sure you want to clear ALL wallets from the fleet?\n\nMake sure you have downloaded a .txt, .json or .csv backup before proceeding!')) return;
+    async function clearAllWallets() {
+      const ok = await showCustomConfirm('Are you sure you want to clear ALL wallets from the fleet?\nMake sure you have downloaded a .txt, .json or .csv backup before proceeding!', 'Clear Entire Fleet', { isDanger: true, confirmText: 'Clear All Wallets' });
+      if (!ok) return;
       walletFleet = [];
       masterWalletIndex = null;
       persistState();
@@ -4436,7 +4541,7 @@
     }
 
     // ─── 1-CLICK EXACT SNIPER COST FLEET FUNDING (AEROMINT V3) ────────────────
-    function fundWorkersExactSniperCost() {
+    async function fundWorkersExactSniperCost() {
       if (masterWalletIndex === null || !walletFleet[masterWalletIndex]) {
         showToast('Please designate a Master Treasury Wallet first!', true);
         return;
@@ -4464,7 +4569,8 @@
       logConsole(`🎯 [EXACT COST CALCULATED] Set ${exactCostStr} ETH per worker (Target Price: ${targetEth} ETH + 0.0008 ETH gas buffer).`);
       showToast(`Set funding: ${exactCostStr} ETH per worker`);
 
-      if (confirm(`Fund all ${workers.length} selected workers with exact sniper cost (${exactCostStr} ETH each)? Total: ${(exactCostPerWorker * workers.length).toFixed(6)} ETH.`)) {
+      const ok = await showCustomConfirm(`Fund all ${workers.length} selected workers with exact sniper cost (${exactCostStr} ETH each)? Total: ${(exactCostPerWorker * workers.length).toFixed(6)} ETH.`, 'Fund Worker Fleet', { isDanger: false, confirmText: 'Fund Workers' });
+      if (ok) {
         executeFundWorkers();
       }
     }
@@ -4775,7 +4881,8 @@
     window.fundWorkerFleet = executeFundWorkers;
 
     async function executeSweepToMaster() {
-      if (!confirm('🧹 Are you sure you want to sweep 100% of remaining ETH from ALL worker wallets back into the Master Treasury?')) return;
+      const ok = await showCustomConfirm('Are you sure you want to sweep 100% of remaining ETH from ALL worker wallets back into the Master Treasury?', 'Sweep Worker Funds', { isDanger: false, confirmText: 'Sweep ETH' });
+      if (!ok) return;
       if (masterWalletIndex === null || !walletFleet[masterWalletIndex]) {
         showToast('Please designate a Master Treasury Wallet first!', true);
         return;
@@ -7854,7 +7961,8 @@
     }
 
     async function handleCloudVaultWipe() {
-      if (!confirm('Are you sure you want to permanently erase your remote Cloud Vault backup? Local settings will remain.')) return;
+      const ok = await showCustomConfirm('Are you sure you want to permanently erase your remote Cloud Vault backup? Local settings will remain.', 'Erase Cloud Vault', { isDanger: true, confirmText: 'Wipe Remote Cloud Data' });
+      if (!ok) return;
       if (!currentUser || !sessionToken) return;
       const uid = currentUser.id;
       try {
@@ -8626,7 +8734,8 @@
     }
 
     async function adminDeleteUser(userId) {
-      if (!confirm('Are you sure you want to permanently delete this user?')) return;
+      const ok = await showCustomConfirm('Are you sure you want to permanently delete this user and wipe their cloud data?', 'Delete User Account', { isDanger: true, confirmText: 'Delete User' });
+      if (!ok) return;
       try {
         const res = await fetch('/api/users/delete', {
           method: 'POST',
@@ -8669,7 +8778,8 @@
     }
 
     async function adminDeleteInvite(inviteId) {
-      if (!confirm('Are you sure you want to permanently delete this invite key?')) return;
+      const ok = await showCustomConfirm('Are you sure you want to permanently delete this invite key?', 'Delete Invite Key', { isDanger: true, confirmText: 'Delete Key' });
+      if (!ok) return;
       try {
         const res = await fetch('/api/invites/delete', {
           method: 'POST',
@@ -8798,7 +8908,8 @@
     }
 
     async function deleteFleetRpc(id) {
-      if (!confirm('Are you sure you want to remove this node from the global cluster?')) return;
+      const ok = await showCustomConfirm('Are you sure you want to remove this node from the global cluster?', 'Remove Cluster Node', { isDanger: true, confirmText: 'Remove Node' });
+      if (!ok) return;
       try {
         const res = await fetch('/api/fleet-rpcs/delete', {
           method: 'POST',
