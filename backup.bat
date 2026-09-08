@@ -62,34 +62,34 @@ echo @echo off
 echo title Restore Sniper V2 Backup Snapshot [%NEXT_NUM%]
 echo color 0E
 echo cls
-echo ===================================================================
-echo   🔄 NFT SNIPER V2 - 1-CLICK RESTORE SNAPSHOT [%NEXT_NUM%]
-echo ===================================================================
-echo.
-echo   Target Project Folder: %ROOT%
-echo   GitHub ^& Live Site:    https://github.com/Jainbharat666/aero-sniper
-echo.
-echo   WARNING: This will restore your Sniper V2 codebase back to Snapshot [%NEXT_NUM%]!
-echo.
-echo ===================================================================
-echo   Press ANY KEY to execute 100%%%% COMPLETE RESTORE...
-echo   (Or close this window to cancel^)
-echo ===================================================================
+echo echo ===================================================================
+echo echo   🔄 NFT SNIPER V2 - 1-CLICK RESTORE SNAPSHOT [%NEXT_NUM%]
+echo echo ===================================================================
+echo echo.
+echo echo   Target Project Folder: %ROOT%
+echo echo   GitHub ^& Live Site:    https://github.com/Jainbharat666/aero-sniper
+echo echo.
+echo echo   WARNING: This will restore your Sniper V2 codebase back to Snapshot [%NEXT_NUM%]!
+echo echo.
+echo echo ===================================================================
+echo echo   Press ANY KEY to execute 100%%%% COMPLETE RESTORE...
+echo echo   (Or close this window to cancel^)
+echo echo ===================================================================
 echo pause ^> nul
-echo.
-echo [1/2] Restoring Local PC Codebase...
+echo echo.
+echo echo [1/2] Restoring Local PC Codebase...
 echo robocopy "%%~dp0." "%ROOT%" /E /XD "node_modules" ".git" ^> nul
-echo.
-echo ===================================================================
-echo   🎉 SUCCESS: VERSION [%NEXT_NUM%] RESTORED TO SNIPER V2!
-echo ===================================================================
-echo.
+echo echo.
+echo echo ===================================================================
+echo echo   🎉 SUCCESS: VERSION [%NEXT_NUM%] RESTORED TO SNIPER V2!
+echo echo ===================================================================
+echo echo.
 echo set /p PUSH_GHT="🚀 Do you want to push this restored version to GitHub ^& Vercel? (Y/N, default Y): "
 echo if /i "%%PUSH_GHT%%"=="" set PUSH_GHT=Y
 echo if /i "%%PUSH_GHT%%"=="Y" (
 echo     if exist "%ROOT%\push_to_github.bat" call "%ROOT%\push_to_github.bat" --auto
 echo ^)
-echo.
+echo echo.
 echo pause
 ) > "%DEST_FOLDER%\RESTORE_THIS_BACKUP.bat"
 
@@ -105,14 +105,14 @@ echo GitHub:    https://github.com/Jainbharat666/aero-sniper
 echo Live Site: https://aero-sniper.vercel.app
 echo.
 echo INCLUDED MODULES:
-echo - server.js (6-Key Laser Grid, Seaport v1.6 Mempool Blast, SSE Engine)
-echo - public/index.html (Tailwind CSS, Bento Box Deck, Zero-Scroll UI)
-echo - src/stream.js (WebSocket Stream Listener)
-echo - src/rarity.js (OpenRarity Engine)
-echo - src/executor.js (Seaport Transaction Builder ^& Multi-RPC Dispatch)
-echo - src/config.js (Network, RPC, Key Configurations)
-echo - scripts/backup_db.js (Supabase 24/7 Cloud Database Backup Engine)
-echo - backups/ (Supabase Cloud JSON Snapshots: Users, Invites, Configs, RPCs)
+echo - server.js
+echo - public/index.html
+echo - src/stream.js
+echo - src/rarity.js
+echo - src/executor.js
+echo - src/config.js
+echo - scripts/backup_db.js
+echo - backups/
 echo - .env, package.json, START_SNIPER.bat, push_to_github.bat
 echo ===================================================================
 ) > "%DEST_FOLDER%\SNAPSHOT_INFO.txt"
