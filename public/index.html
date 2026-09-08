@@ -870,49 +870,347 @@
 
   
     /* ══════════════════════════════════════════════════════════════
-       💎 COMPREHENSIVE DARK MODE & HIGH-CONTRAST TYPOGRAPHY FIXES
+       💎 COMPREHENSIVE DARK/DAY MODE CONTRAST ENGINE V3
+       AeroMint V2 Exact 1:1 Palette Mirror — Battle-Tested
        ══════════════════════════════════════════════════════════════ */
 
-    /* Universal Text Contrast in Dark Mode (Eliminates all dark-on-dark invisible text) */
+    /* ─── SECTION A: UNIVERSAL TAILWIND TEXT OVERRIDES (DARK MODE) ─── */
     body:not(.day-mode) .text-slate-900,
     body:not(.day-mode) .text-slate-800,
-    body:not(.day-mode) h1.text-slate-900,
-    body:not(.day-mode) h2.text-slate-900,
-    body:not(.day-mode) h3.text-slate-900,
-    body:not(.day-mode) span.text-slate-900,
-    body:not(.day-mode) span.text-slate-800,
-    body:not(.day-mode) strong.text-slate-900 {
+    body:not(.day-mode) .text-gray-900,
+    body:not(.day-mode) .text-gray-800 {
       color: #f8fafc !important;
     }
-
     body:not(.day-mode) .text-slate-700,
-    body:not(.day-mode) span.text-slate-700,
-    body:not(.day-mode) strong.text-slate-700 {
+    body:not(.day-mode) .text-gray-700 {
       color: #e2e8f0 !important;
     }
-
     body:not(.day-mode) .text-slate-600,
-    body:not(.day-mode) p.text-slate-600 {
+    body:not(.day-mode) .text-gray-600 {
       color: #cbd5e1 !important;
     }
-
     body:not(.day-mode) .text-slate-500,
     body:not(.day-mode) .text-slate-400,
-    body:not(.day-mode) span.text-slate-500,
-    body:not(.day-mode) p.text-slate-500 {
+    body:not(.day-mode) .text-gray-500,
+    body:not(.day-mode) .text-gray-400 {
+      color: #94a3b8 !important;
+    }
+    body:not(.day-mode) .text-indigo-600 { color: #818cf8 !important; }
+    body:not(.day-mode) .text-indigo-700 { color: #a5b4fc !important; }
+    body:not(.day-mode) .text-indigo-800 { color: #c7d2fe !important; }
+    body:not(.day-mode) .text-purple-600:not(.bg-purple-600) { color: #c084fc !important; }
+    body:not(.day-mode) .text-purple-700 { color: #d8b4fe !important; }
+    body:not(.day-mode) .text-emerald-600 { color: #34d399 !important; }
+    body:not(.day-mode) .text-emerald-700 { color: #6ee7b7 !important; }
+    body:not(.day-mode) .text-emerald-800 { color: #34d399 !important; }
+    body:not(.day-mode) .text-rose-600 { color: #fb7185 !important; }
+    body:not(.day-mode) .text-rose-700 { color: #fda4af !important; }
+    body:not(.day-mode) .text-rose-800 { color: #fb7185 !important; }
+    body:not(.day-mode) .text-amber-600 { color: #fbbf24 !important; }
+    body:not(.day-mode) .text-amber-700 { color: #fcd34d !important; }
+    body:not(.day-mode) .text-amber-800 { color: #fcd34d !important; }
+    body:not(.day-mode) .text-amber-900 { color: #fef3c7 !important; }
+    body:not(.day-mode) .text-amber-950 { color: #fef3c7 !important; }
+    body:not(.day-mode) .text-cyan-600 { color: #22d3ee !important; }
+    body:not(.day-mode) .text-cyan-700 { color: #67e8f9 !important; }
+
+    /* ─── SECTION B: UNIVERSAL BG OVERRIDES (DARK MODE) ─── */
+    body:not(.day-mode) .bg-white {
+      background-color: #141722 !important;
+    }
+    body:not(.day-mode) .bg-white\/90 {
+      background-color: #111420 !important;
+    }
+    body:not(.day-mode) .bg-slate-50\/70 {
+      background-color: #111420 !important;
+    }
+    body:not(.day-mode) .bg-slate-50:not(.console-unibody-card *) {
+      background-color: #0f121d !important;
+    }
+    body:not(.day-mode) .bg-slate-100 {
+      background-color: #0f121d !important;
+    }
+    body:not(.day-mode) .bg-slate-200 {
+      background-color: #181d2a !important;
+    }
+    body:not(.day-mode) .bg-indigo-50,
+    body:not(.day-mode) .bg-indigo-50\/40,
+    body:not(.day-mode) .bg-indigo-100 {
+      background-color: rgba(99, 102, 241, 0.12) !important;
+    }
+    body:not(.day-mode) .bg-purple-50,
+    body:not(.day-mode) .bg-purple-100 {
+      background-color: rgba(168, 85, 247, 0.12) !important;
+    }
+    body:not(.day-mode) .bg-emerald-50,
+    body:not(.day-mode) .bg-emerald-50\/60,
+    body:not(.day-mode) .bg-emerald-100 {
+      background-color: rgba(16, 185, 129, 0.15) !important;
+      color: #34d399 !important;
+    }
+    body:not(.day-mode) .bg-rose-50,
+    body:not(.day-mode) .bg-rose-100 {
+      background-color: rgba(244, 63, 94, 0.15) !important;
+      color: #fb7185 !important;
+    }
+    body:not(.day-mode) .bg-amber-50,
+    body:not(.day-mode) .bg-amber-50\/60,
+    body:not(.day-mode) .bg-amber-100 {
+      background-color: rgba(245, 158, 11, 0.15) !important;
+      color: #fcd34d !important;
+    }
+    body:not(.day-mode) .bg-cyan-50,
+    body:not(.day-mode) .bg-cyan-100 {
+      background-color: rgba(6, 182, 212, 0.12) !important;
+      color: #22d3ee !important;
+    }
+    body:not(.day-mode) .bg-pink-50,
+    body:not(.day-mode) .bg-pink-100 {
+      background-color: rgba(236, 72, 153, 0.12) !important;
+      color: #f472b6 !important;
+    }
+
+    /* ─── SECTION C: UNIVERSAL BORDER OVERRIDES (DARK MODE) ─── */
+    body:not(.day-mode) .border-slate-200,
+    body:not(.day-mode) .border-slate-100,
+    body:not(.day-mode) .border-slate-300 {
+      border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    body:not(.day-mode) .border-indigo-200,
+    body:not(.day-mode) .border-indigo-300 {
+      border-color: rgba(99, 102, 241, 0.35) !important;
+    }
+    body:not(.day-mode) .border-emerald-300 {
+      border-color: rgba(16, 185, 129, 0.4) !important;
+    }
+    body:not(.day-mode) .border-amber-300 {
+      border-color: rgba(245, 158, 11, 0.4) !important;
+    }
+    body:not(.day-mode) .border-rose-200 {
+      border-color: rgba(244, 63, 94, 0.35) !important;
+    }
+    body:not(.day-mode) .border-purple-300 {
+      border-color: rgba(168, 85, 247, 0.35) !important;
+    }
+    body:not(.day-mode) .border-pink-300 {
+      border-color: rgba(236, 72, 153, 0.35) !important;
+    }
+    body:not(.day-mode) .border-cyan-300 {
+      border-color: rgba(6, 182, 212, 0.35) !important;
+    }
+
+    /* ─── SECTION D: RPC FLEET LIST (DARK MODE) ─── */
+    body:not(.day-mode) #rpc-fleet-list > div {
+      background-color: #111420 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      color: #ffffff !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+    }
+    body:not(.day-mode) #rpc-fleet-list > div:hover {
+      background-color: #161b2c !important;
+      border-color: rgba(168, 85, 247, 0.4) !important;
+    }
+    body:not(.day-mode) #rpc-fleet-list > div[class*="border-indigo-300"] {
+      background-color: rgba(99, 102, 241, 0.1) !important;
+      border: 1px solid rgba(99, 102, 241, 0.4) !important;
+    }
+    body:not(.day-mode) #rpc-fleet-list span.text-slate-900,
+    body:not(.day-mode) #rpc-fleet-list .font-black.text-slate-900 {
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #rpc-fleet-list span.bg-slate-200 {
+      background-color: #1e2538 !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: #94a3b8 !important;
+    }
+    body:not(.day-mode) #rpc-fleet-list .bg-emerald-100 {
+      background-color: rgba(16, 185, 129, 0.18) !important;
+      border: 1px solid rgba(16, 185, 129, 0.45) !important;
+      color: #34d399 !important;
+    }
+    body:not(.day-mode) #rpc-fleet-list .bg-amber-100 {
+      background-color: rgba(245, 158, 11, 0.18) !important;
+      border: 1px solid rgba(245, 158, 11, 0.45) !important;
+      color: #fcd34d !important;
+    }
+    body:not(.day-mode) #rpc-fleet-list button.bg-white,
+    body:not(.day-mode) #rpc-fleet-list button[class*="bg-white"] {
+      background-color: #181d2a !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      color: #cbd5e1 !important;
+    }
+    body:not(.day-mode) #rpc-fleet-list button.bg-white:hover,
+    body:not(.day-mode) #rpc-fleet-list button[class*="bg-white"]:hover {
+      background-color: #202738 !important;
+      border-color: rgba(168, 85, 247, 0.5) !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #rpc-fleet-list span.bg-slate-100 {
+      background-color: #181d2a !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: #94a3b8 !important;
+    }
+    body:not(.day-mode) #rpc-fleet-list button.bg-rose-50,
+    body:not(.day-mode) #rpc-fleet-list button[class*="bg-rose-50"] {
+      background-color: rgba(244, 63, 94, 0.12) !important;
+      border: 1px solid rgba(244, 63, 94, 0.3) !important;
+      color: #fb7185 !important;
+    }
+    body:not(.day-mode) #rpc-fleet-list button.bg-rose-50:hover,
+    body:not(.day-mode) #rpc-fleet-list button[class*="bg-rose-50"]:hover {
+      background-color: rgba(244, 63, 94, 0.25) !important;
+      color: #fda4af !important;
+    }
+    body:not(.day-mode) #mini-rpc-list > div {
+      background-color: #111420 !important;
+      border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    }
+    body:not(.day-mode) #mini-rpc-list > div:hover {
+      background-color: #161b2c !important;
+    }
+    body:not(.day-mode) #mini-rpc-list span {
+      color: #e2e8f0 !important;
+    }
+    body:not(.day-mode) #mini-rpc-list .bg-indigo-100 {
+      background-color: rgba(99, 102, 241, 0.15) !important;
+      color: #a5b4fc !important;
+    }
+
+    /* ─── SECTION E: OPENSEA KEYS LIST (DARK MODE) ─── */
+    body:not(.day-mode) #opensea-keys-list > div {
+      background-color: #111420 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      color: #ffffff !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+    }
+    body:not(.day-mode) #opensea-keys-list > div:hover {
+      background-color: #161b2c !important;
+      border-color: rgba(168, 85, 247, 0.4) !important;
+    }
+    body:not(.day-mode) #opensea-keys-list span.text-slate-900,
+    body:not(.day-mode) #opensea-keys-list .font-black.text-slate-900 {
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #opensea-keys-list strong.text-slate-700 {
+      color: #e2e8f0 !important;
+    }
+    body:not(.day-mode) #opensea-keys-list strong.text-indigo-600 {
+      color: #818cf8 !important;
+    }
+    body:not(.day-mode) #opensea-keys-list .bg-emerald-100 {
+      background-color: rgba(16, 185, 129, 0.18) !important;
+      border: 1px solid rgba(16, 185, 129, 0.45) !important;
+      color: #34d399 !important;
+    }
+    body:not(.day-mode) #opensea-keys-list .bg-rose-100 {
+      background-color: rgba(244, 63, 94, 0.18) !important;
+      border: 1px solid rgba(244, 63, 94, 0.45) !important;
+      color: #fb7185 !important;
+    }
+    body:not(.day-mode) #opensea-keys-list button.bg-white,
+    body:not(.day-mode) #opensea-keys-list button[class*="bg-white"] {
+      background-color: #181d2a !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      color: #cbd5e1 !important;
+    }
+    body:not(.day-mode) #opensea-keys-list button.bg-white:hover,
+    body:not(.day-mode) #opensea-keys-list button[class*="bg-white"]:hover {
+      background-color: #22293a !important;
+      border-color: rgba(168, 85, 247, 0.5) !important;
+      color: #ffffff !important;
+    }
+
+    /* ─── SECTION F: RPC STRATEGY CARDS (DARK MODE) ─── */
+    body:not(.day-mode) #strat-blast-card,
+    body:not(.day-mode) #strat-fastest-card,
+    body:not(.day-mode) #strat-primary-card {
+      background-color: #111420 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #strat-blast-card:hover,
+    body:not(.day-mode) #strat-fastest-card:hover,
+    body:not(.day-mode) #strat-primary-card:hover {
+      background-color: #161b2c !important;
+    }
+    body:not(.day-mode) #strat-blast-card.border-indigo-500,
+    body:not(.day-mode) #strat-blast-card[class*="border-2"],
+    body:not(.day-mode) #strat-fastest-card.border-indigo-500,
+    body:not(.day-mode) #strat-fastest-card[class*="border-2"],
+    body:not(.day-mode) #strat-primary-card.border-indigo-500,
+    body:not(.day-mode) #strat-primary-card[class*="border-2"] {
+      background-color: rgba(99, 102, 241, 0.12) !important;
+      border: 2px solid #6366f1 !important;
+    }
+    body:not(.day-mode) #strat-blast-card span,
+    body:not(.day-mode) #strat-fastest-card span,
+    body:not(.day-mode) #strat-primary-card span {
+      color: #f8fafc !important;
+    }
+    body:not(.day-mode) #strat-blast-card p,
+    body:not(.day-mode) #strat-fastest-card p,
+    body:not(.day-mode) #strat-primary-card p {
       color: #94a3b8 !important;
     }
 
-    /* Fix .rule-dimmed: Don't turn paused rules into 0.45 murky mud */
-    .rule-dimmed {
-      opacity: 0.7 !important;
-      filter: grayscale(0.2) !important;
-      pointer-events: none !important;
-      transition: all 0.25s ease !important;
+    /* ─── SECTION G: TREASURY VAULT & FUND BUTTONS (DARK MODE) ─── */
+    body:not(.day-mode) div:has(> div > span > .fa-coins) {
+      background-color: #111420 !important;
+      border: 1px solid rgba(245, 158, 11, 0.3) !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #select-master-wallet {
+      background-color: #0d1017 !important;
+      border: 1px solid rgba(245, 158, 11, 0.4) !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #select-master-wallet option {
+      background-color: #0d1017 !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) button[onclick*="setFundUsdPreset"] {
+      background-color: #181d2a !important;
+      border: 1px solid rgba(245, 158, 11, 0.3) !important;
+      color: #fef3c7 !important;
+      font-weight: 800 !important;
+    }
+    body:not(.day-mode) button[onclick*="setFundUsdPreset"]:hover {
+      background-color: rgba(245, 158, 11, 0.25) !important;
+      border-color: #f59e0b !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) button[onclick*="setFundPercentPreset"] {
+      background-color: #181d2a !important;
+      border: 1px solid rgba(99, 102, 241, 0.3) !important;
+      color: #c7d2fe !important;
+      font-weight: 800 !important;
+    }
+    body:not(.day-mode) button[onclick*="setFundPercentPreset"]:hover {
+      background-color: rgba(99, 102, 241, 0.25) !important;
+      border-color: #818cf8 !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) button[onclick="setFundPercentPreset(100)"] {
+      background-color: rgba(16, 185, 129, 0.18) !important;
+      border: 1px solid rgba(16, 185, 129, 0.5) !important;
+      color: #6ee7b7 !important;
+    }
+    body:not(.day-mode) button[onclick="fundWorkersExactSniperCost()"] {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.25)) !important;
+      border: 1px solid rgba(245, 158, 11, 0.5) !important;
+      color: #fef3c7 !important;
+    }
+    body:not(.day-mode) button[onclick="fundWorkersExactSniperCost()"]:hover {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.4), rgba(217, 119, 6, 0.4)) !important;
+    }
+    body:not(.day-mode) #input-fund-usd,
+    body:not(.day-mode) #input-fund-amount {
+      background-color: #0d1017 !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: #ffffff !important;
     }
 
-    /* ─── SNIPER TRIGGER RULES PRESETS & STYLING ─── */
-    /* Dark Mode Preset Buttons */
+    /* ─── SECTION H: SNIPER TRIGGER PRESETS (BOTH MODES) ─── */
     body:not(.day-mode) .pct-btn {
       background-color: #141824 !important;
       border: 1px solid rgba(245, 158, 11, 0.35) !important;
@@ -932,8 +1230,44 @@
       font-weight: 900 !important;
       box-shadow: 0 0 14px rgba(245, 158, 11, 0.45) !important;
     }
-
-    /* Day Mode Preset Buttons */
+    body:not(.day-mode) .rk-btn,
+    body:not(.day-mode) .rpm-btn {
+      background-color: #181d2a !important;
+      border: 1px solid rgba(168, 85, 247, 0.3) !important;
+      color: #e2e8f0 !important;
+    }
+    body:not(.day-mode) .rk-btn:hover,
+    body:not(.day-mode) .rpm-btn:hover {
+      background-color: rgba(168, 85, 247, 0.25) !important;
+      border-color: #a855f7 !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) .rk-btn.bg-purple-600,
+    body:not(.day-mode) .rpm-btn.bg-purple-600 {
+      background-color: #7c3aed !important;
+      border-color: #a855f7 !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 14px rgba(168, 85, 247, 0.5) !important;
+    }
+    body:not(.day-mode) #param-rare-rank,
+    body:not(.day-mode) #param-rare-eth,
+    body:not(.day-mode) #param-rare-usd,
+    body:not(.day-mode) #param-floor-eth,
+    body:not(.day-mode) #param-floor-usd,
+    body:not(.day-mode) #param-trait-max-eth,
+    body:not(.day-mode) #param-token-ids,
+    body:not(.day-mode) #param-token-max-eth,
+    body:not(.day-mode) #param-trait-type,
+    body:not(.day-mode) #param-trait-value {
+      background-color: #0d1017 !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #param-floor-usd,
+    body:not(.day-mode) #param-rare-usd {
+      color: #38bdf8 !important;
+    }
+    /* Day Mode Presets */
     body.day-mode .pct-btn {
       background-color: #ffffff !important;
       border: 1px solid #fde68a !important;
@@ -951,8 +1285,6 @@
       font-weight: 800 !important;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
     }
-
-    /* Rarity Presets in Day Mode */
     body.day-mode .rk-btn,
     body.day-mode .rpm-btn {
       background-color: #ffffff !important;
@@ -971,7 +1303,7 @@
       font-weight: 800 !important;
     }
 
-    /* Gas War Engine Buttons in Dark Mode */
+    /* ─── SECTION I: GAS WAR BUTTONS (DARK MODE) ─── */
     body:not(.day-mode) #gas-safe,
     body:not(.day-mode) #gas-surge,
     body:not(.day-mode) #gas-hyped {
@@ -979,14 +1311,29 @@
       border: 1px solid rgba(255, 255, 255, 0.1) !important;
       color: #cbd5e1 !important;
     }
-    body:not(.day-mode) #gas-safe:hover,
-    body:not(.day-mode) #gas-surge:hover,
-    body:not(.day-mode) #gas-hyped:hover {
-      background-color: #1e2638 !important;
-      color: #ffffff !important;
+    body:not(.day-mode) #gas-safe:hover { background-color: #1e2638 !important; color: #6ee7b7 !important; }
+    body:not(.day-mode) #gas-surge:hover { background-color: #1e2638 !important; color: #fcd34d !important; }
+    body:not(.day-mode) #gas-hyped:hover { background-color: #1e2638 !important; color: #fb7185 !important; }
+    body:not(.day-mode) #gas-safe.bg-emerald-600 {
+      background-color: rgba(16, 185, 129, 0.25) !important;
+      border-color: #10b981 !important;
+      color: #6ee7b7 !important;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.3) !important;
+    }
+    body:not(.day-mode) #gas-surge.bg-amber-600 {
+      background-color: rgba(245, 158, 11, 0.25) !important;
+      border-color: #f59e0b !important;
+      color: #fcd34d !important;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.3) !important;
+    }
+    body:not(.day-mode) #gas-hyped.bg-rose-600 {
+      background-color: rgba(244, 63, 94, 0.25) !important;
+      border-color: #f43f5e !important;
+      color: #fda4af !important;
+      box-shadow: 0 0 12px rgba(244, 63, 94, 0.3) !important;
     }
 
-    /* Dashboard Wallet Fleet Status Card in Dark Mode */
+    /* ─── SECTION J: DASHBOARD WALLET FLEET STATUS (DARK MODE) ─── */
     body:not(.day-mode) #widget-wallet .bg-amber-50\/60 {
       background-color: rgba(245, 158, 11, 0.08) !important;
       border-color: rgba(245, 158, 11, 0.25) !important;
@@ -995,15 +1342,9 @@
       background-color: rgba(16, 185, 129, 0.08) !important;
       border-color: rgba(16, 185, 129, 0.25) !important;
     }
-    body:not(.day-mode) #dash-master-bal {
-      color: #fbbf24 !important;
-    }
-    body:not(.day-mode) #dash-fleet-total-eth {
-      color: #34d399 !important;
-    }
-    body:not(.day-mode) #dash-fleet-total-usd {
-      color: #a7f3d0 !important;
-    }
+    body:not(.day-mode) #dash-master-bal { color: #fbbf24 !important; }
+    body:not(.day-mode) #dash-fleet-total-eth { color: #34d399 !important; }
+    body:not(.day-mode) #dash-fleet-total-usd { color: #a7f3d0 !important; }
     body:not(.day-mode) #dash-master-status {
       background-color: #1e2433 !important;
       border: 1px solid rgba(245, 158, 11, 0.3) !important;
@@ -1015,22 +1356,61 @@
       color: #6ee7b7 !important;
     }
 
-    /* ─── CUSTOM RPC SECTION CONTRAST FIXES ─── */
-    /* Golden ping badge in Dark Mode: Dark golden pill with brilliant crisp yellow text */
-    body:not(.day-mode) #rpc-fleet-list .bg-amber-100,
-    body:not(.day-mode) #rpc-fleet-list span[class*="bg-amber-100"] {
-      background-color: rgba(245, 158, 11, 0.18) !important;
-      border: 1px solid rgba(245, 158, 11, 0.45) !important;
-      color: #fcd34d !important;
+    /* ─── SECTION K: BENTO DECK (DARK MODE) ─── */
+    body:not(.day-mode) #deck-view-bento {
+      background-color: #0c0f1a !important;
+      border: 2px solid rgba(255, 255, 255, 0.1) !important;
     }
-    /* Emerald ping badge in Dark Mode */
-    body:not(.day-mode) #rpc-fleet-list .bg-emerald-100,
-    body:not(.day-mode) #rpc-fleet-list span[class*="bg-emerald-100"] {
-      background-color: rgba(16, 185, 129, 0.18) !important;
-      border: 1px solid rgba(16, 185, 129, 0.45) !important;
-      color: #34d399 !important;
+    body:not(.day-mode) #deck-view-bento > div {
+      background-color: #121624 !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
     }
-    /* In Day Mode: high contrast text on pastel pills */
+    body:not(.day-mode) #deck-view-bento > div:nth-child(1) { border: 1px solid rgba(245, 158, 11, 0.4) !important; }
+    body:not(.day-mode) #deck-view-bento > div:nth-child(1) span,
+    body:not(.day-mode) #deck-view-bento > div:nth-child(1) div { color: #fef3c7 !important; }
+    body:not(.day-mode) #bento-sw-floor { background-color: #f59e0b !important; color: #000 !important; font-weight: 800 !important; }
+    body:not(.day-mode) #deck-view-bento > div:nth-child(2) { border: 1px solid rgba(168, 85, 247, 0.4) !important; }
+    body:not(.day-mode) #deck-view-bento > div:nth-child(2) span,
+    body:not(.day-mode) #deck-view-bento > div:nth-child(2) div { color: #f3e8ff !important; }
+    body:not(.day-mode) #bento-sw-rarity { background-color: #a855f7 !important; color: #fff !important; font-weight: 800 !important; }
+    body:not(.day-mode) #deck-view-bento > div:nth-child(3) { border: 1px solid rgba(236, 72, 153, 0.4) !important; }
+    body:not(.day-mode) #deck-view-bento > div:nth-child(3) span,
+    body:not(.day-mode) #deck-view-bento > div:nth-child(3) div { color: #fce7f3 !important; }
+    body:not(.day-mode) #deck-view-bento > div:nth-child(4) { border: 1px solid rgba(6, 182, 212, 0.4) !important; }
+    body:not(.day-mode) #deck-view-bento > div:nth-child(4) span,
+    body:not(.day-mode) #deck-view-bento > div:nth-child(4) div { color: #cffafe !important; }
+
+    /* ─── SECTION L: GEN COUNT BTNS & RPC/OPENSEA INPUTS ─── */
+    body:not(.day-mode) .gen-cnt-btn {
+      background-color: #181d2a !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: #e2e8f0 !important;
+    }
+    body:not(.day-mode) .gen-cnt-btn:hover { background-color: #22293a !important; color: #fff !important; }
+    body:not(.day-mode) .gen-cnt-btn.bg-indigo-600 {
+      background-color: #6366f1 !important;
+      color: #fff !important;
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.45) !important;
+    }
+    body:not(.day-mode) #new-rpc-name,
+    body:not(.day-mode) #new-rpc-url,
+    body:not(.day-mode) #new-opensea-label,
+    body:not(.day-mode) #new-opensea-key {
+      background-color: #0c0f18 !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: #fff !important;
+    }
+    body:not(.day-mode) #new-rpc-name::placeholder,
+    body:not(.day-mode) #new-rpc-url::placeholder,
+    body:not(.day-mode) #new-opensea-label::placeholder,
+    body:not(.day-mode) #new-opensea-key::placeholder {
+      color: #64748b !important;
+    }
+    body:not(.day-mode) #view-opensea h2,
+    body:not(.day-mode) #view-opensea h3 { color: #fff !important; font-weight: 800 !important; }
+    body:not(.day-mode) #stat-opensea-total-calls { color: #fff !important; font-weight: 900 !important; }
+
+    /* ─── SECTION M: RPC FLEET DAY MODE BADGES ─── */
     body.day-mode #rpc-fleet-list .bg-amber-100 {
       background-color: #fef3c7 !important;
       border: 1px solid #fcd34d !important;
@@ -1044,63 +1424,107 @@
       font-weight: 800 !important;
     }
 
-    /* RPC Section Inputs & Controls in Dark Mode */
-    body:not(.day-mode) #new-rpc-name,
-    body:not(.day-mode) #new-rpc-url,
-    body:not(.day-mode) #new-opensea-label,
-    body:not(.day-mode) #new-opensea-key {
-      background-color: #0c0f18 !important;
-      border: 1px solid rgba(255, 255, 255, 0.15) !important;
-      color: #ffffff !important;
+    /* ─── SECTION N: WALLETS TABLE & FLEET (DARK MODE) ─── */
+    body:not(.day-mode) #view-wallets table thead th {
+      background-color: #101420 !important;
+      color: #94a3b8 !important;
+      border-color: rgba(255, 255, 255, 0.06) !important;
     }
-    body:not(.day-mode) #new-rpc-name::placeholder,
-    body:not(.day-mode) #new-rpc-url::placeholder,
-    body:not(.day-mode) #new-opensea-label::placeholder,
-    body:not(.day-mode) #new-opensea-key::placeholder {
-      color: #64748b !important;
-    }
-
-    /* ─── OPENSEA API SECTION CONTRAST FIXES ─── */
-    body:not(.day-mode) #view-opensea .bg-slate-50 {
-      background-color: #111420 !important;
-      border-color: rgba(255, 255, 255, 0.08) !important;
-    }
-    body:not(.day-mode) #view-opensea h2,
-    body:not(.day-mode) #view-opensea h3,
-    body:not(.day-mode) #view-opensea span.text-slate-900 {
-      color: #ffffff !important;
-      font-weight: 800 !important;
-    }
-    body:not(.day-mode) #stat-opensea-total-calls {
-      color: #ffffff !important;
-      font-weight: 900 !important;
-    }
-    body:not(.day-mode) #opensea-keys-list > div {
-      background-color: #111420 !important;
-      border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    }
-    body:not(.day-mode) #opensea-keys-list .bg-emerald-100 {
-      background-color: rgba(16, 185, 129, 0.18) !important;
-      border: 1px solid rgba(16, 185, 129, 0.45) !important;
-      color: #34d399 !important;
-    }
-    body:not(.day-mode) #opensea-keys-list .bg-rose-100 {
-      background-color: rgba(244, 63, 94, 0.18) !important;
-      border: 1px solid rgba(244, 63, 94, 0.45) !important;
-      color: #fb7185 !important;
-    }
-    body:not(.day-mode) #opensea-keys-list strong.text-slate-700 {
+    body:not(.day-mode) #view-wallets table tbody td {
       color: #e2e8f0 !important;
+      border-color: rgba(255, 255, 255, 0.04) !important;
     }
-    body:not(.day-mode) #opensea-keys-list button.bg-white {
+    body:not(.day-mode) #view-wallets table tbody tr:hover {
+      background-color: rgba(168, 85, 247, 0.06) !important;
+    }
+    body:not(.day-mode) #view-wallets h2,
+    body:not(.day-mode) #view-wallets h3,
+    body:not(.day-mode) #view-wallets h4 { color: #fff !important; }
+    body:not(.day-mode) #view-wallets label { color: #94a3b8 !important; }
+    body:not(.day-mode) #view-wallets button.bg-white {
       background-color: #181d2a !important;
       border: 1px solid rgba(255, 255, 255, 0.12) !important;
       color: #cbd5e1 !important;
     }
-    body:not(.day-mode) #opensea-keys-list button.bg-white:hover {
-      background-color: #22293a !important;
+    body:not(.day-mode) #view-wallets button.bg-white:hover {
+      background-color: #202738 !important;
       border-color: rgba(168, 85, 247, 0.5) !important;
-      color: #ffffff !important;
+      color: #fff !important;
+    }
+
+    /* ─── SECTION O: SCROLLBAR DARK MODE ─── */
+    body:not(.day-mode) ::-webkit-scrollbar-track { background: #0a0e16 !important; }
+    body:not(.day-mode) ::-webkit-scrollbar-thumb { background: #1e2538 !important; }
+    body:not(.day-mode) ::-webkit-scrollbar-thumb:hover { background: #2d3654 !important; }
+
+    /* ─── SECTION P: MODALS (DARK MODE) ─── */
+    body:not(.day-mode) #custom-confirm-modal .bg-white,
+    body:not(.day-mode) #user-profile-modal .bg-white,
+    body:not(.day-mode) #admin-panel-modal .bg-white {
+      background-color: #141722 !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      color: #fff !important;
+    }
+    body:not(.day-mode) #custom-confirm-modal h3,
+    body:not(.day-mode) #user-profile-modal h3,
+    body:not(.day-mode) #admin-panel-modal h3 { color: #fff !important; }
+    body:not(.day-mode) #custom-confirm-modal p,
+    body:not(.day-mode) #user-profile-modal p,
+    body:not(.day-mode) #admin-panel-modal p { color: #94a3b8 !important; }
+    body:not(.day-mode) #custom-confirm-modal label,
+    body:not(.day-mode) #user-profile-modal label,
+    body:not(.day-mode) #admin-panel-modal label { color: #cbd5e1 !important; }
+
+    /* ─── SECTION Q: RULE DIMMED FIX ─── */
+    .rule-dimmed {
+      opacity: 0.7 !important;
+      filter: grayscale(0.2) !important;
+      pointer-events: none !important;
+      transition: all 0.25s ease !important;
+    }
+
+    /* ─── SECTION R: CATCH-ALL REINFORCEMENTS (DARK MODE) ─── */
+    body:not(.day-mode) div[class*="hover:bg-white"]:hover {
+      background-color: rgba(255, 255, 255, 0.04) !important;
+    }
+    body:not(.day-mode) .hover\:shadow-sm:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    }
+    body:not(.day-mode) #deck-view-floor label,
+    body:not(.day-mode) #deck-view-rarity label,
+    body:not(.day-mode) #deck-view-trait label,
+    body:not(.day-mode) #deck-view-tokenId label { color: #cbd5e1 !important; }
+    body:not(.day-mode) #deck-view-floor small,
+    body:not(.day-mode) #deck-view-rarity small,
+    body:not(.day-mode) #deck-view-trait small,
+    body:not(.day-mode) #deck-view-tokenId small { color: #64748b !important; }
+    body:not(.day-mode) #view-rpc h2,
+    body:not(.day-mode) #view-rpc h3,
+    body:not(.day-mode) #view-rpc h4 { color: #fff !important; }
+    body:not(.day-mode) #view-rpc label { color: #94a3b8 !important; }
+    body:not(.day-mode) #view-opensea label { color: #94a3b8 !important; }
+    body:not(.day-mode) #widget-scanner h2,
+    body:not(.day-mode) #widget-scanner h3 { color: #fff !important; }
+    body:not(.day-mode) #widget-scanner label { color: #94a3b8 !important; }
+    body:not(.day-mode) #widget-rules h2,
+    body:not(.day-mode) #widget-rules h3 { color: #fff !important; }
+    body.day-mode #admin-panel-modal table thead th {
+      background-color: #f1f5f9 !important;
+      color: #475569 !important;
+    }
+    body.day-mode #admin-panel-modal table tbody td { color: #1a202c !important; }
+    body:not(.day-mode) #view-wallets span.text-emerald-800 { color: #34d399 !important; }
+    body:not(.day-mode) #view-wallets span.text-amber-800 { color: #fcd34d !important; }
+    body:not(.day-mode) #view-wallets span.text-rose-800 { color: #fb7185 !important; }
+    body:not(.day-mode) .hover\:bg-white:hover,
+    body:not(.day-mode) .hover\:bg-slate-100:hover {
+      background-color: rgba(255, 255, 255, 0.04) !important;
+    }
+    body:not(.day-mode) .hover\:bg-indigo-50:hover {
+      background-color: rgba(99, 102, 241, 0.15) !important;
+    }
+    body:not(.day-mode) .hover\:bg-rose-100:hover {
+      background-color: rgba(244, 63, 94, 0.2) !important;
     }
 
   </style>
@@ -8208,11 +8632,12 @@
         const btn = document.getElementById(`deck-btn-${d}`);
         if (view) view.classList.add('hidden');
         if (btn) {
-          if (d === 'floor') btn.className = 'flex-1 py-1 rounded-lg text-slate-600 hover:text-amber-800 font-bold flex items-center justify-center gap-1 transition-all text-[10px] cursor-pointer';
-          else if (d === 'rarity') btn.className = 'flex-1 py-1 rounded-lg text-slate-600 hover:text-purple-800 font-bold flex items-center justify-center gap-1 transition-all text-[10px] cursor-pointer';
-          else if (d === 'trait') btn.className = 'flex-1 py-1 rounded-lg text-slate-600 hover:text-pink-800 font-bold flex items-center justify-center gap-1 transition-all text-[10px] cursor-pointer';
-          else if (d === 'tokenId') btn.className = 'flex-1 py-1 rounded-lg text-slate-600 hover:text-cyan-800 font-bold flex items-center justify-center gap-1 transition-all text-[10px] cursor-pointer';
-          else if (d === 'bento') btn.className = 'py-1 px-2 rounded-lg text-slate-600 hover:text-indigo-800 font-bold flex items-center justify-center gap-1 transition-all text-[10px] cursor-pointer';
+          const isDk = !document.body.classList.contains('day-mode');
+          if (d === 'floor') btn.className = 'flex-1 py-1 rounded-lg ' + (isDk ? 'text-slate-400 hover:text-amber-300' : 'text-slate-600 hover:text-amber-800') + ' font-bold flex items-center justify-center gap-1 transition-all text-[10px] cursor-pointer';
+          else if (d === 'rarity') btn.className = 'flex-1 py-1 rounded-lg ' + (isDk ? 'text-slate-400 hover:text-purple-300' : 'text-slate-600 hover:text-purple-800') + ' font-bold flex items-center justify-center gap-1 transition-all text-[10px] cursor-pointer';
+          else if (d === 'trait') btn.className = 'flex-1 py-1 rounded-lg ' + (isDk ? 'text-slate-400 hover:text-pink-300' : 'text-slate-600 hover:text-pink-800') + ' font-bold flex items-center justify-center gap-1 transition-all text-[10px] cursor-pointer';
+          else if (d === 'tokenId') btn.className = 'flex-1 py-1 rounded-lg ' + (isDk ? 'text-slate-400 hover:text-cyan-300' : 'text-slate-600 hover:text-cyan-800') + ' font-bold flex items-center justify-center gap-1 transition-all text-[10px] cursor-pointer';
+          else if (d === 'bento') btn.className = 'py-1 px-2 rounded-lg ' + (isDk ? 'text-slate-400 hover:text-indigo-300' : 'text-slate-600 hover:text-indigo-800') + ' font-bold flex items-center justify-center gap-1 transition-all text-[10px] cursor-pointer';
         }
       });
 
@@ -8462,6 +8887,7 @@
         if (knobIcon) knobIcon.textContent = '☀️';
       }
       ['floor', 'rarity', 'trait', 'tokenId'].forEach(r => { if (typeof refreshSingleRuleSwitchUI === 'function') refreshSingleRuleSwitchUI(r); });
+      if (typeof switchRuleDeck === 'function') switchRuleDeck(currentRuleDeck || 'floor');
     }
 
     function toggleThemeMode(e) {
@@ -8499,6 +8925,8 @@
         }
         ['floor', 'rarity', 'trait', 'tokenId'].forEach(r => { if (typeof refreshSingleRuleSwitchUI === 'function') refreshSingleRuleSwitchUI(r); });
         if (typeof renderRpcFleet === 'function') renderRpcFleet();
+        if (typeof renderOpenSeaKeysList === 'function') renderOpenSeaKeysList();
+        if (typeof switchRuleDeck === 'function') switchRuleDeck(currentRuleDeck || 'floor');
       };
 
       if (!document.startViewTransition) {
