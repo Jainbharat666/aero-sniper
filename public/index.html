@@ -1724,21 +1724,208 @@
 
     /* ─── SECTION P: MODALS (DARK MODE) ─── */
     body:not(.day-mode) #custom-confirm-modal .bg-white,
-    body:not(.day-mode) #user-profile-modal .bg-white,
     body:not(.day-mode) #admin-panel-modal .bg-white {
       background-color: #141722 !important;
       border: 1px solid rgba(255, 255, 255, 0.12) !important;
       color: #fff !important;
     }
-    body:not(.day-mode) #custom-confirm-modal h3,
-    body:not(.day-mode) #user-profile-modal h3,
-    body:not(.day-mode) #admin-panel-modal h3 { color: #fff !important; }
-    body:not(.day-mode) #custom-confirm-modal p,
-    body:not(.day-mode) #user-profile-modal p,
-    body:not(.day-mode) #admin-panel-modal p { color: #94a3b8 !important; }
-    body:not(.day-mode) #custom-confirm-modal label,
-    body:not(.day-mode) #user-profile-modal label,
-    body:not(.day-mode) #admin-panel-modal label { color: #cbd5e1 !important; }
+    /* Profile Modal — Main container */
+    body:not(.day-mode) #user-profile-modal > .bg-white {
+      background-color: #0e1220 !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: #e2e8f0 !important;
+    }
+    /* Profile Modal — Header */
+    body:not(.day-mode) #user-profile-modal .border-b.border-slate-100 {
+      border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    body:not(.day-mode) #user-profile-modal #prof-modal-email {
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #user-profile-modal #prof-modal-uid {
+      color: #64748b !important;
+    }
+    body:not(.day-mode) #user-profile-modal #prof-avatar {
+      background-color: rgba(99, 102, 241, 0.15) !important;
+      border-color: rgba(99, 102, 241, 0.3) !important;
+    }
+    /* Close button */
+    body:not(.day-mode) #user-profile-modal button.bg-slate-100 {
+      background-color: rgba(255, 255, 255, 0.08) !important;
+      color: #94a3b8 !important;
+    }
+    body:not(.day-mode) #user-profile-modal button.bg-slate-100:hover {
+      background-color: rgba(255, 255, 255, 0.15) !important;
+      color: #fff !important;
+    }
+    /* Tab bar container */
+    body:not(.day-mode) #user-profile-modal .bg-slate-100.rounded-2xl {
+      background-color: rgba(255, 255, 255, 0.05) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    /* Active tab */
+    body:not(.day-mode) #user-profile-modal [id^="prof-tab-btn-"].bg-white {
+      background-color: rgba(99, 102, 241, 0.2) !important;
+      color: #a5b4fc !important;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15) !important;
+    }
+    /* Inactive tabs */
+    body:not(.day-mode) #user-profile-modal [id^="prof-tab-btn-"].text-slate-600 {
+      color: #64748b !important;
+    }
+    body:not(.day-mode) #user-profile-modal [id^="prof-tab-btn-"].text-slate-600:hover {
+      color: #e2e8f0 !important;
+    }
+
+    /* ─── Overview Tab ─── */
+    /* Subscription countdown card */
+    body:not(.day-mode) #prof-view-overview .bg-gradient-to-br {
+      background: linear-gradient(145deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.08), rgba(236, 72, 153, 0.06)) !important;
+      border-color: rgba(99, 102, 241, 0.25) !important;
+    }
+    body:not(.day-mode) #prof-view-overview .text-indigo-700 {
+      color: #a5b4fc !important;
+    }
+    /* Clock digit boxes */
+    body:not(.day-mode) #prof-clock-container .bg-white {
+      background-color: rgba(0, 0, 0, 0.35) !important;
+      border-color: rgba(99, 102, 241, 0.25) !important;
+    }
+    body:not(.day-mode) #prof-clock-container .text-indigo-600 {
+      color: #818cf8 !important;
+    }
+    body:not(.day-mode) #prof-clock-container .text-pink-600 {
+      color: #f472b6 !important;
+    }
+    body:not(.day-mode) #prof-clock-container .text-slate-500 {
+      color: #64748b !important;
+    }
+    body:not(.day-mode) #prof-clock-lifetime {
+      color: #34d399 !important;
+    }
+    body:not(.day-mode) #prof-valid-until-label {
+      color: #64748b !important;
+    }
+    /* Quota section */
+    body:not(.day-mode) #prof-view-overview > .bg-slate-50 {
+      background-color: rgba(255, 255, 255, 0.04) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    body:not(.day-mode) #prof-view-overview .text-slate-600 {
+      color: #94a3b8 !important;
+    }
+    body:not(.day-mode) #prof-view-overview .text-purple-700 {
+      color: #c084fc !important;
+    }
+    body:not(.day-mode) #prof-view-overview .bg-slate-200.rounded-full {
+      background-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    body:not(.day-mode) #prof-view-overview .text-slate-500 {
+      color: #64748b !important;
+    }
+
+    /* ─── Cloud Vault Tab ─── */
+    body:not(.day-mode) #prof-view-cloud_vault .bg-slate-50 {
+      background-color: rgba(255, 255, 255, 0.04) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    body:not(.day-mode) #prof-view-cloud_vault .text-slate-900 {
+      color: #f1f5f9 !important;
+    }
+    body:not(.day-mode) #prof-view-cloud_vault .text-slate-500 {
+      color: #64748b !important;
+    }
+    body:not(.day-mode) #prof-view-cloud_vault .bg-white {
+      background-color: rgba(0, 0, 0, 0.25) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+      color: #e2e8f0 !important;
+    }
+    body:not(.day-mode) #prof-view-cloud_vault .text-slate-800 {
+      color: #e2e8f0 !important;
+    }
+    body:not(.day-mode) #prof-view-cloud_vault .text-slate-600 {
+      color: #94a3b8 !important;
+    }
+    body:not(.day-mode) #prof-view-cloud_vault .bg-slate-200 {
+      background-color: rgba(255, 255, 255, 0.1) !important;
+      color: #94a3b8 !important;
+    }
+    body:not(.day-mode) #prof-view-cloud_vault .bg-indigo-50 {
+      background-color: rgba(99, 102, 241, 0.15) !important;
+    }
+    body:not(.day-mode) #prof-view-cloud_vault .bg-purple-50 {
+      background-color: rgba(168, 85, 247, 0.15) !important;
+    }
+    /* Restore button */
+    body:not(.day-mode) #prof-view-cloud_vault button.bg-white {
+      background-color: rgba(255, 255, 255, 0.06) !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #e2e8f0 !important;
+    }
+    body:not(.day-mode) #prof-view-cloud_vault button.bg-white:hover {
+      background-color: rgba(255, 255, 255, 0.12) !important;
+      color: #fff !important;
+    }
+    /* Wipe button */
+    body:not(.day-mode) #prof-view-cloud_vault .bg-rose-50 {
+      background-color: rgba(244, 63, 94, 0.1) !important;
+      border-color: rgba(244, 63, 94, 0.3) !important;
+    }
+
+    /* ─── Security Tab ─── */
+    body:not(.day-mode) #prof-view-security .bg-slate-50,
+    body:not(.day-mode) #prof-view-security form.bg-slate-50 {
+      background-color: rgba(255, 255, 255, 0.04) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    body:not(.day-mode) #prof-view-security .text-indigo-700 {
+      color: #a5b4fc !important;
+    }
+    body:not(.day-mode) #prof-view-security .text-slate-600 {
+      color: #94a3b8 !important;
+    }
+    body:not(.day-mode) #prof-view-security input {
+      background-color: rgba(0, 0, 0, 0.35) !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #e2e8f0 !important;
+    }
+    body:not(.day-mode) #prof-view-security input:focus {
+      border-color: rgba(99, 102, 241, 0.6) !important;
+    }
+
+    /* ─── Renew Tab ─── */
+    body:not(.day-mode) #prof-view-renew .bg-gradient-to-br,
+    body:not(.day-mode) #prof-view-renew form {
+      background: linear-gradient(145deg, rgba(168, 85, 247, 0.1), rgba(99, 102, 241, 0.08), rgba(236, 72, 153, 0.06)) !important;
+      border-color: rgba(168, 85, 247, 0.3) !important;
+    }
+    body:not(.day-mode) #prof-view-renew .text-purple-900 {
+      color: #e9d5ff !important;
+    }
+    body:not(.day-mode) #prof-view-renew .text-slate-600 {
+      color: #94a3b8 !important;
+    }
+    body:not(.day-mode) #prof-view-renew input {
+      background-color: rgba(0, 0, 0, 0.35) !important;
+      border-color: rgba(168, 85, 247, 0.35) !important;
+      color: #e9d5ff !important;
+    }
+    body:not(.day-mode) #prof-view-renew input:focus {
+      border-color: rgba(168, 85, 247, 0.7) !important;
+    }
+    body:not(.day-mode) #prof-view-renew input::placeholder {
+      color: #64748b !important;
+    }
+
+    /* ─── Profile footer buttons ─── */
+    body:not(.day-mode) #user-profile-modal .bg-amber-50 {
+      background-color: rgba(245, 158, 11, 0.15) !important;
+      border-color: rgba(245, 158, 11, 0.4) !important;
+    }
+    body:not(.day-mode) #user-profile-modal .bg-rose-50 {
+      background-color: rgba(244, 63, 94, 0.1) !important;
+      border-color: rgba(244, 63, 94, 0.3) !important;
+    }
 
     /* ─── SECTION Q: RULE DIMMED FIX ─── */
     .rule-dimmed {
