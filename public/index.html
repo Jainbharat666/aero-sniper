@@ -289,10 +289,63 @@
     }
 
     /* Terminal Console: ALWAYS stays deep dark high-contrast in BOTH modes */
-    .console-box, #widget-console, #console-logs, #wallet-console-logs {
-      background-color: #080b12 !important;
+    /* Terminal Console: UNIBODY SEAMLESS CARD IN BOTH MODES */
+    .console-unibody-card {
+      background-color: #080c16 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      color: #e2e8f0 !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+    }
+    .console-header-border {
       border-color: rgba(255, 255, 255, 0.08) !important;
-      color: #10b981 !important;
+    }
+    .console-title-text {
+      color: #ffffff !important;
+    }
+    .console-btn {
+      background-color: #141926 !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      color: #cbd5e1 !important;
+    }
+    .console-btn:hover {
+      background-color: #1e2638 !important;
+      border-color: rgba(168, 85, 247, 0.5) !important;
+      color: #ffffff !important;
+    }
+    .console-telemetry-pill {
+      background-color: #0e1322 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+    #console-logs, #wallet-console-logs {
+      background: transparent !important;
+      border: none !important;
+      color: #e2e8f0 !important;
+    }
+    #console-logs div, #wallet-console-logs div {
+      color: #e2e8f0 !important;
+    }
+
+    /* Day Mode: Unibody dark terminal follows AeroMint V2 rule (Console always stays dark) */
+    body.day-mode .console-unibody-card {
+      background-color: #0a0e1a !important;
+      border: 1px solid rgba(15, 23, 42, 0.15) !important;
+      box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.2) !important;
+    }
+    body.day-mode .console-header-border {
+      border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    body.day-mode .console-btn {
+      background-color: rgba(255, 255, 255, 0.08) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: #f1f5f9 !important;
+    }
+    body.day-mode .console-btn:hover {
+      background-color: rgba(255, 255, 255, 0.18) !important;
+      color: #ffffff !important;
+    }
+    body.day-mode .console-telemetry-pill {
+      background-color: rgba(255, 255, 255, 0.05) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
     }
 
     /* Secondary views in Dark Mode */
@@ -813,6 +866,241 @@
       background-color: #6366f1 !important;
       color: #ffffff !important;
       box-shadow: 0 0 12px rgba(99, 102, 241, 0.45) !important;
+    }
+
+  
+    /* ══════════════════════════════════════════════════════════════
+       💎 COMPREHENSIVE DARK MODE & HIGH-CONTRAST TYPOGRAPHY FIXES
+       ══════════════════════════════════════════════════════════════ */
+
+    /* Universal Text Contrast in Dark Mode (Eliminates all dark-on-dark invisible text) */
+    body:not(.day-mode) .text-slate-900,
+    body:not(.day-mode) .text-slate-800,
+    body:not(.day-mode) h1.text-slate-900,
+    body:not(.day-mode) h2.text-slate-900,
+    body:not(.day-mode) h3.text-slate-900,
+    body:not(.day-mode) span.text-slate-900,
+    body:not(.day-mode) span.text-slate-800,
+    body:not(.day-mode) strong.text-slate-900 {
+      color: #f8fafc !important;
+    }
+
+    body:not(.day-mode) .text-slate-700,
+    body:not(.day-mode) span.text-slate-700,
+    body:not(.day-mode) strong.text-slate-700 {
+      color: #e2e8f0 !important;
+    }
+
+    body:not(.day-mode) .text-slate-600,
+    body:not(.day-mode) p.text-slate-600 {
+      color: #cbd5e1 !important;
+    }
+
+    body:not(.day-mode) .text-slate-500,
+    body:not(.day-mode) .text-slate-400,
+    body:not(.day-mode) span.text-slate-500,
+    body:not(.day-mode) p.text-slate-500 {
+      color: #94a3b8 !important;
+    }
+
+    /* Fix .rule-dimmed: Don't turn paused rules into 0.45 murky mud */
+    .rule-dimmed {
+      opacity: 0.7 !important;
+      filter: grayscale(0.2) !important;
+      pointer-events: none !important;
+      transition: all 0.25s ease !important;
+    }
+
+    /* ─── SNIPER TRIGGER RULES PRESETS & STYLING ─── */
+    /* Dark Mode Preset Buttons */
+    body:not(.day-mode) .pct-btn {
+      background-color: #141824 !important;
+      border: 1px solid rgba(245, 158, 11, 0.35) !important;
+      color: #fde68a !important;
+      font-weight: 700 !important;
+    }
+    body:not(.day-mode) .pct-btn:hover {
+      background-color: rgba(245, 158, 11, 0.2) !important;
+      border-color: #f59e0b !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) .pct-btn.bg-amber-600,
+    body:not(.day-mode) #pct-custom.active {
+      background-color: #f59e0b !important;
+      border-color: #fbbf24 !important;
+      color: #020617 !important;
+      font-weight: 900 !important;
+      box-shadow: 0 0 14px rgba(245, 158, 11, 0.45) !important;
+    }
+
+    /* Day Mode Preset Buttons */
+    body.day-mode .pct-btn {
+      background-color: #ffffff !important;
+      border: 1px solid #fde68a !important;
+      color: #92400e !important;
+      font-weight: 700 !important;
+    }
+    body.day-mode .pct-btn:hover {
+      background-color: #fef3c7 !important;
+      color: #78350f !important;
+    }
+    body.day-mode .pct-btn.bg-amber-600 {
+      background-color: #d97706 !important;
+      border-color: #b45309 !important;
+      color: #ffffff !important;
+      font-weight: 800 !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Rarity Presets in Day Mode */
+    body.day-mode .rk-btn,
+    body.day-mode .rpm-btn {
+      background-color: #ffffff !important;
+      border: 1px solid #e9d5ff !important;
+      color: #6b21a8 !important;
+      font-weight: 700 !important;
+    }
+    body.day-mode .rk-btn:hover,
+    body.day-mode .rpm-btn:hover {
+      background-color: #f3e8ff !important;
+    }
+    body.day-mode .rk-btn.bg-purple-600,
+    body.day-mode .rpm-btn.bg-purple-600 {
+      background-color: #7c3aed !important;
+      color: #ffffff !important;
+      font-weight: 800 !important;
+    }
+
+    /* Gas War Engine Buttons in Dark Mode */
+    body:not(.day-mode) #gas-safe,
+    body:not(.day-mode) #gas-surge,
+    body:not(.day-mode) #gas-hyped {
+      background-color: #141824 !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: #cbd5e1 !important;
+    }
+    body:not(.day-mode) #gas-safe:hover,
+    body:not(.day-mode) #gas-surge:hover,
+    body:not(.day-mode) #gas-hyped:hover {
+      background-color: #1e2638 !important;
+      color: #ffffff !important;
+    }
+
+    /* Dashboard Wallet Fleet Status Card in Dark Mode */
+    body:not(.day-mode) #widget-wallet .bg-amber-50\/60 {
+      background-color: rgba(245, 158, 11, 0.08) !important;
+      border-color: rgba(245, 158, 11, 0.25) !important;
+    }
+    body:not(.day-mode) #widget-wallet .bg-emerald-50\/60 {
+      background-color: rgba(16, 185, 129, 0.08) !important;
+      border-color: rgba(16, 185, 129, 0.25) !important;
+    }
+    body:not(.day-mode) #dash-master-bal {
+      color: #fbbf24 !important;
+    }
+    body:not(.day-mode) #dash-fleet-total-eth {
+      color: #34d399 !important;
+    }
+    body:not(.day-mode) #dash-fleet-total-usd {
+      color: #a7f3d0 !important;
+    }
+    body:not(.day-mode) #dash-master-status {
+      background-color: #1e2433 !important;
+      border: 1px solid rgba(245, 158, 11, 0.3) !important;
+      color: #fde68a !important;
+    }
+    body:not(.day-mode) #dash-worker-count {
+      background-color: #132720 !important;
+      border: 1px solid rgba(16, 185, 129, 0.3) !important;
+      color: #6ee7b7 !important;
+    }
+
+    /* ─── CUSTOM RPC SECTION CONTRAST FIXES ─── */
+    /* Golden ping badge in Dark Mode: Dark golden pill with brilliant crisp yellow text */
+    body:not(.day-mode) #rpc-fleet-list .bg-amber-100,
+    body:not(.day-mode) #rpc-fleet-list span[class*="bg-amber-100"] {
+      background-color: rgba(245, 158, 11, 0.18) !important;
+      border: 1px solid rgba(245, 158, 11, 0.45) !important;
+      color: #fcd34d !important;
+    }
+    /* Emerald ping badge in Dark Mode */
+    body:not(.day-mode) #rpc-fleet-list .bg-emerald-100,
+    body:not(.day-mode) #rpc-fleet-list span[class*="bg-emerald-100"] {
+      background-color: rgba(16, 185, 129, 0.18) !important;
+      border: 1px solid rgba(16, 185, 129, 0.45) !important;
+      color: #34d399 !important;
+    }
+    /* In Day Mode: high contrast text on pastel pills */
+    body.day-mode #rpc-fleet-list .bg-amber-100 {
+      background-color: #fef3c7 !important;
+      border: 1px solid #fcd34d !important;
+      color: #78350f !important;
+      font-weight: 800 !important;
+    }
+    body.day-mode #rpc-fleet-list .bg-emerald-100 {
+      background-color: #d1fae5 !important;
+      border: 1px solid #6ee7b7 !important;
+      color: #064e3b !important;
+      font-weight: 800 !important;
+    }
+
+    /* RPC Section Inputs & Controls in Dark Mode */
+    body:not(.day-mode) #new-rpc-name,
+    body:not(.day-mode) #new-rpc-url,
+    body:not(.day-mode) #new-opensea-label,
+    body:not(.day-mode) #new-opensea-key {
+      background-color: #0c0f18 !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #new-rpc-name::placeholder,
+    body:not(.day-mode) #new-rpc-url::placeholder,
+    body:not(.day-mode) #new-opensea-label::placeholder,
+    body:not(.day-mode) #new-opensea-key::placeholder {
+      color: #64748b !important;
+    }
+
+    /* ─── OPENSEA API SECTION CONTRAST FIXES ─── */
+    body:not(.day-mode) #view-opensea .bg-slate-50 {
+      background-color: #111420 !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    body:not(.day-mode) #view-opensea h2,
+    body:not(.day-mode) #view-opensea h3,
+    body:not(.day-mode) #view-opensea span.text-slate-900 {
+      color: #ffffff !important;
+      font-weight: 800 !important;
+    }
+    body:not(.day-mode) #stat-opensea-total-calls {
+      color: #ffffff !important;
+      font-weight: 900 !important;
+    }
+    body:not(.day-mode) #opensea-keys-list > div {
+      background-color: #111420 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+    body:not(.day-mode) #opensea-keys-list .bg-emerald-100 {
+      background-color: rgba(16, 185, 129, 0.18) !important;
+      border: 1px solid rgba(16, 185, 129, 0.45) !important;
+      color: #34d399 !important;
+    }
+    body:not(.day-mode) #opensea-keys-list .bg-rose-100 {
+      background-color: rgba(244, 63, 94, 0.18) !important;
+      border: 1px solid rgba(244, 63, 94, 0.45) !important;
+      color: #fb7185 !important;
+    }
+    body:not(.day-mode) #opensea-keys-list strong.text-slate-700 {
+      color: #e2e8f0 !important;
+    }
+    body:not(.day-mode) #opensea-keys-list button.bg-white {
+      background-color: #181d2a !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      color: #cbd5e1 !important;
+    }
+    body:not(.day-mode) #opensea-keys-list button.bg-white:hover {
+      background-color: #22293a !important;
+      border-color: rgba(168, 85, 247, 0.5) !important;
+      color: #ffffff !important;
     }
 
   </style>
@@ -1725,28 +2013,26 @@
 
       <!-- WIDGET 6: LIVE EXECUTION CONSOLE (x=8, y=7, w=4, h=9) -->
       <div class="grid-stack-item" gs-id="widget-console" gs-x="8" gs-y="7" gs-w="4" gs-h="9" gs-no-resize="true" gs-no-move="true">
-        <div class="grid-stack-item-content bg-white border border-slate-200 p-4 text-slate-800 font-mono-code text-xs shadow-card-clean space-y-2.5 flex flex-col overflow-hidden">
+        <div class="grid-stack-item-content console-unibody-card rounded-3xl p-3.5 text-xs font-mono-code flex flex-col overflow-hidden space-y-2">
           
-          <div class="flex items-center justify-between border-b border-slate-100 pb-2 shrink-0">
-            <span class="flex items-center gap-2 text-slate-900 font-black text-xs">
-              <div class="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center text-[10px]">
+          <div class="flex items-center justify-between border-b console-header-border pb-2 shrink-0 select-none">
+            <span class="flex items-center gap-2 font-black text-xs console-title-text">
+              <div class="w-6 h-6 rounded-lg bg-indigo-500/20 border border-indigo-500/35 text-indigo-400 flex items-center justify-center text-[10px]">
                 <i class="fa-solid fa-terminal"></i>
               </div>
               Live Execution Console
             </span>
             <div class="flex items-center gap-1.5 text-xs">
-              <button onclick="copyConsoleLogs()" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-[10px] font-bold transition-all" title="Copy Logs"><i class="fa-regular fa-copy"></i> Copy</button>
-              <button onclick="clearConsoleLogs()" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-[10px] font-bold transition-all" title="Clear Logs"><i class="fa-solid fa-eraser"></i> Clear</button>
+              <button onclick="copyConsoleLogs()" class="console-btn px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer" title="Copy Logs"><i class="fa-regular fa-copy"></i> Copy</button>
+              <button onclick="clearConsoleLogs()" class="console-btn px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer" title="Clear Logs"><i class="fa-solid fa-eraser"></i> Clear</button>
             </div>
           </div>
 
-          <!-- Console Terminal Logs -->
-          <div class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-3 overflow-hidden flex flex-col shadow-inner">
-            <div id="console-logs" class="flex-1 overflow-y-auto space-y-1.5 text-xs leading-relaxed text-slate-700 font-mono-code pr-1 max-h-[620px]">
-              <div><span class="text-slate-400 font-bold">[INIT]</span> <span class="text-indigo-700 font-bold">⚡ Aero-Sniper Pro Engine Loaded.</span></div>
-              <div><span class="text-slate-400 font-bold">[INIT]</span> <span class="text-purple-700 font-bold">OpenSea Dual API Keys Active:</span> [Stream &amp; REST Keys Load Balanced]</div>
-              <div><span class="text-slate-400 font-bold">[INIT]</span> <span class="text-emerald-700 font-bold">Mainnet RPC Fleet Ready.</span> Awaiting target collection...</div>
-            </div>
+          <!-- Console Terminal Logs (Direct Seamless Stream - ZERO NESTED BOXES) -->
+          <div id="console-logs" class="flex-1 overflow-y-auto space-y-1.5 text-xs leading-relaxed font-mono-code pr-1 max-h-[620px] select-text">
+            <div><span class="text-slate-500 font-bold">[INIT]</span> <span class="text-sky-400 font-bold">⚡ Aero-Sniper Pro Engine Loaded.</span></div>
+            <div><span class="text-slate-500 font-bold">[INIT]</span> <span class="text-purple-400 font-bold">OpenSea Dual API Keys Active:</span> [Stream &amp; REST Keys Load Balanced]</div>
+            <div><span class="text-slate-500 font-bold">[INIT]</span> <span class="text-emerald-400 font-bold">Mainnet RPC Fleet Ready.</span> Awaiting target collection...</div>
           </div>
 
         </div>
@@ -2031,53 +2317,51 @@
       <!-- COLUMN 3 (RIGHT): FLEET LIVE ON-CHAIN EXECUTION TERMINAL (3 cols) -->
       <div class="xl:col-span-3 lg:col-span-12 space-y-4 flex flex-col">
         
-        <!-- CARD: LIVE EXECUTION TERMINAL (CLEAN LIGHT THEME) -->
-        <div class="bg-white border border-slate-200 rounded-3xl p-5 text-slate-800 font-mono-code text-xs shadow-card-clean space-y-3 flex-1 flex flex-col">
+        <!-- CARD: LIVE EXECUTION TERMINAL (UNIBODY) -->
+        <div class="console-unibody-card rounded-3xl p-4 text-xs font-mono-code space-y-2.5 flex-1 flex flex-col overflow-hidden">
           
-          <div class="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+          <div class="flex items-center justify-between border-b console-header-border pb-2.5 shrink-0 select-none">
             <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-xs font-black shadow-sm">
+              <div class="w-7 h-7 rounded-xl bg-amber-500/20 border border-amber-500/35 text-amber-400 flex items-center justify-center text-xs font-black shadow-sm">
                 <i class="fa-solid fa-terminal"></i>
               </div>
               <div>
-                <span class="flex items-center gap-2 text-slate-900 font-black text-xs">
+                <span class="flex items-center gap-2 font-black text-xs text-white" id="fleet-terminal-title">
                   Fleet Terminal
                 </span>
-                <span class="text-[9px] text-emerald-700 font-bold block">● LIVE ON-CHAIN (Orbit L2)</span>
+                <span class="text-[9px] text-emerald-400 font-bold block">● LIVE ON-CHAIN (Orbit L2)</span>
               </div>
             </div>
             <div class="flex items-center gap-1.5 text-xs">
-              <button onclick="copyWalletConsoleLogs()" class="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center gap-1 shadow-sm cursor-pointer">
+              <button onclick="copyWalletConsoleLogs()" class="console-btn px-2.5 py-1 rounded-xl transition-all text-[11px] font-bold flex items-center gap-1 shadow-sm cursor-pointer">
                 <i class="fa-regular fa-copy"></i> Copy
               </button>
-              <button onclick="clearWalletConsoleLogs()" class="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-all text-[11px] font-bold flex items-center gap-1 shadow-sm cursor-pointer">
+              <button onclick="clearWalletConsoleLogs()" class="console-btn px-2.5 py-1 rounded-xl transition-all text-[11px] font-bold flex items-center gap-1 shadow-sm cursor-pointer">
                 <i class="fa-solid fa-eraser"></i> Clear
               </button>
             </div>
           </div>
 
           <!-- Real-Time Gas & Network Telemetry Pill in Terminal -->
-          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center justify-between font-mono-code text-[11px] shrink-0 shadow-inner">
+          <div class="console-telemetry-pill rounded-xl p-2.5 flex items-center justify-between font-mono-code text-[11px] shrink-0">
             <div>
-              <span class="text-[8px] text-slate-500 font-bold block uppercase">BASE FEE</span>
-              <span class="text-amber-700 font-black text-xs" id="terminal-base-fee">0.020 GWEI</span>
+              <span class="text-[8px] text-slate-400 font-bold block uppercase">BASE FEE</span>
+              <span class="text-amber-400 font-black text-xs" id="terminal-base-fee">0.020 GWEI</span>
             </div>
             <div>
-              <span class="text-[8px] text-slate-500 font-bold block uppercase">GAS LIMIT</span>
-              <span class="text-emerald-700 font-black text-xs">21,225</span>
+              <span class="text-[8px] text-slate-400 font-bold block uppercase">GAS LIMIT</span>
+              <span class="text-emerald-400 font-black text-xs">21,225</span>
             </div>
             <div class="text-right">
-              <span class="text-[8px] text-slate-500 font-bold block uppercase">TX COST</span>
-              <span class="text-indigo-700 font-black text-xs" id="terminal-tx-fee">~$0.001</span>
+              <span class="text-[8px] text-slate-400 font-bold block uppercase">TX COST</span>
+              <span class="text-indigo-400 font-black text-xs" id="terminal-tx-fee">~$0.001</span>
             </div>
           </div>
 
-          <!-- Terminal Logs Stream Container (Starts immediately below telemetry without gap) -->
-          <div class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-3 flex flex-col shadow-inner overflow-hidden min-h-[460px]">
-            <div id="wallet-console-logs" class="flex-1 overflow-y-auto space-y-2 text-xs leading-relaxed text-slate-700 font-mono-code pr-1">
-              <div><span class="text-slate-400 font-bold">[INIT]</span> <span class="text-amber-700 font-bold">⚡ Fleet Live Execution Terminal Active.</span> Connected to Robinhood Mainnet RPC.</div>
-              <div><span class="text-slate-400 font-bold">[READY]</span> Master Treasury Vault &amp; Worker Fleet synchronized.</div>
-            </div>
+          <!-- Terminal Logs Stream (Direct Seamless Stream - ZERO NESTED BOXES) -->
+          <div id="wallet-console-logs" class="flex-1 overflow-y-auto space-y-1.5 text-xs leading-relaxed font-mono-code pr-1 min-h-[460px] select-text">
+            <div><span class="text-slate-500 font-bold">[INIT]</span> <span class="text-amber-400 font-bold">⚡ Fleet Live Execution Terminal Active.</span> Connected to Robinhood Mainnet RPC.</div>
+            <div><span class="text-slate-500 font-bold">[READY]</span> Master Treasury Vault &amp; Worker Fleet synchronized.</div>
           </div>
 
         </div>
@@ -7880,15 +8164,16 @@
       const isActive = activeRuleStates[ruleName];
 
       if (sw) {
+        const isDay = document.body.classList.contains('day-mode');
         if (isActive) {
           sw.innerText = '● ACTIVE';
-          if (ruleName === 'floor') sw.className = 'text-[9px] font-black uppercase bg-amber-200 text-amber-900 px-2.5 py-0.5 rounded-full border border-amber-300 hover:bg-amber-300 transition-all cursor-pointer';
-          else if (ruleName === 'rarity') sw.className = 'text-[9px] font-black uppercase bg-purple-200 text-purple-900 px-2.5 py-0.5 rounded-full border border-purple-300 hover:bg-purple-300 transition-all cursor-pointer';
-          else if (ruleName === 'trait') sw.className = 'text-[9px] font-black uppercase bg-pink-200 text-pink-900 px-2.5 py-0.5 rounded-full border border-pink-300 hover:bg-pink-300 transition-all cursor-pointer';
-          else if (ruleName === 'tokenId') sw.className = 'text-[9px] font-black uppercase bg-cyan-200 text-cyan-900 px-2.5 py-0.5 rounded-full border border-cyan-300 hover:bg-cyan-300 transition-all cursor-pointer';
+          if (ruleName === 'floor') sw.className = isDay ? 'text-[9px] font-black uppercase bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full border border-amber-300 hover:bg-amber-200 transition-all cursor-pointer' : 'text-[9px] font-black uppercase bg-amber-500/20 text-amber-300 px-2.5 py-0.5 rounded-full border border-amber-500/50 hover:bg-amber-500/30 transition-all cursor-pointer shadow-[0_0_8px_rgba(245,158,11,0.25)]';
+          else if (ruleName === 'rarity') sw.className = isDay ? 'text-[9px] font-black uppercase bg-purple-100 text-purple-900 px-2.5 py-0.5 rounded-full border border-purple-300 hover:bg-purple-200 transition-all cursor-pointer' : 'text-[9px] font-black uppercase bg-purple-500/20 text-purple-300 px-2.5 py-0.5 rounded-full border border-purple-500/50 hover:bg-purple-500/30 transition-all cursor-pointer shadow-[0_0_8px_rgba(168,85,247,0.25)]';
+          else if (ruleName === 'trait') sw.className = isDay ? 'text-[9px] font-black uppercase bg-pink-100 text-pink-900 px-2.5 py-0.5 rounded-full border border-pink-300 hover:bg-pink-200 transition-all cursor-pointer' : 'text-[9px] font-black uppercase bg-pink-500/20 text-pink-300 px-2.5 py-0.5 rounded-full border border-pink-500/50 hover:bg-pink-500/30 transition-all cursor-pointer shadow-[0_0_8px_rgba(236,72,153,0.25)]';
+          else if (ruleName === 'tokenId') sw.className = isDay ? 'text-[9px] font-black uppercase bg-cyan-100 text-cyan-900 px-2.5 py-0.5 rounded-full border border-cyan-300 hover:bg-cyan-200 transition-all cursor-pointer' : 'text-[9px] font-black uppercase bg-cyan-500/20 text-cyan-300 px-2.5 py-0.5 rounded-full border border-cyan-500/50 hover:bg-cyan-500/30 transition-all cursor-pointer shadow-[0_0_8px_rgba(6,182,212,0.25)]';
         } else {
           sw.innerText = 'PAUSED';
-          sw.className = 'text-[9px] font-bold uppercase bg-slate-200 text-slate-600 px-2.5 py-0.5 rounded-full border border-slate-300 hover:bg-slate-300 transition-all cursor-pointer';
+          sw.className = isDay ? 'text-[9px] font-bold uppercase bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full border border-slate-300 hover:bg-slate-200 transition-all cursor-pointer' : 'text-[9px] font-bold uppercase bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-full border border-slate-700 hover:bg-slate-700 transition-all cursor-pointer';
         }
       }
 
@@ -8176,6 +8461,7 @@
         }
         if (knobIcon) knobIcon.textContent = '☀️';
       }
+      ['floor', 'rarity', 'trait', 'tokenId'].forEach(r => { if (typeof refreshSingleRuleSwitchUI === 'function') refreshSingleRuleSwitchUI(r); });
     }
 
     function toggleThemeMode(e) {
@@ -8211,6 +8497,8 @@
           if (knobIcon) knobIcon.textContent = '☀️';
           localStorage.setItem('sniper_theme_mode', 'day');
         }
+        ['floor', 'rarity', 'trait', 'tokenId'].forEach(r => { if (typeof refreshSingleRuleSwitchUI === 'function') refreshSingleRuleSwitchUI(r); });
+        if (typeof renderRpcFleet === 'function') renderRpcFleet();
       };
 
       if (!document.startViewTransition) {
