@@ -2215,8 +2215,9 @@
         <!-- Search & Filter Badges -->
         <div class="flex items-center justify-between gap-3 shrink-0">
           <div class="relative flex-1">
-            <input type="text" id="admin-user-search" oninput="filterAdminUsers()" placeholder="Search users by email, ID or invite code..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+            <input type="text" id="admin-user-search" oninput="filterAdminUsers()" placeholder="Search users by email, ID or invite code..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-8 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" name="admin_user_search_noautofill">
             <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2 text-slate-500 text-xs"></i>
+            <button id="admin-search-clear-btn" type="button" onclick="clearAdminUserSearch()" class="hidden absolute right-2.5 top-1.5 text-slate-500 hover:text-white text-xs px-1">✕</button>
           </div>
           <!-- Filter Buttons (AeroMint V2 Standard) -->
           <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-[10px] font-bold">
@@ -2264,7 +2265,7 @@
           <div class="grid grid-cols-4 gap-2 text-xs">
             <div>
               <label class="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Invite Code</label>
-              <input type="text" id="gen-invite-code" required placeholder="e.g. SNIPER-VIP-2026" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-black uppercase text-indigo-300 focus:outline-none focus:border-indigo-500">
+              <input type="text" id="gen-invite-code" required placeholder="e.g. SNIPER-VIP-2026" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-black uppercase text-indigo-300 focus:outline-none focus:border-indigo-500" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" name="gen_invite_code_noautofill">
             </div>
             <div>
               <label class="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Validity Days</label>
@@ -7065,6 +7066,17 @@
       if (streamInp && (streamInp.value.includes('@') || streamInp.value === currentUser?.email)) {
         streamInp.value = '';
       }
+      const adminSearchInp = document.getElementById('admin-user-search');
+      if (adminSearchInp && (adminSearchInp.value === currentUser?.email || adminSearchInp.value === 'jainbharat666@gmail.com')) {
+        adminSearchInp.value = '';
+        const clearBtn = document.getElementById('admin-search-clear-btn');
+        if (clearBtn) clearBtn.classList.add('hidden');
+        if (typeof filterAdminUsers === 'function') filterAdminUsers();
+      }
+      const genCodeInp = document.getElementById('gen-invite-code');
+      if (genCodeInp && (genCodeInp.value.includes('@') || genCodeInp.value === currentUser?.email)) {
+        genCodeInp.value = '';
+      }
     }
 
     function renderAuthHeaderUI() {
@@ -7814,8 +7826,24 @@
       }
       const m = document.getElementById('admin-panel-modal');
       if (m) m.classList.remove('hidden');
+
+      // Clear search query so all registered members are displayed by default
+      const searchInp = document.getElementById('admin-user-search');
+      if (searchInp) {
+        searchInp.value = '';
+        const clearBtn = document.getElementById('admin-search-clear-btn');
+        if (clearBtn) clearBtn.classList.add('hidden');
+      }
+      currentAdminUserFilter = 'all';
+      setAdminUserFilter('all');
+
       refreshAdminData();
       loadAdminFleetData();
+
+      // Proactive anti-autofill purges in case browser injects credentials into search box
+      setTimeout(purgeAutofilledEmail, 50);
+      setTimeout(purgeAutofilledEmail, 200);
+      setTimeout(purgeAutofilledEmail, 500);
     }
 
     function closeAdminModal() {
@@ -7866,6 +7894,7 @@
 
         if (uData.success) {
           allAdminUsers = uData.users || [];
+          purgeAutofilledEmail();
           filterAdminUsers();
           const cntEl = document.getElementById('admin-user-count');
           const teleCntEl = document.getElementById('tele-users-count');
@@ -7904,13 +7933,19 @@
     }
 
     function filterAdminUsers() {
-      const query = (document.getElementById('admin-user-search')?.value || '').toLowerCase();
+      const searchEl = document.getElementById('admin-user-search');
+      const query = (searchEl?.value || '').toLowerCase().trim();
+      const clearBtn = document.getElementById('admin-search-clear-btn');
+      if (clearBtn) {
+        clearBtn.classList.toggle('hidden', !query);
+      }
       const filter = currentAdminUserFilter;
 
       const filtered = allAdminUsers.filter(u => {
         const matchesQuery = !query || 
           (u.email && u.email.toLowerCase().includes(query)) ||
           (u.id && u.id.toLowerCase().includes(query)) ||
+          (u.invite_code_used && u.invite_code_used.toLowerCase().includes(query)) ||
           (u.invite_code && u.invite_code.toLowerCase().includes(query));
         
         if (!matchesQuery) return false;
@@ -7929,6 +7964,14 @@
       });
 
       renderAdminUsers(filtered);
+    }
+
+    function clearAdminUserSearch() {
+      const searchEl = document.getElementById('admin-user-search');
+      if (searchEl) {
+        searchEl.value = '';
+      }
+      filterAdminUsers();
     }
 
     function renderAdminUsers(users) {
