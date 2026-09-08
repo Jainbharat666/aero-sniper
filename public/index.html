@@ -1738,25 +1738,6 @@
       background-color: rgba(255, 255, 255, 0.06) !important;
       border-color: rgba(255, 255, 255, 0.08) !important;
     }
-    body:not(.day-mode) #admin-view-telemetry .bg-gradient-to-br {
-      background: linear-gradient(145deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.08), rgba(16, 185, 129, 0.06)) !important;
-      border-color: rgba(99, 102, 241, 0.3) !important;
-    }
-    body:not(.day-mode) #admin-view-telemetry .bg-white {
-      background-color: rgba(0, 0, 0, 0.35) !important;
-      border-color: rgba(255, 255, 255, 0.08) !important;
-    }
-    body:not(.day-mode) #admin-view-telemetry .text-slate-900 {
-      color: #ffffff !important;
-    }
-    body:not(.day-mode) #admin-view-telemetry .text-slate-700,
-    body:not(.day-mode) #admin-view-telemetry .text-slate-600 {
-      color: #cbd5e1 !important;
-    }
-    body:not(.day-mode) #admin-view-telemetry code {
-      background-color: rgba(255, 255, 255, 0.08) !important;
-      color: #a5b4fc !important;
-    }
     /* Profile Modal — Main container */
     body:not(.day-mode) #user-profile-modal > .bg-white {
       background-color: #0e1220 !important;
@@ -4402,47 +4383,12 @@
             <div class="text-sm font-black text-slate-800 flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-purple-500"></span> Seaport v1.6 Zero-Hop
             </div>
-            <div class="text-[10px] text-slate-500">0x0000000000000068F116a894984e2DB1123eB395</div>
-          </div>
-        <!-- 🛡️ AERO-SNIPER V2 BACKUP & RECOVERY ENGINE (MIRRORING AEROMINT V2) -->
-        <div class="bg-gradient-to-br from-indigo-50/70 via-purple-50/50 to-emerald-50/40 border border-indigo-200 rounded-2xl p-4 space-y-3 shrink-0 shadow-sm">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2.5">
-              <div class="w-9 h-9 rounded-xl bg-indigo-600/10 border border-indigo-500/30 flex items-center justify-center text-indigo-600 text-base font-black shadow-sm">
-                <i class="fa-solid fa-database"></i>
-              </div>
-              <div>
-                <div class="text-xs font-black text-slate-900">Aero-Sniper V2 Automated Cloud Database &amp; System Backup</div>
-                <div class="text-[10px] text-slate-500">Full snapshot of all registered users, VIP invites, custom RPCs &amp; encrypted vaults.</div>
-              </div>
-            </div>
-            <button type="button" onclick="downloadAdminDatabaseBackup()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-md shadow-indigo-600/20 flex items-center gap-2 transition-all cursor-pointer">
-              <i class="fa-solid fa-download"></i> Export Cloud DB (.JSON)
-            </button>
-          </div>
-          
-          <div class="grid grid-cols-2 gap-2 text-[10px] font-mono-code pt-0.5">
-            <div class="bg-white border border-slate-200 rounded-xl p-2.5 space-y-1 shadow-sm">
-              <span class="text-indigo-600 font-black uppercase flex items-center gap-1">
-                <i class="fa-solid fa-shield-halved"></i> 1-Click Desktop Full Backup
-              </span>
-              <p class="text-slate-600">Run <code class="bg-slate-100 px-1.5 py-0.5 rounded text-indigo-700 font-bold">backup.bat</code> on your PC to fetch live database and create timestamped version folders + zip archive.</p>
-            </div>
-            <div class="bg-white border border-slate-200 rounded-xl p-2.5 space-y-1 shadow-sm">
-              <span class="text-emerald-600 font-black uppercase flex items-center gap-1">
-                <i class="fa-solid fa-rocket"></i> 1-Click GitHub &amp; Vercel Push
-              </span>
-              <p class="text-slate-600">Run <code class="bg-slate-100 px-1.5 py-0.5 rounded text-emerald-700 font-bold">push_to_github.bat</code> to sync code + DB and auto-deploy to Vercel in 15 seconds.</p>
-            </div>
-          </div>
         </div>
-
         <div class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 font-mono-code text-[11px] overflow-y-auto space-y-1.5 text-slate-600 shadow-inner" id="admin-telemetry-log">
           <div>✔ [DATABASE] Connected to Supabase Cloud PostgreSQL.</div>
           <div>✔ [SEAPORT] Seaport 1.6 contract verified on Robinhood Chain (4663).</div>
           <div>✔ [AUTHENTICATION] Admin session authenticated: jainbharat666@gmail.com</div>
           <div>✔ [FLEET RPC] Multi-RPC Simultaneous Mempool Blast engine initialized.</div>
-          <div>✔ [BACKUP SYSTEM] 1-Click backup.bat and push_to_github.bat engines armed.</div>
         </div>
       </div>
 
@@ -10693,53 +10639,6 @@
         showToast('Admin data refreshed');
       } catch(e) {
         showToast('Failed to refresh admin data: ' + e.message, true);
-      }
-    }
-
-    async function downloadAdminDatabaseBackup() {
-      try {
-        showToast('🔄 Fetching complete database from Supabase Cloud...');
-        const supabaseUrl = 'https://fjxarhcisasyvomfgtxl.supabase.co/rest/v1';
-        const supabaseKey = 'sb_publishable_QkC4wXZTz_4m8P9zUuwDjg_mUZA1Vqa';
-        const headers = { apikey: supabaseKey, Authorization: 'Bearer ' + supabaseKey };
-
-        const [usersRes, invitesRes, configsRes, rpcsRes] = await Promise.all([
-          fetch(supabaseUrl + '/sniper_users?select=*&order=created_at.desc', { headers }).then(r => r.json()),
-          fetch(supabaseUrl + '/sniper_invites?select=*&order=created_at.desc', { headers }).then(r => r.json()),
-          fetch(supabaseUrl + '/sniper_user_configs?select=*', { headers }).then(r => r.json()),
-          fetch(supabaseUrl + '/sniper_custom_rpcs?select=*', { headers }).then(r => r.json()).catch(() => [])
-        ]);
-
-        const backupData = {
-          timestamp: new Date().toISOString(),
-          project: 'Aero-Sniper-V2-DB (fjxarhcisasyvomfgtxl)',
-          database: 'Supabase PostgreSQL 24/7 Cloud',
-          counts: {
-            users: (usersRes || []).length,
-            invites: (invitesRes || []).length,
-            user_configs: (configsRes || []).length,
-            custom_rpcs: (rpcsRes || []).length
-          },
-          tables: {
-            sniper_users: usersRes || [],
-            sniper_invites: invitesRes || [],
-            sniper_user_configs: configsRes || [],
-            sniper_custom_rpcs: rpcsRes || []
-          }
-        };
-
-        const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json;charset=utf-8' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `aero_sniper_complete_db_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-
-        showToast('✅ Complete Cloud Database Backup Downloaded!');
-      } catch (err) {
-        console.error('Database backup error:', err);
-        showToast('❌ Backup failed: ' + err.message, true);
       }
     }
 
