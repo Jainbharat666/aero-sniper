@@ -572,6 +572,249 @@
       100% { transform: translate(-50%, -50%) scale(1.06); opacity: 0.95; }
     }
 
+  
+    /* ══════════════════════════════════════════════════════════════
+       🎯 TARGETED NIGHT MODE FIXES FOR USER SCREENSHOTS
+       Fixes OpenSea keys, RPC cards, Bento deck, Treasury vault,
+       and Rule buttons to look institutional & dark obsidian
+       ══════════════════════════════════════════════════════════════ */
+
+    /* 1. OPENSEA KEYS & RPC FLEET LIST ITEMS IN NIGHT MODE (Screenshots 1 & 2) */
+    body:not(.day-mode) #opensea-keys-list > div,
+    body:not(.day-mode) #rpc-fleet-list > div {
+      background-color: #111420 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      color: #ffffff !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+    }
+    body:not(.day-mode) #opensea-keys-list > div:hover,
+    body:not(.day-mode) #rpc-fleet-list > div:hover {
+      background-color: #161b2c !important;
+      border-color: rgba(168, 85, 247, 0.4) !important;
+    }
+    body:not(.day-mode) #opensea-keys-list span.text-slate-900,
+    body:not(.day-mode) #rpc-fleet-list span.text-slate-900 {
+      color: #ffffff !important;
+      font-weight: 800 !important;
+    }
+    body:not(.day-mode) #opensea-keys-list strong.text-slate-700,
+    body:not(.day-mode) #rpc-fleet-list p.text-slate-400 {
+      color: #94a3b8 !important;
+    }
+    body:not(.day-mode) #opensea-keys-list button.bg-white,
+    body:not(.day-mode) #rpc-fleet-list button.bg-white {
+      background-color: #181d2a !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      color: #cbd5e1 !important;
+    }
+    body:not(.day-mode) #opensea-keys-list button.bg-white:hover,
+    body:not(.day-mode) #rpc-fleet-list button.bg-white:hover {
+      background-color: #202738 !important;
+      border-color: rgba(168, 85, 247, 0.5) !important;
+      color: #ffffff !important;
+    }
+
+    /* 2. RPC STRATEGY SELECTION CARDS IN NIGHT MODE (Screenshot 2) */
+    body:not(.day-mode) #strat-blast-card,
+    body:not(.day-mode) #strat-fastest-card,
+    body:not(.day-mode) #strat-primary-card {
+      background-color: #111420 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #strat-blast-card:hover,
+    body:not(.day-mode) #strat-fastest-card:hover,
+    body:not(.day-mode) #strat-primary-card:hover {
+      background-color: #161b2c !important;
+    }
+    body:not(.day-mode) #strat-blast-card.border-indigo-500,
+    body:not(.day-mode) #strat-blast-card[class*="border-2"] {
+      background-color: rgba(99, 102, 241, 0.12) !important;
+      border: 2px solid #6366f1 !important;
+    }
+    body:not(.day-mode) #strat-blast-card span.text-slate-900,
+    body:not(.day-mode) #strat-fastest-card span.text-slate-900,
+    body:not(.day-mode) #strat-primary-card span.text-slate-900 {
+      color: #ffffff !important;
+      font-weight: 800 !important;
+    }
+    body:not(.day-mode) #strat-blast-card p,
+    body:not(.day-mode) #strat-fastest-card p,
+    body:not(.day-mode) #strat-primary-card p {
+      color: #94a3b8 !important;
+    }
+
+    /* 3. MASTER TREASURY VAULT & MICRO-FUND WORKERS IN NIGHT MODE (Screenshot 3) */
+    body:not(.day-mode) div:has(> div > span > .fa-coins),
+    body:not(.day-mode) .bg-white\/90 {
+      background-color: #111420 !important;
+      border: 1px solid rgba(245, 158, 11, 0.3) !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #select-master-wallet {
+      background-color: #0d1017 !important;
+      border: 1px solid rgba(245, 158, 11, 0.4) !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #select-master-wallet option {
+      background-color: #0d1017 !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) .text-amber-950,
+    body:not(.day-mode) .text-amber-900 {
+      color: #fef3c7 !important;
+    }
+    body:not(.day-mode) .text-amber-800 {
+      color: #fcd34d !important;
+    }
+    body:not(.day-mode) button[onclick*="setFundUsdPreset"] {
+      background-color: #181d2a !important;
+      border: 1px solid rgba(245, 158, 11, 0.3) !important;
+      color: #fef3c7 !important;
+      font-weight: 800 !important;
+    }
+    body:not(.day-mode) button[onclick*="setFundUsdPreset"]:hover {
+      background-color: rgba(245, 158, 11, 0.25) !important;
+      border-color: #f59e0b !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) button[onclick*="setFundPercentPreset"] {
+      background-color: #181d2a !important;
+      border: 1px solid rgba(99, 102, 241, 0.3) !important;
+      color: #c7d2fe !important;
+      font-weight: 800 !important;
+    }
+    body:not(.day-mode) button[onclick*="setFundPercentPreset"]:hover {
+      background-color: rgba(99, 102, 241, 0.25) !important;
+      border-color: #818cf8 !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) button[onclick="setFundPercentPreset(100)"] {
+      background-color: rgba(16, 185, 129, 0.18) !important;
+      border: 1px solid rgba(168, 85, 247, 0.4) !important;
+      border-color: rgba(16, 185, 129, 0.5) !important;
+      color: #6ee7b7 !important;
+    }
+    body:not(.day-mode) button[onclick="fundWorkersExactSniperCost()"] {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.25)) !important;
+      border: 1px solid rgba(245, 158, 11, 0.5) !important;
+      color: #fef3c7 !important;
+    }
+    body:not(.day-mode) button[onclick="fundWorkersExactSniperCost()"]:hover {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.4), rgba(217, 119, 6, 0.4)) !important;
+    }
+    body:not(.day-mode) #input-fund-usd,
+    body:not(.day-mode) #input-fund-amount {
+      background-color: #0d1017 !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: #ffffff !important;
+    }
+
+    /* 4. SNIPER TRIGGER RULES PRESET BUTTONS (Screenshot 4) */
+    body:not(.day-mode) .rk-btn,
+    body:not(.day-mode) .rpm-btn {
+      background-color: #181d2a !important;
+      border: 1px solid rgba(168, 85, 247, 0.3) !important;
+      color: #e2e8f0 !important;
+    }
+    body:not(.day-mode) .rk-btn:hover,
+    body:not(.day-mode) .rpm-btn:hover {
+      background-color: rgba(168, 85, 247, 0.25) !important;
+      border-color: #a855f7 !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) .rk-btn.bg-purple-600,
+    body:not(.day-mode) .rpm-btn.bg-purple-600 {
+      background-color: #7c3aed !important;
+      border-color: #a855f7 !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 14px rgba(168, 85, 247, 0.5) !important;
+    }
+    body:not(.day-mode) #param-rare-rank,
+    body:not(.day-mode) #param-rare-eth,
+    body:not(.day-mode) #param-rare-usd,
+    body:not(.day-mode) #param-floor-eth,
+    body:not(.day-mode) #param-floor-usd,
+    body:not(.day-mode) #param-trait-max-eth,
+    body:not(.day-mode) #param-token-ids,
+    body:not(.day-mode) #param-token-max-eth {
+      background-color: #0d1017 !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #param-floor-usd,
+    body:not(.day-mode) #param-rare-usd {
+      color: #38bdf8 !important;
+    }
+
+    /* 5. 2x2 BENTO DECK CELLS IN NIGHT MODE (Screenshot 5) */
+    body:not(.day-mode) #deck-view-bento {
+      background-color: #0c0f1a !important;
+      border: 2px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    body:not(.day-mode) #deck-view-bento > div {
+      background-color: #121624 !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    }
+    /* Bento Cell 1: Floor */
+    body:not(.day-mode) #deck-view-bento > div:nth-child(1) {
+      border: 1px solid rgba(245, 158, 11, 0.4) !important;
+    }
+    body:not(.day-mode) #deck-view-bento > div:nth-child(1) span,
+    body:not(.day-mode) #deck-view-bento > div:nth-child(1) div {
+      color: #fef3c7 !important;
+    }
+    body:not(.day-mode) #bento-sw-floor {
+      background-color: #f59e0b !important;
+      color: #000000 !important;
+      font-weight: 800 !important;
+    }
+    /* Bento Cell 2: Rare */
+    body:not(.day-mode) #deck-view-bento > div:nth-child(2) {
+      border: 1px solid rgba(168, 85, 247, 0.4) !important;
+    }
+    body:not(.day-mode) #deck-view-bento > div:nth-child(2) span,
+    body:not(.day-mode) #deck-view-bento > div:nth-child(2) div {
+      color: #f3e8ff !important;
+    }
+    body:not(.day-mode) #bento-sw-rarity {
+      background-color: #a855f7 !important;
+      color: #ffffff !important;
+      font-weight: 800 !important;
+    }
+    /* Bento Cell 3: Trait */
+    body:not(.day-mode) #deck-view-bento > div:nth-child(3) {
+      border: 1px solid rgba(236, 72, 153, 0.4) !important;
+    }
+    body:not(.day-mode) #deck-view-bento > div:nth-child(3) span,
+    body:not(.day-mode) #deck-view-bento > div:nth-child(3) div {
+      color: #fce7f3 !important;
+    }
+    /* Bento Cell 4: Token */
+    body:not(.day-mode) #deck-view-bento > div:nth-child(4) {
+      border: 1px solid rgba(6, 182, 212, 0.4) !important;
+    }
+    body:not(.day-mode) #deck-view-bento > div:nth-child(4) span,
+    body:not(.day-mode) #deck-view-bento > div:nth-child(4) div {
+      color: #cffafe !important;
+    }
+
+    /* Generator Count Buttons (+1, +5, +10, etc.) in night mode */
+    body:not(.day-mode) .gen-cnt-btn {
+      background-color: #181d2a !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: #e2e8f0 !important;
+    }
+    body:not(.day-mode) .gen-cnt-btn:hover {
+      background-color: #22293a !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) .gen-cnt-btn.bg-indigo-600 {
+      background-color: #6366f1 !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.45) !important;
+    }
+
   </style>
   <script>
     (function() {
