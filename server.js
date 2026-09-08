@@ -169,10 +169,15 @@ async function dbRecordUserSnipe(userIdOrEmail, count = 1) {
     if (!user) user = await dbGetUserByEmail(userIdOrEmail);
     if (user) {
       const updatedTotal = (user.total_snipes || 0) + count;
-      await dbUpdateUser(user.id, {
+      const updates = {
         total_snipes: updatedTotal,
+        snipes_used: (user.snipes_used || 0) + count,
         last_active_at: new Date().toISOString()
-      });
+      };
+      if (user.snipes_remaining !== null && user.snipes_remaining !== undefined && user.snipes_remaining > 0) {
+        updates.snipes_remaining = Math.max(0, user.snipes_remaining - count);
+      }
+      await dbUpdateUser(user.id, updates);
       console.log(`🎯 [SNIPER DB] Snipe recorded for ${user.email}! New Total: ${updatedTotal}`);
       return updatedTotal;
     }
@@ -1510,6 +1515,128 @@ app.delete('/api/user-config', async (req, res) => {
     return res.json({ success: true, message: 'Cloud Vault data wiped from server.' });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── 6B. MANAGED FLEET RPC CLUSTER SERVICES (CLOUD SYNCED) ──────────────────
+const DEFAULT_GLOBAL_FLEET = {
+  robinhood: [
+    { id: 'fleet-rbh-1', network_key: 'robinhood', name: '⚡ Robinhood Alchemy Fast Route', url: 'https://robinhood-mainnet.g.alchemy.com/v2/alch_FtrEfyyJYzEBZ0SQ3ctbJ', is_active: true, priority: 1 },
+    { id: 'fleet-rbh-2', network_key: 'robinhood', name: '⚡ Robinhood Official Sequencer', url: 'https://rpc.mainnet.chain.robinhood.com', is_active: true, priority: 2 },
+    { id: 'fleet-rbh-3', network_key: 'robinhood', name: '⚡ Robinhood Direct Node', url: 'https://mainnet.chain.robinhood.com/rpc', is_active: true, priority: 3 }
+  ],
+  base: [
+    { id: 'fleet-base-1', network_key: 'base', name: '⚡ Base Official Sequencer', url: 'https://mainnet.base.org', is_active: true, priority: 1 },
+    { id: 'fleet-base-2', network_key: 'base', name: '⚡ Base 1RPC Dedicated', url: 'https://1rpc.io/base', is_active: true, priority: 2 }
+  ],
+  arbitrum: [
+    { id: 'fleet-arb-1', network_key: 'arbitrum', name: '⚡ Arbitrum One Turbo', url: 'https://arb1.arbitrum.io/rpc', is_active: true, priority: 1 }
+  ],
+  polygon: [
+    { id: 'fleet-poly-1', network_key: 'polygon', name: '⚡ Polygon PoS Dedicated', url: 'https://polygon-rpc.com', is_active: true, priority: 1 }
+  ],
+  ethereum: [
+    { id: 'fleet-eth-1', network_key: 'ethereum', name: '⚡ Ethereum LlamaRPC Fast', url: 'https://eth.llamarpc.com', is_active: true, priority: 1 }
+  ]
+};
+
+async function dbGetCloudFleet(networkKey = 'robinhood') {
+  try {
+    const config = await dbGetUserConfig('SYSTEM_GLOBAL_FLEET_RPCS');
+    if (config && config[networkKey] && Array.isArray(config[networkKey]) && config[networkKey].length > 0) {
+      return config[networkKey];
+    }
+  } catch (e) {
+    console.error('[Fleet DB] Get error:', e.message);
+  }
+  return DEFAULT_GLOBAL_FLEET[networkKey] || DEFAULT_GLOBAL_FLEET['robinhood'];
+}
+
+async function dbSaveCloudFleet(networkKey, rpcList) {
+  try {
+    const existing = await dbGetUserConfig('SYSTEM_GLOBAL_FLEET_RPCS') || {};
+    existing[networkKey] = rpcList;
+    await dbSaveUserConfig('SYSTEM_GLOBAL_FLEET_RPCS', existing);
+    return true;
+  } catch (e) {
+    console.error('[Fleet DB] Save error:', e.message);
+    return false;
+  }
+}
+
+app.get('/api/fleet-rpcs', async (req, res) => {
+  const network = req.query.network || 'robinhood';
+  try {
+    const rpcs = await dbGetCloudFleet(network);
+    return res.json({ success: true, rpcs, fleetRpcs: rpcs });
+  } catch (e) {
+    return res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/fleet-rpcs/save', adminAuthMiddleware, async (req, res) => {
+  const payload = req.body.rpc || req.body;
+  const { id, networkKey = (payload.network || 'robinhood'), name, url, isActive = true, priority = 1 } = payload;
+  if (!name || !url) {
+    return res.status(400).json({ success: false, error: 'Name and URL are required' });
+  }
+  try {
+    const currentList = await dbGetCloudFleet(networkKey);
+    const rpcId = id || `fleet-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const newRecord = {
+      id: rpcId,
+      network_key: networkKey,
+      name: name.trim(),
+      url: url.trim(),
+      is_active: isActive !== false,
+      priority: parseInt(priority) || 1,
+      updated_at: new Date().toISOString()
+    };
+
+    const index = currentList.findIndex(r => r.id === rpcId);
+    let updated;
+    if (index >= 0) {
+      updated = [...currentList];
+      updated[index] = newRecord;
+    } else {
+      updated = [newRecord, ...currentList];
+    }
+    updated.sort((a, b) => (parseInt(a.priority) || 99) - (parseInt(b.priority) || 99));
+    await dbSaveCloudFleet(networkKey, updated);
+    return res.json({ success: true, rpc: newRecord, rpcs: updated, fleetRpcs: updated });
+  } catch (e) {
+    return res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/fleet-rpcs/delete', adminAuthMiddleware, async (req, res) => {
+  const payload = req.body;
+  const id = payload.id;
+  const networkKey = payload.networkKey || payload.network || 'robinhood';
+  if (!id) return res.status(400).json({ success: false, error: 'ID is required' });
+  try {
+    const currentList = await dbGetCloudFleet(networkKey);
+    const updated = currentList.filter(r => r.id !== id);
+    await dbSaveCloudFleet(networkKey, updated);
+    return res.json({ success: true, rpcs: updated, fleetRpcs: updated });
+  } catch (e) {
+    return res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/fleet-rpcs/toggle', adminAuthMiddleware, async (req, res) => {
+  const payload = req.body;
+  const id = payload.id;
+  const isActive = payload.isActive !== undefined ? payload.isActive : (payload.active !== undefined ? payload.active : true);
+  const networkKey = payload.networkKey || payload.network || 'robinhood';
+  if (!id) return res.status(400).json({ success: false, error: 'ID is required' });
+  try {
+    const currentList = await dbGetCloudFleet(networkKey);
+    const updated = currentList.map(r => r.id === id ? { ...r, is_active: Boolean(isActive) } : r);
+    await dbSaveCloudFleet(networkKey, updated);
+    return res.json({ success: true, rpcs: updated, fleetRpcs: updated });
+  } catch (e) {
+    return res.status(500).json({ success: false, error: e.message });
   }
 });
 

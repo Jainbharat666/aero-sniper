@@ -1871,91 +1871,232 @@
     </div>
   </div>
 
-  <!-- ================= 5A-2. USER PROFILE & VAULT SYNC MODAL ================= -->
-  <div id="user-profile-modal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-white border border-slate-200 rounded-3xl shadow-2xl max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in duration-200">
+  <!-- ================= 5A-2. 5-TAB CYBER USER PROFILE & VAULT MODAL (AEROMINT V2 STANDARD) ================= -->
+  <div id="user-profile-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl max-w-xl w-full p-6 space-y-4 animate-in fade-in zoom-in duration-200 text-slate-100 font-mono-code">
       
-      <!-- Header -->
-      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-        <div class="flex items-center gap-2.5">
-          <div class="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-black text-lg">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-3">
+          <div id="prof-avatar" class="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 font-black text-lg">
             👤
           </div>
           <div>
-            <h3 class="text-sm font-black text-slate-900" id="prof-modal-email">user@email.com</h3>
+            <h3 class="text-sm font-black text-white" id="prof-modal-email">user@email.com</h3>
             <div class="flex items-center gap-2">
-              <span id="prof-modal-role-badge" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-indigo-100 text-indigo-800">VIP MEMBER</span>
-              <span class="text-[10px] text-slate-400 font-mono-code" id="prof-modal-uid">UID: --</span>
+              <span id="prof-modal-role-badge" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">VIP MEMBER</span>
+              <span class="text-[10px] text-slate-400" id="prof-modal-uid">UID: --</span>
             </div>
           </div>
         </div>
-        <button onclick="closeUserProfileModal()" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-xs font-bold transition-colors">
+        <button onclick="closeUserProfileModal()" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-xs font-bold transition-colors">
           ✕
         </button>
       </div>
 
-      <!-- Subscription & Quota Bento Grid -->
-      <div class="grid grid-cols-2 gap-2.5 font-mono-code text-xs">
-        
-        <div class="bg-indigo-50/70 border border-indigo-200 rounded-2xl p-3 flex flex-col justify-between">
-          <div class="flex items-center justify-between mb-1">
-            <span class="text-[10px] font-black text-indigo-900 uppercase">Subscription Validity</span>
-            <i class="fa-regular fa-calendar-check text-indigo-600 text-xs"></i>
-          </div>
-          <div class="text-sm font-black text-indigo-950" id="prof-modal-expiry">30 Days Remaining</div>
-          <div class="text-[10px] text-indigo-700 font-bold" id="prof-modal-expiry-date">Valid until: --</div>
-        </div>
-
-        <div class="bg-purple-50/70 border border-purple-200 rounded-2xl p-3 flex flex-col justify-between">
-          <div class="flex items-center justify-between mb-1">
-            <span class="text-[10px] font-black text-purple-900 uppercase">Snipes Quota</span>
-            <i class="fa-solid fa-bullseye text-purple-600 text-xs"></i>
-          </div>
-          <div class="text-sm font-black text-purple-950" id="prof-modal-quota-stat">Unlimited ⚡</div>
-          <div class="text-[10px] text-purple-700 font-bold" id="prof-modal-quota-sub">0 completed on this key</div>
-        </div>
-
+      <!-- 5 Tab Switcher -->
+      <div class="flex bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs font-bold gap-1">
+        <button onclick="switchProfileTab('overview')" id="prof-tab-btn-overview" class="flex-1 py-1.5 rounded-xl bg-indigo-600 text-white shadow-sm transition-all text-center">
+          📊 Overview
+        </button>
+        <button onclick="switchProfileTab('cloud_vault')" id="prof-tab-btn-cloud_vault" class="flex-1 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all text-center">
+          ☁️ Cloud Vault
+        </button>
+        <button onclick="switchProfileTab('rpcs')" id="prof-tab-btn-rpcs" class="flex-1 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all text-center">
+          ⚡ Custom RPCs
+        </button>
+        <button onclick="switchProfileTab('security')" id="prof-tab-btn-security" class="flex-1 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all text-center">
+          🔐 Security
+        </button>
+        <button onclick="switchProfileTab('renew')" id="prof-tab-btn-renew" class="flex-1 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all text-center">
+          🎁 Renew
+        </button>
       </div>
 
-      <!-- Cloud Vault Management -->
-      <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-2">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <i class="fa-solid fa-cloud text-indigo-600 text-sm"></i>
-            <div>
-              <div class="text-xs font-bold text-slate-900">Private Cloud Vault Sync</div>
-              <div class="text-[10px] text-slate-500 font-sans">Sync your wallets fleet & custom sniper presets across devices securely.</div>
+      <!-- TAB 1: OVERVIEW -->
+      <div id="prof-view-overview" class="space-y-3">
+        <!-- Live Second-by-Second Countdown Clock -->
+        <div class="bg-gradient-to-br from-indigo-950/60 to-purple-950/60 border border-indigo-500/30 rounded-2xl p-4 text-center space-y-2">
+          <div class="text-[10px] font-black uppercase tracking-wider text-indigo-300 flex items-center justify-center gap-1.5">
+            <i class="fa-regular fa-clock text-amber-400"></i> Subscription Remaining (Live Ticker)
+          </div>
+          <div id="prof-clock-container" class="grid grid-cols-4 gap-2 py-1">
+            <div class="bg-slate-950/80 border border-indigo-500/20 rounded-xl p-2">
+              <div id="prof-clock-days" class="text-xl font-black text-indigo-400">00</div>
+              <div class="text-[9px] text-slate-400 uppercase font-bold">Days</div>
+            </div>
+            <div class="bg-slate-950/80 border border-indigo-500/20 rounded-xl p-2">
+              <div id="prof-clock-hours" class="text-xl font-black text-indigo-400">00</div>
+              <div class="text-[9px] text-slate-400 uppercase font-bold">Hours</div>
+            </div>
+            <div class="bg-slate-950/80 border border-indigo-500/20 rounded-xl p-2">
+              <div id="prof-clock-mins" class="text-xl font-black text-indigo-400">00</div>
+              <div class="text-[9px] text-slate-400 uppercase font-bold">Mins</div>
+            </div>
+            <div class="bg-slate-950/80 border border-indigo-500/20 rounded-xl p-2">
+              <div id="prof-clock-secs" class="text-xl font-black text-pink-400">00</div>
+              <div class="text-[9px] text-slate-400 uppercase font-bold">Secs</div>
             </div>
           </div>
+          <div id="prof-clock-lifetime" class="hidden text-sm font-black text-emerald-400 py-2">
+            👑 Permanent Lifetime Master Access (No Expiry)
+          </div>
+          <div class="text-[10px] text-slate-400" id="prof-valid-until-label">Valid until: --</div>
         </div>
 
-        <div class="grid grid-cols-2 gap-2 font-mono-code text-xs pt-1">
-          <button onclick="syncSniperConfigToCloud()" class="py-2 px-3 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all">
-            <i class="fa-solid fa-cloud-arrow-up text-indigo-600"></i> Backup to Cloud
-          </button>
-          <button onclick="loadSniperConfigFromCloud()" class="py-2 px-3 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all">
-            <i class="fa-solid fa-cloud-arrow-down text-emerald-600"></i> Restore from Cloud
-          </button>
+        <!-- Snipes Quota Usage -->
+        <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-3.5 space-y-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-[10px] uppercase font-black text-slate-400">Snipes Quota Consumption</span>
+            <span id="prof-quota-label" class="font-black text-purple-400">0 / 0 Snipes</span>
+          </div>
+          <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+            <div id="prof-quota-progress" class="bg-gradient-to-r from-emerald-500 via-indigo-500 to-purple-500 h-2.5 rounded-full transition-all" style="width: 0%"></div>
+          </div>
+          <div class="flex items-center justify-between text-[10px] text-slate-400">
+            <span id="prof-quota-remaining">Remaining: --</span>
+            <span id="prof-invite-used">Invite: --</span>
+          </div>
         </div>
       </div>
 
-      <!-- Admin Access Button (Exclusive for Owner / Admin) -->
-      <div id="prof-modal-admin-btn-container" class="hidden pt-1">
-        <button onclick="closeUserProfileModal(); openAdminModal();" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white font-black text-xs shadow-md shadow-amber-500/20 flex items-center justify-center gap-2 transition-all">
-          <i class="fa-solid fa-crown text-xs"></i> 👑 Open Master Admin Console
+      <!-- TAB 2: CLOUD VAULT -->
+      <div id="prof-view-cloud_vault" class="space-y-3 hidden">
+        <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-3.5 space-y-2">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-shield-halved text-indigo-400 text-lg"></i>
+              <div>
+                <div class="text-xs font-bold text-white">Non-Custodial Cloud Vault</div>
+                <div class="text-[10px] text-slate-400">Securely sync your wallet fleet and custom presets across devices.</div>
+              </div>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">AES-GCM</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs pt-2">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-2.5">
+              <div class="text-[9px] uppercase text-slate-500 font-bold">Local Wallets</div>
+              <div id="prof-vault-wallets-count" class="text-base font-black text-indigo-400">0</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-2.5">
+              <div class="text-[9px] uppercase text-slate-500 font-bold">Custom RPCs</div>
+              <div id="prof-vault-rpcs-count" class="text-base font-black text-purple-400">0</div>
+            </div>
+          </div>
+          <div class="text-[10px] text-slate-500" id="prof-vault-last-sync">Last synced: Never</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button onclick="handleCloudVaultBackup()" class="py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20 transition-all">
+            <i class="fa-solid fa-cloud-arrow-up"></i> ⚡ Backup to Cloud Vault
+          </button>
+          <button onclick="handleCloudVaultRestore()" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all">
+            <i class="fa-solid fa-cloud-arrow-down text-emerald-400"></i> 📥 Restore from Cloud
+          </button>
+        </div>
+        <button onclick="handleCloudVaultWipe()" class="w-full py-2 px-3 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 border border-rose-800/40 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all">
+          <i class="fa-solid fa-trash-can text-rose-400"></i> 🗑️ Wipe Remote Cloud Data
         </button>
       </div>
 
-      <!-- Quick Action Buttons -->
-      <div class="grid grid-cols-3 gap-2 font-mono-code text-xs pt-1">
-        <button onclick="openChangePasswordModal()" class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all">
-          <i class="fa-solid fa-key text-xs text-amber-600"></i> Password
-        </button>
-        <button onclick="openRedeemTopupModal()" class="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all">
-          <i class="fa-solid fa-gift text-xs text-purple-600"></i> Top-up Key
-        </button>
-        <button onclick="logoutUser()" class="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-all">
-          <i class="fa-solid fa-power-off text-xs text-rose-600"></i> Logout
+      <!-- TAB 3: CUSTOM RPCS MANAGER -->
+      <div id="prof-view-rpcs" class="space-y-3 hidden">
+        <!-- Add RPC Form -->
+        <form onsubmit="handleAddUserCustomRpc(event)" class="bg-slate-950/60 border border-slate-800 rounded-2xl p-3 space-y-2">
+          <div class="text-[10px] uppercase font-black text-indigo-400 flex items-center gap-1">
+            <i class="fa-solid fa-plus-circle"></i> Add Private Node
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <label class="text-[9px] text-slate-400 block mb-0.5">Node Name</label>
+              <input type="text" id="user-rpc-name" required placeholder="e.g. My Alchemy Node" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+              <label class="text-[9px] text-slate-400 block mb-0.5">Network</label>
+              <select id="user-rpc-network" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+                <option value="robinhood">Robinhood Chain (4663)</option>
+                <option value="ethereum">Ethereum (1)</option>
+                <option value="base">Base (8453)</option>
+                <option value="arbitrum">Arbitrum One (42161)</option>
+                <option value="polygon">Polygon (137)</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="text-[9px] text-slate-400 block mb-0.5">RPC URL (HTTPS / WSS)</label>
+            <input type="url" id="user-rpc-url" required placeholder="https://robinhood-mainnet.g.alchemy.com/v2/..." class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+          </div>
+          <div class="flex justify-end pt-1">
+            <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs flex items-center gap-1 shadow-md">
+              <i class="fa-solid fa-bolt"></i> Add Node
+            </button>
+          </div>
+        </form>
+
+        <!-- Custom Nodes List Header -->
+        <div class="flex items-center justify-between pt-1">
+          <span class="text-[10px] uppercase font-black text-slate-400">Your Private Nodes (<span id="user-rpcs-count">0</span>)</span>
+          <button onclick="testUserCustomRpcLatencies()" class="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1">
+            <i class="fa-solid fa-gauge-high"></i> Benchmark Latencies
+          </button>
+        </div>
+        <div id="user-rpcs-list" class="max-h-36 overflow-y-auto space-y-1.5 divide-y divide-slate-800/50">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- TAB 4: SECURITY -->
+      <div id="prof-view-security" class="space-y-3 hidden">
+        <form onsubmit="handleUserProfileChangePassword(event)" class="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-3">
+          <div class="text-[11px] font-black uppercase text-indigo-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-lock"></i> Change Account Password
+          </div>
+          <div>
+            <label class="text-[9px] text-slate-400 block mb-0.5 uppercase font-bold">Current Password</label>
+            <input type="password" id="prof-cp-current" required class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="text-[9px] text-slate-400 block mb-0.5 uppercase font-bold">New Password (min 6 chars)</label>
+            <input type="password" id="prof-cp-new" required minlength="6" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="text-[9px] text-slate-400 block mb-0.5 uppercase font-bold">Confirm New Password</label>
+            <input type="password" id="prof-cp-confirm" required minlength="6" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+          </div>
+          <div class="pt-1 flex justify-end">
+            <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-md">
+              Update Password
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- TAB 5: RENEW / TOP-UP -->
+      <div id="prof-view-renew" class="space-y-3 hidden">
+        <form onsubmit="handleUserProfileRedeemTopup(event)" class="bg-gradient-to-br from-purple-950/50 to-indigo-950/50 border border-purple-500/30 rounded-2xl p-4 space-y-3">
+          <div class="text-[11px] font-black uppercase text-purple-300 flex items-center gap-1.5">
+            <i class="fa-solid fa-gift text-purple-400"></i> Redeem VIP Top-up / Renewal Voucher
+          </div>
+          <p class="text-[10px] text-slate-400 font-sans">Enter a renewal key purchased from the Administrator to immediately add validity days or increase your allowed snipes quota without losing your wallets.</p>
+          <div>
+            <label class="text-[9px] text-purple-300 uppercase font-bold block mb-0.5">Top-up Voucher Key</label>
+            <input type="text" id="prof-topup-code" required placeholder="e.g. SNIPER-PRO-30D" class="w-full bg-slate-950 border border-purple-500/40 rounded-xl px-3 py-2.5 text-xs font-black text-purple-200 uppercase focus:outline-none focus:border-purple-400">
+          </div>
+          <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs shadow-md shadow-purple-600/25 flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-bolt"></i> Redeem Key &amp; Extend Access
+          </button>
+        </form>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+        <div id="prof-owner-btn-container" class="hidden">
+          <button onclick="closeUserProfileModal(); openAdminModal();" class="py-2 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 font-bold text-xs flex items-center gap-1.5">
+            👑 Master Admin
+          </button>
+        </div>
+        <button onclick="logoutUser()" class="py-2 px-3.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 font-bold text-xs flex items-center gap-1.5 ml-auto">
+          <i class="fa-solid fa-power-off text-rose-400"></i> Logout Account
         </button>
       </div>
 
@@ -2023,77 +2164,84 @@
   </div>
 
   <!-- ================= 5A-5. 👑 MASTER ADMIN CONTROLS MODAL (EXCLUSIVE FOR OWNER) ================= -->
-  <div id="admin-panel-modal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
-    <div class="bg-white border border-slate-200 rounded-3xl shadow-2xl max-w-4xl w-full h-[85vh] flex flex-col p-6 space-y-4 animate-in fade-in zoom-in duration-200 overflow-hidden">
+  <div id="admin-panel-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden font-mono-code text-xs">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl max-w-5xl w-full h-[88vh] flex flex-col p-6 space-y-4 animate-in fade-in zoom-in duration-200 overflow-hidden text-slate-100">
       
       <!-- Modal Header -->
-      <div class="flex items-center justify-between border-b border-slate-100 pb-3 shrink-0">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-xl text-amber-600 font-black shadow-sm">
+          <div class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-xl text-amber-400 font-black shadow-sm">
             👑
           </div>
           <div>
             <div class="flex items-center gap-2">
-              <h2 class="text-base font-black text-slate-900">Aero-Sniper V2 Master Admin Console</h2>
-              <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-100 text-amber-800 border border-amber-300">PLATFORM OWNER</span>
+              <h2 class="text-base font-black text-white">Aero-Sniper V2 Master Admin Console</h2>
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-500/20 text-amber-400 border border-amber-500/40">PLATFORM OWNER</span>
             </div>
-            <p class="text-[11px] text-slate-500 font-mono-code font-bold">jainbharat666@gmail.com • Isolated Supabase Database</p>
+            <p class="text-[11px] text-slate-400 font-mono-code font-bold">jainbharat666@gmail.com • Isolated Supabase Database</p>
           </div>
         </div>
 
-        <button onclick="closeAdminModal()" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold transition-colors">
+        <button onclick="closeAdminModal()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center text-sm font-bold transition-colors">
           ✕
         </button>
       </div>
 
       <!-- Admin Tab Switcher -->
       <div class="flex items-center justify-between gap-2 shrink-0">
-        <div class="flex bg-slate-100 p-1 rounded-2xl font-mono-code text-xs font-bold">
-          <button type="button" onclick="switchAdminTab('users')" id="admin-tab-btn-users" class="px-4 py-1.5 rounded-xl bg-white text-indigo-600 shadow-sm transition-all flex items-center gap-1.5">
+        <div class="flex bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs font-bold gap-1">
+          <button type="button" onclick="switchAdminTab('users')" id="admin-tab-btn-users" class="px-4 py-1.5 rounded-xl bg-indigo-600 text-white shadow-sm transition-all flex items-center gap-1.5">
             <i class="fa-solid fa-users text-xs"></i> Registered Members (<span id="admin-user-count">0</span>)
           </button>
-          <button type="button" onclick="switchAdminTab('invites')" id="admin-tab-btn-invites" class="px-4 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5">
+          <button type="button" onclick="switchAdminTab('invites')" id="admin-tab-btn-invites" class="px-4 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
             <i class="fa-solid fa-ticket text-xs"></i> VIP Invite Generator (<span id="admin-invite-count">0</span>)
           </button>
-          <button type="button" onclick="switchAdminTab('telemetry')" id="admin-tab-btn-telemetry" class="px-4 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5">
-            <i class="fa-solid fa-server text-xs"></i> Cloud Health
+          <button type="button" onclick="switchAdminTab('fleet')" id="admin-tab-btn-fleet" class="px-4 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-server text-xs"></i> Fleet RPC Cluster
+          </button>
+          <button type="button" onclick="switchAdminTab('telemetry')" id="admin-tab-btn-telemetry" class="px-4 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-heart-pulse text-xs"></i> Cloud Health
           </button>
         </div>
 
-        <button onclick="refreshAdminData()" class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono-code text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all">
-          <i class="fa-solid fa-rotate text-xs text-indigo-600"></i> Refresh
+        <button onclick="refreshAdminData()" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-mono-code text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all">
+          <i class="fa-solid fa-rotate text-xs text-indigo-400"></i> Refresh
         </button>
       </div>
 
       <!-- TAB 1: USERS FLEET -->
       <div id="admin-view-users" class="flex-1 flex flex-col space-y-3 overflow-hidden">
         
+        <!-- Search & Filter Badges -->
         <div class="flex items-center justify-between gap-3 shrink-0">
           <div class="relative flex-1">
-            <input type="text" id="admin-user-search" oninput="filterAdminUsers()" placeholder="Search users by email, ID or invite code..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs font-mono-code font-bold focus:outline-none focus:border-indigo-600">
-            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400 text-xs"></i>
+            <input type="text" id="admin-user-search" oninput="filterAdminUsers()" placeholder="Search users by email, ID or invite code..." class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2 text-slate-500 text-xs"></i>
           </div>
-          <select id="admin-user-filter" onchange="filterAdminUsers()" class="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-mono-code font-bold text-slate-700 focus:outline-none">
-            <option value="all">All Members</option>
-            <option value="active">Active Only</option>
-            <option value="banned">Banned Only</option>
-          </select>
+          <!-- Filter Buttons (AeroMint V2 Standard) -->
+          <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-[10px] font-bold">
+            <button onclick="setAdminUserFilter('all')" id="uf-btn-all" class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white">All</button>
+            <button onclick="setAdminUserFilter('active')" id="uf-btn-active" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white">Active</button>
+            <button onclick="setAdminUserFilter('expired')" id="uf-btn-expired" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white">Expired Time</button>
+            <button onclick="setAdminUserFilter('exhausted')" id="uf-btn-exhausted" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white">Expired Quota</button>
+            <button onclick="setAdminUserFilter('banned')" id="uf-btn-banned" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white">Suspended</button>
+          </div>
         </div>
 
         <!-- Users Table Container -->
-        <div class="flex-1 border border-slate-200 rounded-2xl overflow-y-auto bg-slate-50/50">
+        <div class="flex-1 border border-slate-800 rounded-2xl overflow-y-auto bg-slate-950/60">
           <table class="w-full text-left font-mono-code text-xs border-collapse">
-            <thead class="bg-slate-100/90 sticky top-0 z-10 text-[10px] text-slate-500 uppercase font-black tracking-wider border-b border-slate-200">
+            <thead class="bg-slate-900 sticky top-0 z-10 text-[10px] text-slate-400 uppercase font-black tracking-wider border-b border-slate-800">
               <tr>
-                <th class="py-2 px-3">Email / UID</th>
-                <th class="py-2 px-3">Role / Code</th>
-                <th class="py-2 px-3">Validity</th>
-                <th class="py-2 px-3">Snipes Quota</th>
-                <th class="py-2 px-3">Status</th>
-                <th class="py-2 px-3 text-right">Actions</th>
+                <th class="py-2.5 px-3">Email / UID</th>
+                <th class="py-2.5 px-3">Role / Code</th>
+                <th class="py-2.5 px-3">Validity</th>
+                <th class="py-2.5 px-3">Snipes Quota</th>
+                <th class="py-2.5 px-3">Status</th>
+                <th class="py-2.5 px-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody id="admin-users-tbody" class="divide-y divide-slate-200">
+            <tbody id="admin-users-tbody" class="divide-y divide-slate-800/60">
               <!-- Dynamically populated -->
             </tbody>
           </table>
@@ -2105,51 +2253,69 @@
       <div id="admin-view-invites" class="flex-1 flex flex-col space-y-3 overflow-hidden hidden">
         
         <!-- Create New Invite Code Card -->
-        <form onsubmit="handleCreateInviteSubmit(event)" class="bg-indigo-50/50 border border-indigo-200 rounded-2xl p-3.5 space-y-2.5 shrink-0 font-mono-code text-xs">
-          <div class="text-[11px] font-black uppercase text-indigo-900 flex items-center gap-1.5">
-            <i class="fa-solid fa-plus-circle text-indigo-600"></i> Generate VIP Access Key (Dual Constraint)
+        <form onsubmit="handleCreateInviteSubmit(event)" class="bg-slate-950/60 border border-slate-800 rounded-2xl p-3.5 space-y-2.5 shrink-0 font-mono-code text-xs">
+          <div class="flex items-center justify-between text-[11px] font-black uppercase text-indigo-400">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-plus-circle"></i> Generate VIP Access Key (Dual Constraint)</span>
+            <button type="button" onclick="generateDiceInviteCode()" class="text-[10px] bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-lg flex items-center gap-1 transition-all">
+              🎲 Auto Generate Random Key
+            </button>
           </div>
 
           <div class="grid grid-cols-4 gap-2 text-xs">
             <div>
-              <label class="text-[9px] text-slate-500 uppercase font-bold block mb-0.5">Invite Code</label>
-              <input type="text" id="gen-invite-code" required placeholder="e.g. SNIPER-VIP-2026" class="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-black uppercase text-indigo-900 focus:outline-none focus:border-indigo-600">
+              <label class="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Invite Code</label>
+              <input type="text" id="gen-invite-code" required placeholder="e.g. SNIPER-VIP-2026" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-black uppercase text-indigo-300 focus:outline-none focus:border-indigo-500">
             </div>
             <div>
-              <label class="text-[9px] text-slate-500 uppercase font-bold block mb-0.5">Validity Days</label>
-              <input type="number" id="gen-invite-days" required value="30" min="1" class="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-600">
+              <label class="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Validity Days</label>
+              <input type="number" id="gen-invite-days" required value="30" min="1" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none focus:border-indigo-500">
             </div>
             <div>
-              <label class="text-[9px] text-slate-500 uppercase font-bold block mb-0.5">Snipes Limit (0=Unltd)</label>
-              <input type="number" id="gen-invite-snipes" required value="0" min="0" class="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-600">
+              <label class="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Snipes Limit (0=Unltd)</label>
+              <input type="number" id="gen-invite-snipes" required value="0" min="0" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none focus:border-indigo-500">
             </div>
             <div>
-              <label class="text-[9px] text-slate-500 uppercase font-bold block mb-0.5">Max Registrations</label>
-              <input type="number" id="gen-invite-uses" required value="1" min="1" class="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-600">
+              <label class="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Max Registrations</label>
+              <input type="number" id="gen-invite-uses" required value="1" min="1" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none focus:border-indigo-500">
             </div>
           </div>
 
-          <div class="flex justify-end pt-1">
-            <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-md shadow-indigo-500/20 flex items-center gap-1.5 transition-all">
+          <!-- Quick Presets -->
+          <div class="flex items-center justify-between pt-1 text-[10px]">
+            <div class="flex items-center gap-1">
+              <span class="text-slate-500">Days:</span>
+              <button type="button" onclick="setQuickInviteDays(7)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">+7d</button>
+              <button type="button" onclick="setQuickInviteDays(30)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">+30d</button>
+              <button type="button" onclick="setQuickInviteDays(90)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">+90d</button>
+              <button type="button" onclick="setQuickInviteDays(365)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">+365d</button>
+            </div>
+            <div class="flex items-center gap-1">
+              <span class="text-slate-500">Snipes:</span>
+              <button type="button" onclick="setQuickInviteSnipes(10)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">10</button>
+              <button type="button" onclick="setQuickInviteSnipes(50)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">50</button>
+              <button type="button" onclick="setQuickInviteSnipes(100)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">100</button>
+              <button type="button" onclick="setQuickInviteSnipes(0)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-indigo-300">Unlimited (0)</button>
+            </div>
+            <button type="submit" class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-md shadow-indigo-500/20 flex items-center gap-1.5 transition-all">
               <i class="fa-solid fa-magic text-xs"></i> Mint VIP Access Code
             </button>
           </div>
         </form>
 
         <!-- Invites Table -->
-        <div class="flex-1 border border-slate-200 rounded-2xl overflow-y-auto bg-slate-50/50">
+        <div class="flex-1 border border-slate-800 rounded-2xl overflow-y-auto bg-slate-950/60">
           <table class="w-full text-left font-mono-code text-xs border-collapse">
-            <thead class="bg-slate-100/90 sticky top-0 z-10 text-[10px] text-slate-500 uppercase font-black tracking-wider border-b border-slate-200">
+            <thead class="bg-slate-900 sticky top-0 z-10 text-[10px] text-slate-400 uppercase font-black tracking-wider border-b border-slate-800">
               <tr>
-                <th class="py-2 px-3">Invite Code</th>
-                <th class="py-2 px-3">Days</th>
-                <th class="py-2 px-3">Snipes Cap</th>
-                <th class="py-2 px-3">Usage</th>
-                <th class="py-2 px-3">Status</th>
-                <th class="py-2 px-3 text-right">Actions</th>
+                <th class="py-2.5 px-3">Invite Code</th>
+                <th class="py-2.5 px-3">Days</th>
+                <th class="py-2.5 px-3">Snipes Cap</th>
+                <th class="py-2.5 px-3">Usage</th>
+                <th class="py-2.5 px-3">Status</th>
+                <th class="py-2.5 px-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody id="admin-invites-tbody" class="divide-y divide-slate-200">
+            <tbody id="admin-invites-tbody" class="divide-y divide-slate-800/60">
               <!-- Dynamically populated -->
             </tbody>
           </table>
@@ -2157,37 +2323,95 @@
 
       </div>
 
-      <!-- TAB 3: TELEMETRY & CLOUD HEALTH -->
-      <div id="admin-view-telemetry" class="flex-1 space-y-4 overflow-y-auto hidden font-mono-code text-xs">
-        <div class="grid grid-cols-3 gap-3">
-          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
-            <div class="text-[10px] text-slate-500 uppercase font-bold">Cloud Database</div>
-            <div class="text-sm font-black text-emerald-600 mt-1 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-ring"></span> Supabase Isolated
+      <!-- TAB 3: FLEET RPC CLUSTER (AEROMINT V2 CLOUD SYNCD) -->
+      <div id="admin-view-fleet" class="flex-1 flex flex-col space-y-3 overflow-hidden hidden">
+        <form onsubmit="handleAddFleetRpcSubmit(event)" class="bg-slate-950/60 border border-slate-800 rounded-2xl p-3.5 space-y-2.5 shrink-0 font-mono-code text-xs">
+          <div class="text-[11px] font-black uppercase text-amber-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-network-wired"></i> Add System-Wide Fleet Node (Shared by All VIPs)
+          </div>
+          <div class="grid grid-cols-4 gap-2">
+            <div>
+              <label class="text-[9px] text-slate-400 block mb-0.5">Network</label>
+              <select id="fleet-rpc-network" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white">
+                <option value="robinhood">Robinhood Chain (4663)</option>
+                <option value="ethereum">Ethereum (1)</option>
+                <option value="base">Base (8453)</option>
+                <option value="arbitrum">Arbitrum One (42161)</option>
+                <option value="polygon">Polygon (137)</option>
+              </select>
             </div>
-            <div class="text-[10px] text-slate-400 mt-1">fjxarhcisasyvomfgtxl.supabase.co</div>
+            <div>
+              <label class="text-[9px] text-slate-400 block mb-0.5">Node Name</label>
+              <input type="text" id="fleet-rpc-name" required placeholder="e.g. Robinhood Alchemy Dedicated" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white">
+            </div>
+            <div class="col-span-2">
+              <label class="text-[9px] text-slate-400 block mb-0.5">RPC URL (HTTPS)</label>
+              <div class="flex gap-2">
+                <input type="url" id="fleet-rpc-url" required placeholder="https://robinhood-mainnet.g.alchemy.com/v2/..." class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-white">
+                <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs">
+                  Add Node
+                </button>
+              </div>
+            </div>
           </div>
-          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
-            <div class="text-[10px] text-slate-500 uppercase font-bold">Active Invites</div>
-            <div class="text-sm font-black text-indigo-600 mt-1" id="tele-invites-count">--</div>
-            <div class="text-[10px] text-slate-400 mt-1">Ready for redemption</div>
+        </form>
+
+        <!-- Fleet RPCs Table -->
+        <div class="flex items-center justify-between pt-1">
+          <span class="text-[10px] uppercase font-black text-slate-400">System Managed RPC Cluster</span>
+          <button onclick="testFleetRpcLatencies()" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1">
+            <i class="fa-solid fa-gauge-high"></i> Benchmark Cluster Latency
+          </button>
+        </div>
+        <div class="flex-1 border border-slate-800 rounded-2xl overflow-y-auto bg-slate-950/60">
+          <table class="w-full text-left font-mono-code text-xs border-collapse">
+            <thead class="bg-slate-900 sticky top-0 z-10 text-[10px] text-slate-400 uppercase font-black tracking-wider border-b border-slate-800">
+              <tr>
+                <th class="py-2.5 px-3">Network</th>
+                <th class="py-2.5 px-3">Node Name</th>
+                <th class="py-2.5 px-3">URL</th>
+                <th class="py-2.5 px-3">Latency</th>
+                <th class="py-2.5 px-3">Status</th>
+                <th class="py-2.5 px-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-fleet-tbody" class="divide-y divide-slate-800/60">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 4: TELEMETRY & CLOUD HEALTH -->
+      <div id="admin-view-telemetry" class="flex-1 flex flex-col space-y-3 overflow-hidden hidden">
+        <div class="grid grid-cols-3 gap-3">
+          <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-1">
+            <div class="text-[10px] text-slate-400 uppercase font-bold">Supabase Status</div>
+            <div class="text-sm font-black text-emerald-400 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Connected &amp; Isolated
+            </div>
+            <div class="text-[10px] text-slate-500">https://fjxarhcisasyvomfgtxl.supabase.co</div>
           </div>
-          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
-            <div class="text-[10px] text-slate-500 uppercase font-bold">Total Registered</div>
-            <div class="text-sm font-black text-purple-600 mt-1" id="tele-users-count">--</div>
-            <div class="text-[10px] text-slate-400 mt-1">Across all VIP keys</div>
+          <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-1">
+            <div class="text-[10px] text-slate-400 uppercase font-bold">OpenSea Laser Grid</div>
+            <div class="text-sm font-black text-indigo-400 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-indigo-500"></span> 6 Keys Armed
+            </div>
+            <div class="text-[10px] text-slate-500">Dedicated Stream + Multi-Rest Grid</div>
+          </div>
+          <div class="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 space-y-1">
+            <div class="text-[10px] text-slate-400 uppercase font-bold">Seaport Protocol</div>
+            <div class="text-sm font-black text-purple-400 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-purple-500"></span> Seaport v1.6 Zero-Hop
+            </div>
+            <div class="text-[10px] text-slate-500">0x0000000000000068F116a894984e2DB1123eB395</div>
           </div>
         </div>
-
-        <div class="bg-slate-900 text-white rounded-2xl p-4 space-y-2 text-xs">
-          <div class="text-cyan-400 font-black flex items-center gap-2">
-            <i class="fa-solid fa-lock"></i> AERO-SNIPER V2 CORE ENGINE STATUS: LOCKED &amp; FROZEN
-          </div>
-          <div class="text-slate-300 space-y-1 text-[11px]">
-            <div>• Benchmarked Blocks: #57070193, #57072881, #57076323, #57079669</div>
-            <div>• Execution Engine: 0ms Seaport 1.6 Direct Bytecode + 6-Key OpenSea Laser Grid</div>
-            <div>• Database Isolation: sniper_users, sniper_invites, sniper_user_configs, sniper_custom_rpcs</div>
-          </div>
+        <div class="flex-1 bg-slate-950/80 border border-slate-800 rounded-2xl p-4 font-mono-code text-[11px] overflow-y-auto space-y-1.5 text-slate-400" id="admin-telemetry-log">
+          <div>✔ [DATABASE] Connected to Supabase Cloud PostgreSQL.</div>
+          <div>✔ [SEAPORT] Seaport 1.6 contract verified on Robinhood Chain (4663).</div>
+          <div>✔ [AUTHENTICATION] Admin session authenticated: jainbharat666@gmail.com</div>
+          <div>✔ [FLEET RPC] Multi-RPC Simultaneous Mempool Blast engine initialized.</div>
         </div>
       </div>
 
@@ -2281,12 +2505,37 @@
     let walletFleet = [];
     let masterWalletIndex = null;
 
-    try {
-      const savedFleet = localStorage.getItem('sniper_wallet_fleet') || localStorage.getItem('aero_active_wallets');
-      if (savedFleet) walletFleet = JSON.parse(savedFleet);
-      const savedMaster = localStorage.getItem('sniper_master_wallet_idx');
-      if (savedMaster !== null && savedMaster !== '') masterWalletIndex = parseInt(savedMaster, 10);
-    } catch(e) {}
+    function getUserWalletStorageKey() {
+      if (currentUser && currentUser.id) {
+        return 'sniper_user_' + currentUser.id + '_wallets';
+      }
+      return 'sniper_wallet_fleet';
+    }
+
+    function getUserMasterWalletKey() {
+      if (currentUser && currentUser.id) {
+        return 'sniper_user_' + currentUser.id + '_master_idx';
+      }
+      return 'sniper_master_wallet_idx';
+    }
+
+    function loadUserScopedWallets() {
+      try {
+        const wKey = getUserWalletStorageKey();
+        const mKey = getUserMasterWalletKey();
+        const savedFleet = localStorage.getItem(wKey) || localStorage.getItem('sniper_wallet_fleet') || localStorage.getItem('aero_active_wallets');
+        if (savedFleet) walletFleet = JSON.parse(savedFleet);
+        else walletFleet = [];
+        const savedMaster = localStorage.getItem(mKey) || localStorage.getItem('sniper_master_wallet_idx');
+        if (savedMaster !== null && savedMaster !== '') masterWalletIndex = parseInt(savedMaster, 10);
+        else masterWalletIndex = null;
+      } catch(e) {
+        walletFleet = [];
+        masterWalletIndex = null;
+      }
+    }
+
+    loadUserScopedWallets();
 
     const DEFAULT_RPC_FLEET = [
       {
@@ -2356,10 +2605,16 @@
 
     function persistState() {
       try {
+        const wKey = getUserWalletStorageKey();
+        localStorage.setItem(wKey, JSON.stringify(walletFleet));
         localStorage.setItem('sniper_wallet_fleet', JSON.stringify(walletFleet));
+
+        const mKey = getUserMasterWalletKey();
         if (masterWalletIndex !== null) {
+          localStorage.setItem(mKey, masterWalletIndex);
           localStorage.setItem('sniper_master_wallet_idx', masterWalletIndex);
         } else {
+          localStorage.removeItem(mKey);
           localStorage.removeItem('sniper_master_wallet_idx');
         }
         localStorage.setItem('sniper_rpc_fleet', JSON.stringify(rpcFleet));
@@ -5190,10 +5445,28 @@
         return;
       }
 
-      if (!isDryRun && !currentUser) {
-        showToast('⚡ VIP Member Login Required to Arm Live Sniper on Mainnet!', true);
-        openAuthModal('login');
-        return;
+      if (!isArmed) {
+        if (!currentUser) {
+          showToast('⚡ VIP Member Login Required to Arm Sniper Engine!', true);
+          openAuthModal('login');
+          return;
+        }
+
+        const isOwnerAdmin = currentUser.role === 'admin' || currentUser.email === 'jainbharat666@gmail.com';
+        if (!isOwnerAdmin) {
+          // Check Validity Expiration
+          if (currentUser.valid_until && new Date(currentUser.valid_until).getTime() < Date.now()) {
+            showToast('⚠️ VIP Access Expired! Please redeem a renewal key in your profile.', true);
+            openUserProfileModal('renew');
+            return;
+          }
+          // Check Snipes Quota
+          if (currentUser.snipes_remaining !== null && currentUser.snipes_remaining !== undefined && currentUser.snipes_remaining <= 0 && currentUser.snipes_remaining !== 0) {
+            showToast('⚠️ Snipes Quota Exhausted! Please top-up in your profile.', true);
+            openUserProfileModal('renew');
+            return;
+          }
+        }
       }
       
       const activeWorkers = walletFleet.filter((w, i) => i !== masterWalletIndex && w.selected);
@@ -6754,6 +7027,7 @@
           appRoot.classList.remove('hidden');
           appRoot.style.display = 'flex';
         }
+        loadUserScopedWallets();
         renderAuthHeaderUI();
         renderWalletFleetUI();
         renderRpcFleet();
@@ -6764,13 +7038,23 @@
       }
     }
 
+    // =========================================================================
+    // 👑 100% AEROMINT V2 SAAS ARCHITECTURE INTEGRATION (VIP, CLOUD VAULT & FLEET)
+    // =========================================================================
+
+    let profileCountdownTimer = null;
+    let activeProfileTab = 'overview';
+    let currentAdminUserFilter = 'all';
+    let allAdminFleetRpcs = [];
+
+    // --- 1. USERNAV PILL IN HEADER ---
     function renderAuthHeaderUI() {
       const container = document.getElementById('header-auth-container');
       if (!container) return;
 
       if (!currentUser) {
         container.innerHTML = `
-          <button onclick="openAuthModal('login')" class="flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:to-pink-700 text-white px-3 py-1.5 rounded-xl font-mono-code text-xs font-black shadow-md shadow-indigo-500/20 transition-all">
+          <button onclick="openAuthModal('login')" class="flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:to-pink-700 text-white px-3.5 py-1.5 rounded-xl font-mono-code text-xs font-black shadow-md shadow-indigo-500/20 transition-all cursor-pointer">
             <i class="fa-solid fa-bolt text-xs text-amber-300"></i>
             <span>VIP Login</span>
           </button>
@@ -6780,33 +7064,551 @@
 
       const isOwnerAdmin = currentUser.role === 'admin' || currentUser.email === 'jainbharat666@gmail.com';
       const roleBadge = isOwnerAdmin 
-        ? `<span class="bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase">👑 ADMIN</span>`
+        ? `<span class="bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase">👑 ADMIN</span>`
         : `<span class="bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase">⚡ VIP</span>`;
       
-      const snipesLeft = (currentUser.snipes_remaining === 0 || currentUser.snipes_remaining === null || currentUser.snipes_remaining === undefined)
-        ? '∞' : currentUser.snipes_remaining;
-      const emailShort = currentUser.email && currentUser.email.length > 18 
-        ? currentUser.email.substring(0, 16) + '...' 
+      const initial = isOwnerAdmin ? '👑' : (currentUser.email ? currentUser.email.charAt(0).toUpperCase() : 'U');
+      const emailShort = currentUser.email && currentUser.email.length > 16 
+        ? currentUser.email.substring(0, 14) + '...' 
         : (currentUser.email || 'VIP Member');
+
+      let accessMetric = '';
+      if (isOwnerAdmin) {
+        accessMetric = `<span class="text-[10px] text-amber-700 font-black">👑 Master Access</span>`;
+      } else {
+        let daysStr = '∞';
+        if (currentUser.valid_until) {
+          const diff = new Date(currentUser.valid_until).getTime() - Date.now();
+          const d = Math.ceil(diff / (1000 * 60 * 60 * 24));
+          daysStr = d > 0 ? `${d}d left` : `<span class="text-rose-600 font-black">EXPIRED</span>`;
+        }
+        const snipesStr = (currentUser.snipes_remaining === 0 || currentUser.snipes_remaining === null || currentUser.snipes_remaining === undefined) 
+          ? '∞' : `${currentUser.snipes_remaining} snipes`;
+        accessMetric = `<span class="text-[10px] text-slate-500 font-bold">⏳ ${daysStr} • ⚡ ${snipesStr}</span>`;
+      }
 
       container.innerHTML = `
         <div class="flex items-center gap-2">
           ${isOwnerAdmin ? `
-            <button onclick="openAdminModal()" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded-xl font-mono-code text-xs font-black shadow-sm transition-all">
-              <i class="fa-solid fa-crown text-xs"></i>
-              <span>Admin</span>
+            <button onclick="openAdminModal()" class="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white px-3 py-1.5 rounded-xl font-mono-code text-xs font-black shadow-md shadow-amber-500/20 transition-all cursor-pointer">
+              <i class="fa-solid fa-crown text-xs text-amber-200"></i>
+              <span>Admin Console</span>
             </button>
           ` : ''}
-          <button onclick="openUserProfileModal()" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 px-3 py-1.5 rounded-xl font-mono-code text-xs font-bold shadow-sm transition-all">
-            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span class="font-black text-slate-900">${emailShort}</span>
-            ${roleBadge}
-            <span class="text-[10px] text-slate-500 font-bold border-l border-slate-300 pl-2">🎯 ${snipesLeft}</span>
-          </button>
+          <div onclick="openUserProfileModal('overview')" class="flex items-center gap-2.5 bg-white/90 hover:bg-white border border-slate-200/80 text-slate-800 px-2.5 py-1.5 rounded-2xl font-mono-code text-xs font-bold shadow-sm hover:shadow-md transition-all cursor-pointer select-none">
+            <div class="w-6 h-6 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[11px] font-black shadow-sm">
+              ${initial}
+            </div>
+            <div class="flex flex-col text-left leading-tight">
+              <div class="flex items-center gap-1.5">
+                <span class="font-black text-slate-900">${emailShort}</span>
+                ${roleBadge}
+              </div>
+              <div class="flex items-center gap-1 text-[10px]">
+                ${accessMetric}
+              </div>
+            </div>
+            <div class="w-6 h-6 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors ml-1">
+              <i class="fa-solid fa-gear text-[11px]"></i>
+            </div>
+          </div>
         </div>
       `;
     }
 
+    // --- 2. USER PROFILE & CLOUD VAULT MODAL (5 TABS) ---
+    function openUserProfileModal(tab = 'overview') {
+      if (!currentUser) {
+        openAuthModal('login');
+        return;
+      }
+      const isOwnerAdmin = currentUser.role === 'admin' || currentUser.email === 'jainbharat666@gmail.com';
+      
+      const elEmail = document.getElementById('prof-modal-email');
+      const elUid = document.getElementById('prof-modal-uid');
+      const elBadge = document.getElementById('prof-modal-role-badge');
+      const elAvatar = document.getElementById('prof-avatar');
+      const ownerBtn = document.getElementById('prof-owner-btn-container');
+
+      if (elEmail) elEmail.innerText = currentUser.email;
+      if (elUid) elUid.innerText = 'UID: ' + (currentUser.id ? currentUser.id.substring(0, 8) : '--');
+      if (elAvatar) elAvatar.innerText = isOwnerAdmin ? '👑' : (currentUser.email ? currentUser.email.charAt(0).toUpperCase() : '👤');
+      
+      if (elBadge) {
+        elBadge.innerText = isOwnerAdmin ? '👑 PLATFORM ADMIN' : (currentUser.plan || 'VIP MEMBER');
+        elBadge.className = isOwnerAdmin 
+          ? 'px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40'
+          : 'px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/40';
+      }
+
+      if (ownerBtn) ownerBtn.classList.toggle('hidden', !isOwnerAdmin);
+
+      // Snipes Quota Calculation
+      const rem = currentUser.snipes_remaining;
+      const used = currentUser.snipes_used || currentUser.total_snipes || 0;
+      const quotaLabel = document.getElementById('prof-quota-label');
+      const quotaProgress = document.getElementById('prof-quota-progress');
+      const quotaRemaining = document.getElementById('prof-quota-remaining');
+      const inviteUsed = document.getElementById('prof-invite-used');
+
+      if (rem === null || rem === undefined || rem === 0) {
+        if (quotaLabel) quotaLabel.innerText = 'Unlimited Snipes ⚡';
+        if (quotaProgress) quotaProgress.style.width = '100%';
+        if (quotaRemaining) quotaRemaining.innerText = 'Remaining: Unlimited';
+        if (inviteUsed) inviteUsed.innerText = 'Snipes Mined: ' + used;
+      } else {
+        const total = used + rem;
+        const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
+        if (quotaLabel) quotaLabel.innerText = `${used} / ${total} Snipes (${pct}%)`;
+        if (quotaProgress) quotaProgress.style.width = pct + '%';
+        if (quotaRemaining) quotaRemaining.innerText = `Remaining: ${rem} Snipes`;
+        if (inviteUsed) inviteUsed.innerText = 'Snipes Mined: ' + used;
+      }
+
+      // Populate Cloud Vault counters
+      const elWalletsCount = document.getElementById('prof-vault-wallets-count');
+      const elRpcsCount = document.getElementById('prof-vault-rpcs-count');
+      const elLastSync = document.getElementById('prof-vault-last-sync');
+      if (elWalletsCount) elWalletsCount.innerText = walletFleet.length;
+      if (elRpcsCount) elRpcsCount.innerText = getUserCustomRpcs().length;
+      if (elLastSync) {
+        const lastSync = localStorage.getItem('sniper_last_cloud_sync');
+        elLastSync.innerText = lastSync ? ('Last synced: ' + lastSync) : 'Last synced: Never';
+      }
+
+      renderUserCustomRpcs();
+      switchProfileTab(tab);
+      startProfileCountdownClock();
+
+      const m = document.getElementById('user-profile-modal');
+      if (m) m.classList.remove('hidden');
+    }
+
+    function closeUserProfileModal() {
+      const m = document.getElementById('user-profile-modal');
+      if (m) m.classList.add('hidden');
+      if (profileCountdownTimer) {
+        clearInterval(profileCountdownTimer);
+        profileCountdownTimer = null;
+      }
+    }
+
+    function switchProfileTab(tab) {
+      activeProfileTab = tab;
+      const tabs = ['overview', 'cloud_vault', 'rpcs', 'security', 'renew'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`prof-tab-btn-${t}`);
+        const view = document.getElementById(`prof-view-${t}`);
+        if (btn) {
+          if (t === tab) {
+            btn.className = 'flex-1 py-1.5 rounded-xl bg-indigo-600 text-white shadow-sm transition-all text-center';
+          } else {
+            btn.className = 'flex-1 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all text-center';
+          }
+        }
+        if (view) {
+          view.classList.toggle('hidden', t !== tab);
+        }
+      });
+
+      if (tab === 'rpcs') {
+        renderUserCustomRpcs();
+      } else if (tab === 'cloud_vault') {
+        const elWalletsCount = document.getElementById('prof-vault-wallets-count');
+        const elRpcsCount = document.getElementById('prof-vault-rpcs-count');
+        if (elWalletsCount) elWalletsCount.innerText = walletFleet.length;
+        if (elRpcsCount) elRpcsCount.innerText = getUserCustomRpcs().length;
+      }
+    }
+
+    function startProfileCountdownClock() {
+      if (profileCountdownTimer) clearInterval(profileCountdownTimer);
+      updateProfileClockTick();
+      profileCountdownTimer = setInterval(updateProfileClockTick, 1000);
+    }
+
+    function updateProfileClockTick() {
+      if (!currentUser) return;
+      const isOwnerAdmin = currentUser.role === 'admin' || currentUser.email === 'jainbharat666@gmail.com';
+      const container = document.getElementById('prof-clock-container');
+      const lifetime = document.getElementById('prof-clock-lifetime');
+      const lblValid = document.getElementById('prof-valid-until-label');
+      const dEl = document.getElementById('prof-clock-days');
+      const hEl = document.getElementById('prof-clock-hours');
+      const mEl = document.getElementById('prof-clock-mins');
+      const sEl = document.getElementById('prof-clock-secs');
+
+      if (isOwnerAdmin) {
+        if (container) container.classList.add('hidden');
+        if (lifetime) lifetime.classList.remove('hidden');
+        if (lblValid) lblValid.innerText = 'Platform Master Owner Account • Permanent Access';
+        return;
+      }
+
+      if (lifetime) lifetime.classList.add('hidden');
+      if (container) container.classList.remove('hidden');
+
+      if (!currentUser.valid_until) {
+        if (dEl) dEl.innerText = '∞';
+        if (hEl) hEl.innerText = '∞';
+        if (mEl) mEl.innerText = '∞';
+        if (sEl) sEl.innerText = '∞';
+        if (lblValid) lblValid.innerText = 'Unlimited Validity Key (No expiry)';
+        return;
+      }
+
+      const expDate = new Date(currentUser.valid_until).getTime();
+      const diff = expDate - Date.now();
+
+      if (diff <= 0) {
+        if (dEl) dEl.innerText = '00';
+        if (hEl) hEl.innerText = '00';
+        if (mEl) mEl.innerText = '00';
+        if (sEl) sEl.innerText = '00';
+        if (lblValid) lblValid.innerHTML = '<span class="text-rose-400 font-bold">⚠️ Access Expired! Please redeem renewal key in Renew tab.</span>';
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+      if (dEl) dEl.innerText = String(days).padStart(2, '0');
+      if (hEl) hEl.innerText = String(hours).padStart(2, '0');
+      if (mEl) mEl.innerText = String(mins).padStart(2, '0');
+      if (sEl) sEl.innerText = String(secs).padStart(2, '0');
+      if (lblValid) lblValid.innerText = `Valid until: ${new Date(currentUser.valid_until).toLocaleString()}`;
+    }
+
+    // --- 3. CLOUD VAULT HANDLERS (BACKUP, RESTORE, WIPE) ---
+    async function handleCloudVaultBackup() {
+      if (!currentUser || !sessionToken) {
+        showToast('Please login to backup your vault', true);
+        return;
+      }
+
+      const payloadConfig = {
+        walletFleet: walletFleet.map(w => ({
+          name: w.name,
+          address: w.address,
+          privateKey: w.privateKey,
+          selected: w.selected
+        })),
+        masterWalletIndex,
+        customRpcs: getUserCustomRpcs(),
+        activeFloorPercentPreset,
+        activeRarityMultiplier,
+        activeGasPreset,
+        activeWorkerStrategy,
+        activeMaxSnipesLimit,
+        activeRuleStates,
+        timestamp: Date.now()
+      };
+
+      try {
+        showToast('Securing Cloud Vault...');
+        const res = await fetch('/api/user-config', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({ userId: currentUser.id, config: payloadConfig })
+        });
+        const data = await res.json();
+        if (data.success) {
+          const timeStr = new Date().toLocaleTimeString();
+          localStorage.setItem('sniper_last_cloud_sync', timeStr);
+          const elSync = document.getElementById('prof-vault-last-sync');
+          if (elSync) elSync.innerText = 'Last synced: ' + timeStr;
+          showToast('⚡ Private Cloud Vault Synced & Secured!');
+          playBeep(784, 'sine', 0.15);
+        } else {
+          showToast(data.error || 'Cloud sync failed', true);
+        }
+      } catch(e) {
+        showToast('Vault sync error: ' + e.message, true);
+      }
+    }
+
+    async function handleCloudVaultRestore() {
+      if (!currentUser || !sessionToken) {
+        showToast('Please login to restore your vault', true);
+        return;
+      }
+      try {
+        showToast('Fetching Cloud Vault backup...');
+        const res = await fetch(`/api/user-config?userId=${encodeURIComponent(currentUser.id)}`, {
+          headers: { 'Authorization': `Bearer ${sessionToken}` }
+        });
+        const data = await res.json();
+        if (data.success && data.config) {
+          const cfg = data.config;
+          if (Array.isArray(cfg.walletFleet) && cfg.walletFleet.length > 0) {
+            walletFleet = cfg.walletFleet;
+            persistState();
+            renderWalletFleetUI();
+            refreshAllBalances();
+          }
+          if (typeof cfg.masterWalletIndex === 'number') {
+            masterWalletIndex = cfg.masterWalletIndex;
+            persistState();
+          }
+          if (Array.isArray(cfg.customRpcs)) {
+            saveUserCustomRpcs(cfg.customRpcs);
+            renderUserCustomRpcs();
+          }
+          if (cfg.activeRuleStates) {
+            activeRuleStates = Object.assign(activeRuleStates, cfg.activeRuleStates);
+            refreshAllRuleSwitchesUI();
+          }
+          const timeStr = new Date().toLocaleTimeString();
+          localStorage.setItem('sniper_last_cloud_sync', timeStr);
+          const elSync = document.getElementById('prof-vault-last-sync');
+          if (elSync) elSync.innerText = 'Last synced: ' + timeStr;
+          const elW = document.getElementById('prof-vault-wallets-count');
+          if (elW) elW.innerText = walletFleet.length;
+          showToast('⚡ Private Cloud Vault Restored Successfully!');
+          playBeep(659, 'sine', 0.15);
+        } else {
+          showToast('No existing Cloud Vault backup found for this account.');
+        }
+      } catch(e) {
+        showToast('Failed to restore vault: ' + e.message, true);
+      }
+    }
+
+    async function handleCloudVaultWipe() {
+      if (!confirm('Are you sure you want to permanently erase your remote Cloud Vault backup? Local settings will remain.')) return;
+      if (!currentUser || !sessionToken) return;
+      try {
+        const res = await fetch(`/api/user-config?userId=${encodeURIComponent(currentUser.id)}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${sessionToken}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          localStorage.removeItem('sniper_last_cloud_sync');
+          const elSync = document.getElementById('prof-vault-last-sync');
+          if (elSync) elSync.innerText = 'Last synced: Never';
+          showToast('Remote Cloud Vault wiped successfully.');
+        } else {
+          showToast(data.error || 'Failed to wipe cloud data', true);
+        }
+      } catch(e) {
+        showToast('Wipe failed: ' + e.message, true);
+      }
+    }
+
+    // --- 4. USER CUSTOM RPCS MANAGER ---
+    function getUserCustomRpcs() {
+      if (!currentUser || !currentUser.id) return [];
+      try {
+        const saved = localStorage.getItem('sniper_user_' + currentUser.id + '_custom_rpcs');
+        return saved ? JSON.parse(saved) : [];
+      } catch(e) {
+        return [];
+      }
+    }
+
+    function saveUserCustomRpcs(rpcs) {
+      if (!currentUser || !currentUser.id) return;
+      localStorage.setItem('sniper_user_' + currentUser.id + '_custom_rpcs', JSON.stringify(rpcs));
+    }
+
+    function handleAddUserCustomRpc(event) {
+      event.preventDefault();
+      const name = document.getElementById('user-rpc-name')?.value?.trim();
+      const network = document.getElementById('user-rpc-network')?.value || 'robinhood';
+      const url = document.getElementById('user-rpc-url')?.value?.trim();
+      if (!name || !url) return;
+
+      const currentCustom = getUserCustomRpcs();
+      const newRpc = {
+        id: 'user-rpc-' + Date.now(),
+        name,
+        network,
+        url,
+        isCustom: true,
+        pingMs: 0,
+        status: 'online'
+      };
+      currentCustom.push(newRpc);
+      saveUserCustomRpcs(currentCustom);
+
+      if (!rpcFleet.some(r => r.url === url)) {
+        rpcFleet.push(newRpc);
+        persistState();
+        renderRpcFleet();
+      }
+
+      document.getElementById('user-rpc-name').value = '';
+      document.getElementById('user-rpc-url').value = '';
+      renderUserCustomRpcs();
+      testUserCustomRpcLatencies();
+      showToast('Private Node Added Successfully!');
+    }
+
+    function renderUserCustomRpcs() {
+      const listEl = document.getElementById('user-rpcs-list');
+      const countEl = document.getElementById('user-rpcs-count');
+      const vaultCountEl = document.getElementById('prof-vault-rpcs-count');
+      const customRpcs = getUserCustomRpcs();
+
+      if (countEl) countEl.innerText = customRpcs.length;
+      if (vaultCountEl) vaultCountEl.innerText = customRpcs.length;
+      if (!listEl) return;
+
+      if (customRpcs.length === 0) {
+        listEl.innerHTML = `<div class="py-4 text-center text-slate-500 text-xs">No private custom RPC nodes added yet.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = customRpcs.map(r => `
+        <div class="py-2 flex items-center justify-between gap-2">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-xs text-white truncate">${r.name}</span>
+              <span class="px-1.5 py-0.2 rounded text-[8px] uppercase bg-indigo-500/20 text-indigo-300 font-mono-code">${r.network || '4663'}</span>
+            </div>
+            <div class="text-[10px] text-slate-400 font-mono-code truncate">${r.url}</div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <span id="user-rpc-ping-${r.id}" class="px-2 py-0.5 rounded-lg text-[9px] font-black ${r.pingMs && r.pingMs < 150 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'}">
+              ${r.pingMs ? r.pingMs + ' MS' : '--'}
+            </span>
+            <button onclick="deleteUserCustomRpc('${r.id}')" class="w-6 h-6 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 flex items-center justify-center text-[10px] cursor-pointer">
+              ✕
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function deleteUserCustomRpc(id) {
+      let custom = getUserCustomRpcs();
+      const deleted = custom.find(r => r.id === id);
+      custom = custom.filter(r => r.id !== id);
+      saveUserCustomRpcs(custom);
+      if (deleted) {
+        rpcFleet = rpcFleet.filter(r => r.url !== deleted.url);
+        persistState();
+        renderRpcFleet();
+      }
+      renderUserCustomRpcs();
+      showToast('Custom Node Removed');
+    }
+
+    async function testUserCustomRpcLatencies() {
+      const custom = getUserCustomRpcs();
+      if (custom.length === 0) return;
+      for (const r of custom) {
+        const el = document.getElementById(`user-rpc-ping-${r.id}`);
+        if (el) el.innerHTML = `<span class="text-amber-400 animate-pulse">...</span>`;
+        const t0 = performance.now();
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3500);
+          await fetch(r.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          const lat = Math.round(performance.now() - t0);
+          r.pingMs = lat;
+          if (el) {
+            el.className = `px-2 py-0.5 rounded-lg text-[9px] font-black ${lat < 150 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'}`;
+            el.innerText = `${lat} MS`;
+          }
+        } catch(e) {
+          if (el) {
+            el.className = `px-2 py-0.5 rounded-lg text-[9px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/40`;
+            el.innerText = 'TIMEOUT';
+          }
+        }
+      }
+      saveUserCustomRpcs(custom);
+    }
+
+    // --- 5. SECURITY & RENEW HANDLERS ---
+    async function handleUserProfileChangePassword(event) {
+      event.preventDefault();
+      const current_password = document.getElementById('prof-cp-current')?.value;
+      const new_password = document.getElementById('prof-cp-new')?.value;
+      const confirm_password = document.getElementById('prof-cp-confirm')?.value;
+
+      if (new_password !== confirm_password) {
+        showToast('New passwords do not match!', true);
+        return;
+      }
+      if (!new_password || new_password.length < 6) {
+        showToast('New password must be at least 6 characters long!', true);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({ email: currentUser?.email, oldPassword: current_password, newPassword: new_password })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Password updated successfully!');
+          document.getElementById('prof-cp-current').value = '';
+          document.getElementById('prof-cp-new').value = '';
+          document.getElementById('prof-cp-confirm').value = '';
+          playBeep(880, 'sine', 0.2);
+        } else {
+          showToast(data.error || 'Password update failed', true);
+        }
+      } catch(e) {
+        showToast('Network error: ' + e.message, true);
+      }
+    }
+
+    async function handleUserProfileRedeemTopup(event) {
+      event.preventDefault();
+      const code = document.getElementById('prof-topup-code')?.value?.trim().toUpperCase();
+      if (!code) return;
+
+      try {
+        const res = await fetch('/api/auth/redeem-topup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({ email: currentUser?.email, topupCode: code })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message || 'VIP Top-up redeemed successfully!');
+          if (currentUser) {
+            if (data.valid_until) currentUser.valid_until = data.valid_until;
+            if (data.snipes_remaining !== undefined) currentUser.snipes_remaining = data.snipes_remaining;
+            localStorage.setItem('sniper_user', JSON.stringify(currentUser));
+            renderAuthHeaderUI();
+          }
+          document.getElementById('prof-topup-code').value = '';
+          playBeep(880, 'sine', 0.25);
+          switchProfileTab('overview');
+          updateProfileClockTick();
+        } else {
+          showToast(data.error || 'Redeem failed', true);
+        }
+      } catch(e) {
+        showToast('Network error: ' + e.message, true);
+      }
+    }
+
+    // --- 6. AUTHENTICATION & MULTI-TENANT LOGOUT ---
     function openAuthModal(tab = 'login') {
       switchAuthTab(tab);
       const m = document.getElementById('auth-modal');
@@ -6893,7 +7695,6 @@
           return;
         }
 
-        // Authentication Success!
         currentUser = data.user;
         sessionToken = data.sessionToken || data.token;
         localStorage.setItem('sniper_token', sessionToken);
@@ -6910,7 +7711,7 @@
         setTimeout(() => {
           closeAuthModal();
           showToast(`Logged in as ${currentUser.email}`);
-          loadSniperConfigFromCloud(true);
+          handleCloudVaultRestore();
         }, 600);
 
       } catch (err) {
@@ -6927,247 +7728,27 @@
       }
     }
 
-    function openUserProfileModal() {
-      if (!currentUser) {
-        openAuthModal('login');
-        return;
-      }
-      const isOwnerAdmin = currentUser.role === 'admin' || currentUser.email === 'jainbharat666@gmail.com';
-      
-      const elEmail = document.getElementById('prof-modal-email');
-      const elUid = document.getElementById('prof-modal-uid');
-      const elBadge = document.getElementById('prof-modal-role-badge');
-      const elExpiry = document.getElementById('prof-modal-expiry');
-      const elExpiryDate = document.getElementById('prof-modal-expiry-date');
-      const elQuotaStat = document.getElementById('prof-modal-quota-stat');
-      const elQuotaSub = document.getElementById('prof-modal-quota-sub');
-      const adminBtnContainer = document.getElementById('prof-modal-admin-btn-container');
-
-      if (elEmail) elEmail.innerText = currentUser.email;
-      if (elUid) elUid.innerText = 'UID: ' + (currentUser.id ? currentUser.id.substring(0, 8) : '--');
-      
-      if (elBadge) {
-        elBadge.innerText = isOwnerAdmin ? '👑 PLATFORM ADMIN' : (currentUser.plan || 'VIP MEMBER');
-        elBadge.className = isOwnerAdmin 
-          ? 'px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-100 text-amber-800 border border-amber-300'
-          : 'px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-indigo-100 text-indigo-800';
-      }
-
-      if (adminBtnContainer) {
-        adminBtnContainer.classList.toggle('hidden', !isOwnerAdmin);
-      }
-
-      if (currentUser.valid_until) {
-        const expDate = new Date(currentUser.valid_until);
-        const diffDays = Math.ceil((expDate - Date.now()) / (1000 * 60 * 60 * 24));
-        if (elExpiry) elExpiry.innerText = diffDays > 0 ? `${diffDays} Days Remaining` : 'Expired';
-        if (elExpiryDate) elExpiryDate.innerText = `Valid until: ${expDate.toLocaleDateString()}`;
-      } else {
-        if (elExpiry) elExpiry.innerText = 'Unlimited Validity ⚡';
-        if (elExpiryDate) elExpiryDate.innerText = 'No expiry set';
-      }
-
-      const rem = currentUser.snipes_remaining;
-      const used = currentUser.snipes_used || 0;
-      if (rem === null || rem === undefined || rem === 0) {
-        if (elQuotaStat) elQuotaStat.innerText = 'Unlimited ⚡';
-      } else {
-        if (elQuotaStat) elQuotaStat.innerText = `${rem} Snipes Left`;
-      }
-      if (elQuotaSub) elQuotaSub.innerText = `${used} completed on this key`;
-
-      const m = document.getElementById('user-profile-modal');
-      if (m) m.classList.remove('hidden');
-    }
-
-    function closeUserProfileModal() {
-      const m = document.getElementById('user-profile-modal');
-      if (m) m.classList.add('hidden');
-    }
-
     function logoutUser() {
+      if (Array.isArray(walletFleet)) {
+        walletFleet.forEach(w => {
+          w.signer = null;
+          delete w.privateKey;
+        });
+      }
+      walletFleet = [];
+      masterWalletIndex = null;
+
       currentUser = null;
       sessionToken = null;
       localStorage.removeItem('sniper_token');
       localStorage.removeItem('sniper_user');
+      localStorage.removeItem('sniper_wallet_fleet');
+      localStorage.removeItem('sniper_master_wallet_idx');
+
       closeUserProfileModal();
       closeAdminModal();
       checkAuthState();
-      showToast('Logged out successfully');
-    }
-
-    function openChangePasswordModal() {
-      const m = document.getElementById('change-pass-modal');
-      if (m) m.classList.remove('hidden');
-    }
-
-    function closeChangePasswordModal() {
-      const m = document.getElementById('change-pass-modal');
-      if (m) m.classList.add('hidden');
-      const cp = document.getElementById('cp-current-pass');
-      const np = document.getElementById('cp-new-pass');
-      const cnp = document.getElementById('cp-confirm-pass');
-      if (cp) cp.value = '';
-      if (np) np.value = '';
-      if (cnp) cnp.value = '';
-    }
-
-    async function handleChangePasswordSubmit(event) {
-      event.preventDefault();
-      const current_password = document.getElementById('cp-current-pass')?.value;
-      const new_password = document.getElementById('cp-new-pass')?.value;
-      const confirm_password = document.getElementById('cp-confirm-pass')?.value;
-
-      if (new_password !== confirm_password) {
-        showToast('New passwords do not match!', true);
-        return;
-      }
-
-      try {
-        const res = await fetch('/api/auth/change-password', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionToken}`
-          },
-          body: JSON.stringify({ email: currentUser?.email, oldPassword: current_password, newPassword: new_password })
-        });
-        const data = await res.json();
-        if (data.success) {
-          showToast('Password updated successfully!');
-          closeChangePasswordModal();
-        } else {
-          showToast(data.error || 'Password update failed', true);
-        }
-      } catch(e) {
-        showToast('Network error: ' + e.message, true);
-      }
-    }
-
-    function openRedeemTopupModal() {
-      const m = document.getElementById('redeem-topup-modal');
-      if (m) m.classList.remove('hidden');
-    }
-
-    function closeRedeemTopupModal() {
-      const m = document.getElementById('redeem-topup-modal');
-      if (m) m.classList.add('hidden');
-      const inp = document.getElementById('redeem-input-code');
-      if (inp) inp.value = '';
-    }
-
-    async function handleRedeemTopupSubmit(event) {
-      event.preventDefault();
-      const code = document.getElementById('redeem-input-code')?.value?.trim().toUpperCase();
-      if (!code) return;
-
-      try {
-        const res = await fetch('/api/auth/redeem-topup', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionToken}`
-          },
-          body: JSON.stringify({ email: currentUser?.email, topupCode: code })
-        });
-        const data = await res.json();
-        if (data.success) {
-          showToast(data.message || 'VIP Top-up redeemed successfully!');
-          if (currentUser) {
-            if (data.valid_until) currentUser.valid_until = data.valid_until;
-            if (data.max_snipes_allowed !== undefined) currentUser.max_snipes_allowed = data.max_snipes_allowed;
-            localStorage.setItem('sniper_user', JSON.stringify(currentUser));
-            renderAuthHeaderUI();
-          }
-          closeRedeemTopupModal();
-          openUserProfileModal();
-        } else {
-          showToast(data.error || 'Redeem failed', true);
-        }
-      } catch(e) {
-        showToast('Network error: ' + e.message, true);
-      }
-    }
-
-    async function syncSniperConfigToCloud() {
-      if (!currentUser || !sessionToken) {
-        showToast('Please login first to backup to cloud', true);
-        openAuthModal('login');
-        return;
-      }
-
-      const payloadConfig = {
-        walletFleet,
-        masterWalletIndex,
-        rpcFleet,
-        activeFloorPercentPreset,
-        activeRarityMultiplier,
-        activeGasPreset,
-        activeWorkerStrategy,
-        activeMaxSnipesLimit,
-        activeRuleStates,
-        timestamp: Date.now()
-      };
-
-      try {
-        const res = await fetch('/api/user-config', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionToken}`
-          },
-          body: JSON.stringify({ config: payloadConfig })
-        });
-        const data = await res.json();
-        if (data.success) {
-          showToast('⚡ Private Cloud Vault Synced & Secured!');
-          playBeep(784, 'sine', 0.15);
-        } else {
-          showToast(data.error || 'Cloud sync failed', true);
-        }
-      } catch(e) {
-        showToast('Vault sync error: ' + e.message, true);
-      }
-    }
-
-    async function loadSniperConfigFromCloud(silent = false) {
-      if (!currentUser || !sessionToken) return;
-
-      try {
-        const res = await fetch('/api/user-config', {
-          headers: { 'Authorization': `Bearer ${sessionToken}` }
-        });
-        const data = await res.json();
-        if (data.success && data.config) {
-          const cfg = data.config;
-          if (Array.isArray(cfg.walletFleet) && cfg.walletFleet.length > 0) {
-            walletFleet = cfg.walletFleet;
-            localStorage.setItem('sniper_wallet_fleet', JSON.stringify(walletFleet));
-            renderWalletFleetUI();
-            refreshAllBalances();
-          }
-          if (typeof cfg.masterWalletIndex === 'number') {
-            masterWalletIndex = cfg.masterWalletIndex;
-            localStorage.setItem('sniper_master_wallet_idx', String(masterWalletIndex));
-          }
-          if (Array.isArray(cfg.rpcFleet) && cfg.rpcFleet.length > 0) {
-            rpcFleet = cfg.rpcFleet;
-            renderRpcFleet();
-          }
-          if (cfg.activeRuleStates) {
-            activeRuleStates = Object.assign(activeRuleStates, cfg.activeRuleStates);
-            refreshAllRuleSwitchesUI();
-          }
-          if (!silent) {
-            showToast('⚡ Private Cloud Vault Restored Successfully!');
-            playBeep(659, 'sine', 0.15);
-          }
-        } else if (!silent) {
-          showToast('No cloud backup found for this account.');
-        }
-      } catch(e) {
-        if (!silent) showToast('Failed to load cloud vault: ' + e.message, true);
-      }
+      showToast('Logged out successfully. Memory purged.');
     }
 
     async function checkAuthHeartbeat() {
@@ -7181,16 +7762,11 @@
           showToast(data.message || 'Session invalidated: Logged in from another device or expired!', true);
           logoutUser();
         }
-      } catch(e) {
-        // network blip, skip
-      }
+      } catch(e) {}
     }
     setInterval(checkAuthHeartbeat, 25000);
 
-    // =========================================================================
-    // 👑 MASTER OWNER ADMIN CONSOLE (EXCLUSIVE FOR jainbharat666@gmail.com)
-    // =========================================================================
-
+    // --- 7. MASTER OWNER ADMIN CONSOLE (4 TABS) ---
     function openAdminModal() {
       const isOwnerAdmin = currentUser && (currentUser.role === 'admin' || currentUser.email === 'jainbharat666@gmail.com');
       if (!isOwnerAdmin) {
@@ -7200,6 +7776,7 @@
       const m = document.getElementById('admin-panel-modal');
       if (m) m.classList.remove('hidden');
       refreshAdminData();
+      loadAdminFleetData();
     }
 
     function closeAdminModal() {
@@ -7211,22 +7788,30 @@
       activeAdminTab = tab;
       const tabUsers = document.getElementById('admin-tab-btn-users');
       const tabInvites = document.getElementById('admin-tab-btn-invites');
+      const tabFleet = document.getElementById('admin-tab-btn-fleet');
       const tabTele = document.getElementById('admin-tab-btn-telemetry');
 
       const viewUsers = document.getElementById('admin-view-users');
       const viewInvites = document.getElementById('admin-view-invites');
+      const viewFleet = document.getElementById('admin-view-fleet');
       const viewTele = document.getElementById('admin-view-telemetry');
 
-      const activeCls = 'px-4 py-1.5 rounded-xl bg-white text-indigo-600 shadow-sm transition-all flex items-center gap-1.5';
-      const inactiveCls = 'px-4 py-1.5 rounded-xl text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5';
+      const activeCls = 'px-4 py-1.5 rounded-xl bg-indigo-600 text-white shadow-sm transition-all flex items-center gap-1.5';
+      const inactiveCls = 'px-4 py-1.5 rounded-xl text-slate-400 hover:text-white transition-all flex items-center gap-1.5';
 
       if (tabUsers) tabUsers.className = tab === 'users' ? activeCls : inactiveCls;
       if (tabInvites) tabInvites.className = tab === 'invites' ? activeCls : inactiveCls;
+      if (tabFleet) tabFleet.className = tab === 'fleet' ? activeCls : inactiveCls;
       if (tabTele) tabTele.className = tab === 'telemetry' ? activeCls : inactiveCls;
 
       if (viewUsers) viewUsers.classList.toggle('hidden', tab !== 'users');
       if (viewInvites) viewInvites.classList.toggle('hidden', tab !== 'invites');
+      if (viewFleet) viewFleet.classList.toggle('hidden', tab !== 'fleet');
       if (viewTele) viewTele.classList.toggle('hidden', tab !== 'telemetry');
+
+      if (tab === 'fleet') {
+        loadAdminFleetData();
+      }
     }
 
     async function refreshAdminData() {
@@ -7242,7 +7827,7 @@
 
         if (uData.success) {
           allAdminUsers = uData.users || [];
-          renderAdminUsers(allAdminUsers);
+          filterAdminUsers();
           const cntEl = document.getElementById('admin-user-count');
           const teleCntEl = document.getElementById('tele-users-count');
           if (cntEl) cntEl.innerText = allAdminUsers.length;
@@ -7264,9 +7849,24 @@
       }
     }
 
+    function setAdminUserFilter(filter) {
+      currentAdminUserFilter = filter;
+      ['all', 'active', 'expired', 'exhausted', 'banned'].forEach(f => {
+        const btn = document.getElementById(`uf-btn-${f}`);
+        if (btn) {
+          if (f === filter) {
+            btn.className = 'px-2.5 py-1 rounded-lg bg-indigo-600 text-white';
+          } else {
+            btn.className = 'px-2.5 py-1 rounded-lg text-slate-400 hover:text-white';
+          }
+        }
+      });
+      filterAdminUsers();
+    }
+
     function filterAdminUsers() {
       const query = (document.getElementById('admin-user-search')?.value || '').toLowerCase();
-      const filter = document.getElementById('admin-user-filter')?.value || 'all';
+      const filter = currentAdminUserFilter;
 
       const filtered = allAdminUsers.filter(u => {
         const matchesQuery = !query || 
@@ -7275,8 +7875,15 @@
           (u.invite_code && u.invite_code.toLowerCase().includes(query));
         
         if (!matchesQuery) return false;
-        if (filter === 'active') return !u.is_banned;
-        if (filter === 'banned') return u.is_banned;
+        
+        const isBanned = !!u.is_banned;
+        const isExpiredTime = u.valid_until && new Date(u.valid_until).getTime() <= Date.now();
+        const isExhaustedQuota = u.snipes_remaining !== null && u.snipes_remaining !== undefined && u.snipes_remaining <= 0 && u.snipes_remaining !== 0;
+
+        if (filter === 'active') return !isBanned && !isExpiredTime && !isExhaustedQuota;
+        if (filter === 'expired') return isExpiredTime;
+        if (filter === 'exhausted') return isExhaustedQuota;
+        if (filter === 'banned') return isBanned;
         return true;
       });
 
@@ -7288,7 +7895,7 @@
       if (!tbody) return;
 
       if (users.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400 font-sans">No registered users found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500 font-sans">No users matching filter found.</td></tr>`;
         return;
       }
 
@@ -7297,43 +7904,43 @@
         const isBanned = !!u.is_banned;
         const uidShort = u.id ? u.id.substring(0, 8) : '--';
         
-        let validStr = 'Lifetime';
+        let validStr = '<span class="text-indigo-300 font-bold">Lifetime</span>';
         if (u.valid_until) {
           const expDate = new Date(u.valid_until);
           const diffDays = Math.ceil((expDate - Date.now()) / (1000 * 60 * 60 * 24));
-          validStr = diffDays > 0 ? `${diffDays}d (${expDate.toLocaleDateString()})` : `<span class="text-rose-600 font-bold">Expired</span>`;
+          validStr = diffDays > 0 ? `${diffDays}d (${expDate.toLocaleDateString()})` : `<span class="text-rose-400 font-bold">Expired</span>`;
         }
 
         const quotaStr = (u.snipes_remaining === 0 || u.snipes_remaining === null || u.snipes_remaining === undefined) ? '∞ Unlimited' : `${u.snipes_remaining} left`;
         const statusBadge = isBanned 
-          ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-rose-100 text-rose-800 border border-rose-200">BANNED</span>`
-          : `<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">ACTIVE</span>`;
+          ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-rose-500/20 text-rose-400 border border-rose-500/30">SUSPENDED</span>`
+          : `<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ACTIVE</span>`;
 
         return `
-          <tr class="hover:bg-slate-100/60 transition-colors">
+          <tr class="hover:bg-slate-800/40 transition-colors">
             <td class="py-2.5 px-3">
-              <div class="font-black text-slate-900">${u.email}</div>
-              <div class="text-[10px] text-slate-400">UID: ${uidShort}</div>
+              <div class="font-black text-white">${u.email}</div>
+              <div class="text-[10px] text-slate-400 font-mono-code">UID: ${uidShort}</div>
             </td>
             <td class="py-2.5 px-3">
-              <div class="font-bold text-indigo-900">${u.role || 'user'}</div>
+              <div class="font-bold text-indigo-300">${u.role || 'user'}</div>
               <div class="text-[10px] text-slate-500">${u.invite_code || 'Direct'}</div>
             </td>
             <td class="py-2.5 px-3 font-bold">${validStr}</td>
             <td class="py-2.5 px-3">
-              <div class="font-black text-purple-950">${quotaStr}</div>
-              <div class="text-[10px] text-slate-400">Used: ${u.snipes_used || 0}</div>
+              <div class="font-black text-purple-300">${quotaStr}</div>
+              <div class="text-[10px] text-slate-400">Used: ${u.snipes_used || u.total_snipes || 0}</div>
             </td>
             <td class="py-2.5 px-3">${statusBadge}</td>
             <td class="py-2.5 px-3 text-right">
-              ${isOwner ? `<span class="text-[10px] text-slate-400 italic">Master Owner</span>` : `
+              ${isOwner ? `<span class="text-[10px] text-slate-500 italic">Master Owner</span>` : `
                 <div class="flex items-center justify-end gap-1.5">
-                  <button onclick="adminExtendValidity('${u.id}', 30)" title="Add +30 Days" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-black border border-indigo-200">+30d</button>
-                  <button onclick="adminExtendSnipes('${u.id}', 10)" title="Add +10 Snipes" class="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-[10px] font-black border border-purple-200">+10🎯</button>
-                  <button onclick="adminToggleBan('${u.id}')" title="${isBanned ? 'Unban' : 'Ban'}" class="px-2 py-1 ${isBanned ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'} rounded-lg text-[10px] font-black border">
-                    ${isBanned ? 'Unban' : 'Ban'}
+                  <button onclick="adminExtendValidity('${u.id}', 30)" title="Add +30 Days" class="px-2 py-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 rounded-lg text-[10px] font-black border border-indigo-500/40">+30d</button>
+                  <button onclick="adminExtendSnipes('${u.id}', 10)" title="Add +10 Snipes" class="px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-lg text-[10px] font-black border border-purple-500/40">+10🎯</button>
+                  <button onclick="adminToggleBan('${u.id}')" title="${isBanned ? 'Unban' : 'Suspend'}" class="px-2 py-1 ${isBanned ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border-amber-500/40'} rounded-lg text-[10px] font-black border">
+                    ${isBanned ? 'Unban' : 'Suspend'}
                   </button>
-                  <button onclick="adminDeleteUser('${u.id}')" title="Delete User" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-black border border-rose-200">✕</button>
+                  <button onclick="adminDeleteUser('${u.id}')" title="Delete User" class="px-2 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-lg text-[10px] font-black border border-rose-500/40">✕</button>
                 </div>
               `}
             </td>
@@ -7347,7 +7954,7 @@
       if (!tbody) return;
 
       if (!invites || invites.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400 font-sans">No invite keys created yet.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500 font-sans">No invite keys created yet.</td></tr>`;
         return;
       }
 
@@ -7360,24 +7967,24 @@
         const targetId = inv.id || inviteCode;
 
         return `
-          <tr class="hover:bg-slate-100/60 transition-colors">
+          <tr class="hover:bg-slate-800/40 transition-colors">
             <td class="py-2.5 px-3">
-              <span class="font-black text-indigo-900 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-200">${inviteCode}</span>
+              <span class="font-black text-indigo-300 bg-indigo-950/60 px-2 py-1 rounded-md border border-indigo-500/40">${inviteCode}</span>
             </td>
             <td class="py-2.5 px-3 font-bold">${inv.validity_days || 30} Days</td>
-            <td class="py-2.5 px-3 font-black text-purple-950">${snipesStr}</td>
+            <td class="py-2.5 px-3 font-black text-purple-300">${snipesStr}</td>
             <td class="py-2.5 px-3 font-mono-code">${usesStr}</td>
             <td class="py-2.5 px-3">
-              <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${isActive ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-slate-800 text-slate-400 border border-slate-700'}">
                 ${isActive ? 'ACTIVE' : 'DISABLED'}
               </span>
             </td>
             <td class="py-2.5 px-3 text-right">
               <div class="flex items-center justify-end gap-1.5">
-                <button onclick="adminToggleInvite('${targetId}', ${!isActive})" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-black border">
+                <button onclick="adminToggleInvite('${targetId}', ${!isActive})" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[10px] font-black border border-slate-700">
                   ${isActive ? 'Disable' : 'Enable'}
                 </button>
-                <button onclick="adminDeleteInvite('${targetId}')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-black border border-rose-200">
+                <button onclick="adminDeleteInvite('${targetId}')" class="px-2 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-lg text-[10px] font-black border border-rose-500/40">
                   ✕
                 </button>
               </div>
@@ -7385,6 +7992,56 @@
           </tr>
         `;
       }).join('');
+    }
+
+    function generateDiceInviteCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let rand = '';
+      for (let i = 0; i < 8; i++) {
+        rand += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      const codeInput = document.getElementById('gen-invite-code');
+      if (codeInput) codeInput.value = 'SNIPER-' + rand;
+      playBeep(600, 'triangle', 0.1);
+    }
+
+    function setQuickInviteDays(days) {
+      const d = document.getElementById('gen-invite-days');
+      if (d) d.value = days;
+    }
+
+    function setQuickInviteSnipes(snipes) {
+      const s = document.getElementById('gen-invite-snipes');
+      if (s) s.value = snipes;
+    }
+
+    async function handleCreateInviteSubmit(event) {
+      event.preventDefault();
+      const code = document.getElementById('gen-invite-code')?.value?.trim().toUpperCase();
+      const validity_days = parseInt(document.getElementById('gen-invite-days')?.value, 10) || 30;
+      const snipes_quota = parseInt(document.getElementById('gen-invite-snipes')?.value, 10) || 0;
+      const max_uses = parseInt(document.getElementById('gen-invite-uses')?.value, 10) || 1;
+
+      if (!code) return;
+
+      try {
+        const res = await fetch('/api/invites/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({ code, validity_days, snipes_quota, max_uses })
+        });
+        const d = await res.json();
+        if (d.success) {
+          showToast(`VIP Invite Key ${code} minted!`);
+          document.getElementById('gen-invite-code').value = '';
+          refreshAdminData();
+        } else {
+          showToast(d.error || 'Failed to mint code', true);
+        }
+      } catch(e) { showToast(e.message, true); }
     }
 
     async function adminExtendValidity(userId, days) {
@@ -7468,35 +8125,6 @@
       } catch(e) { showToast(e.message, true); }
     }
 
-    async function handleCreateInviteSubmit(event) {
-      event.preventDefault();
-      const code = document.getElementById('gen-invite-code')?.value?.trim().toUpperCase();
-      const validity_days = parseInt(document.getElementById('gen-invite-days')?.value, 10) || 30;
-      const snipes_quota = parseInt(document.getElementById('gen-invite-snipes')?.value, 10) || 0;
-      const max_uses = parseInt(document.getElementById('gen-invite-uses')?.value, 10) || 1;
-
-      if (!code) return;
-
-      try {
-        const res = await fetch('/api/invites/create', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionToken}`
-          },
-          body: JSON.stringify({ code, validity_days, snipes_quota, max_uses })
-        });
-        const d = await res.json();
-        if (d.success) {
-          showToast(`VIP Invite Key ${code} minted!`);
-          document.getElementById('gen-invite-code').value = '';
-          refreshAdminData();
-        } else {
-          showToast(d.error || 'Failed to mint code', true);
-        }
-      } catch(e) { showToast(e.message, true); }
-    }
-
     async function adminToggleInvite(inviteId, isActive) {
       try {
         const res = await fetch('/api/invites/toggle', {
@@ -7536,6 +8164,186 @@
           showToast(d.error || 'Failed', true);
         }
       } catch(e) { showToast(e.message, true); }
+    }
+
+    // --- 8. MANAGED FLEET RPC CLUSTER (ADMIN CONSOLE TAB 3) ---
+    async function loadAdminFleetData() {
+      if (!sessionToken) return;
+      try {
+        const res = await fetch('/api/fleet-rpcs', {
+          headers: { 'Authorization': `Bearer ${sessionToken}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          allAdminFleetRpcs = data.fleetRpcs || [];
+          renderAdminFleetTable(allAdminFleetRpcs);
+        }
+      } catch(e) {
+        console.warn('Failed to load fleet RPCs:', e);
+      }
+    }
+
+    function renderAdminFleetTable(fleetList) {
+      const tbody = document.getElementById('admin-fleet-tbody');
+      if (!tbody) return;
+      if (!fleetList || fleetList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500 font-sans">No fleet RPCs configured in cluster.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = fleetList.map(r => {
+        const isActive = r.isActive !== false && r.is_active !== false;
+        return `
+          <tr class="hover:bg-slate-800/50 transition-colors">
+            <td class="py-2.5 px-3">
+              <span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">${r.network || r.network_key || 'robinhood'}</span>
+            </td>
+            <td class="py-2.5 px-3 font-bold text-white">${r.name}</td>
+            <td class="py-2.5 px-3 font-mono-code text-slate-400 max-w-[200px] truncate" title="${r.url}">${r.url}</td>
+            <td class="py-2.5 px-3" id="fleet-ping-${r.id}">
+              <span class="px-2 py-0.5 rounded-lg text-[9px] font-black ${r.pingMs && r.pingMs < 150 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'}">${r.pingMs ? r.pingMs + ' MS' : '--'}</span>
+            </td>
+            <td class="py-2.5 px-3">
+              <button onclick="toggleFleetRpcActive('${r.id}', ${!isActive})" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${isActive ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-slate-800 text-slate-500 border border-slate-700'}">
+                ${isActive ? '● ACTIVE' : '○ DISABLED'}
+              </button>
+            </td>
+            <td class="py-2.5 px-3 text-right">
+              <div class="flex items-center justify-end gap-1.5">
+                <button onclick="pingSingleFleetRpc('${r.id}', '${r.url}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg text-[10px] font-bold border border-slate-700" title="Ping Node">
+                  <i class="fa-solid fa-bolt"></i>
+                </button>
+                <button onclick="deleteFleetRpc('${r.id}')" class="px-2 py-1 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 rounded-lg text-[10px] font-bold border border-rose-800/40" title="Delete Node">
+                  ✕
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function handleAddFleetRpcSubmit(event) {
+      event.preventDefault();
+      const name = document.getElementById('fleet-rpc-name')?.value?.trim();
+      const network = document.getElementById('fleet-rpc-network')?.value || 'robinhood';
+      const url = document.getElementById('fleet-rpc-url')?.value?.trim();
+      if (!name || !url) return;
+
+      try {
+        const res = await fetch('/api/fleet-rpcs/save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({ rpc: { name, network, url, isActive: true } })
+        });
+        const d = await res.json();
+        if (d.success) {
+          showToast('Fleet RPC added to global cluster!');
+          document.getElementById('fleet-rpc-name').value = '';
+          document.getElementById('fleet-rpc-url').value = '';
+          loadAdminFleetData();
+        } else {
+          showToast(d.error || 'Failed to add fleet RPC', true);
+        }
+      } catch(e) {
+        showToast('Failed to add fleet RPC: ' + e.message, true);
+      }
+    }
+
+    async function toggleFleetRpcActive(id, active) {
+      try {
+        const res = await fetch('/api/fleet-rpcs/toggle', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({ id, active })
+        });
+        const d = await res.json();
+        if (d.success) {
+          showToast('Fleet RPC status updated');
+          loadAdminFleetData();
+        } else {
+          showToast(d.error || 'Failed to toggle status', true);
+        }
+      } catch(e) {
+        showToast(e.message, true);
+      }
+    }
+
+    async function deleteFleetRpc(id) {
+      if (!confirm('Are you sure you want to remove this node from the global cluster?')) return;
+      try {
+        const res = await fetch('/api/fleet-rpcs/delete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({ id })
+        });
+        const d = await res.json();
+        if (d.success) {
+          showToast('Fleet RPC removed');
+          loadAdminFleetData();
+        } else {
+          showToast(d.error || 'Failed to delete', true);
+        }
+      } catch(e) {
+        showToast(e.message, true);
+      }
+    }
+
+    async function testFleetRpcLatencies() {
+      if (!allAdminFleetRpcs || allAdminFleetRpcs.length === 0) return;
+      showToast('Benchmarking global fleet RPC cluster...');
+      for (const rpc of allAdminFleetRpcs) {
+        pingSingleFleetRpc(rpc.id, rpc.url);
+      }
+    }
+
+    async function pingSingleFleetRpc(id, url) {
+      const cell = document.getElementById(`fleet-ping-${id}`);
+      if (cell) cell.innerHTML = `<span class="text-[9px] text-amber-400 font-bold animate-pulse">Pinging...</span>`;
+      const t0 = performance.now();
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        const lat = Math.round(performance.now() - t0);
+        if (cell) {
+          cell.innerHTML = `<span class="px-2 py-0.5 rounded-lg text-[9px] font-black ${lat < 150 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'}">${lat} MS</span>`;
+        }
+      } catch(e) {
+        if (cell) {
+          cell.innerHTML = `<span class="px-2 py-0.5 rounded-lg text-[9px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/40">TIMEOUT</span>`;
+        }
+      }
+    }
+
+    // --- 9. LEGACY ALIASES FOR BACKWARD COMPATIBILITY ---
+    function openChangePasswordModal() {
+      openUserProfileModal('security');
+    }
+    function closeChangePasswordModal() {}
+    function openRedeemTopupModal() {
+      openUserProfileModal('renew');
+    }
+    function closeRedeemTopupModal() {}
+    async function syncSniperConfigToCloud() {
+      await handleCloudVaultBackup();
+    }
+    async function loadSniperConfigFromCloud(silent = false) {
+      await handleCloudVaultRestore();
     }
 
     // 🛡️ INITIALIZE HARD AUTH GATE (IMPERMEABLE FULL-PAGE VIP ENFORCEMENT)
