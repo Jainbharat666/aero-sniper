@@ -47,6 +47,11 @@ app.get('/api', (req, res) => {
   });
 });
 
+app.get('/api/my-ip', (req, res) => {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || '127.0.0.1';
+  res.json({ ip });
+});
+
 // High-performance HTTP Keep-Alive Agent for OpenSea REST calls
 const httpsAgent = new https.Agent({
   keepAlive: true,

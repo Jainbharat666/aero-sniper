@@ -94,6 +94,395 @@
       transition: all 0.25s ease;
     }
 
+    
+    /* ══════════════════════════════════════════════════════════════
+       🎨 EXACT AEROMINT V2 COLOR PALETTE & DUAL-THEME ENGINE
+       ══════════════════════════════════════════════════════════════ */
+
+    :root {
+      --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Dark Mode Palette (AeroMint V2 Base) */
+      --bg-base: #020408;
+      --panel-bg: #141722;
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --panel-border-focus: rgba(168, 85, 247, 0.5);
+      --text-primary: #ffffff;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-purple: #a855f7;
+      --accent-cyan: #06b6d4;
+      --accent-green: #10b981;
+      --accent-red: #ef4444;
+      --accent-yellow: #f59e0b;
+      --tabs-bg: rgba(16, 20, 31, 0.9);
+      --tab-color: #94a3b8;
+      --tab-active-bg: #1e2436;
+      --tab-active-color: #ffffff;
+      --tab-active-border: rgba(168, 85, 247, 0.4);
+      --input-bg: #0d1017;
+      --input-border: rgba(255, 255, 255, 0.12);
+      --input-text: #ffffff;
+      --subpanel-bg: #0f121d;
+    }
+
+    /* 🌙 DARK MODE (DEFAULT) — Exact AeroMint V2 */
+    body:not(.day-mode) {
+      background-color: #020408 !important;
+      background-image: 
+        radial-gradient(ellipse 130% 60% at 50% 106%, rgba(22, 58, 130, 0.55) 0%, rgba(12, 32, 78, 0.4) 38%, rgba(4, 10, 26, 0.12) 70%, transparent 100%),
+        linear-gradient(180deg, #000000 0%, #010307 40%, #040813 70%, #071326 100%) !important;
+      background-size: 100% 100% !important;
+      background-attachment: fixed !important;
+      color: #ffffff !important;
+      color-scheme: dark !important;
+    }
+
+    body:not(.day-mode) .bg-pro-canvas {
+      background: transparent !important;
+    }
+
+    /* Dark Mode Top Header */
+    body:not(.day-mode) header {
+      background-color: #0d111c !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) header h1, 
+    body:not(.day-mode) header h1 span {
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) header p {
+      color: #94a3b8 !important;
+    }
+    body:not(.day-mode) header nav {
+      background-color: rgba(16, 20, 31, 0.9) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+    body:not(.day-mode) header nav button {
+      color: #94a3b8 !important;
+    }
+    body:not(.day-mode) header nav button:hover {
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) header nav button.bg-white,
+    body:not(.day-mode) header nav button[class*="text-indigo-600"],
+    body:not(.day-mode) header nav button[class*="text-amber-700"] {
+      background-color: #1e2436 !important;
+      border: 1px solid rgba(168, 85, 247, 0.4) !important;
+      color: #ffffff !important;
+      box-shadow: 0 4px 16px rgba(168, 85, 247, 0.25) !important;
+    }
+    body:not(.day-mode) #btn-audio,
+    body:not(.day-mode) header div:has(> #top-live-clock),
+    body:not(.day-mode) header div:has(> #network-select) {
+      background-color: #141722 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      color: #cbd5e1 !important;
+    }
+    body:not(.day-mode) #top-live-clock,
+    body:not(.day-mode) #network-select {
+      color: #f8fafc !important;
+    }
+    body:not(.day-mode) #network-select option {
+      background-color: #0f172a;
+      color: #ffffff;
+    }
+    body:not(.day-mode) #eth-price-container {
+      background-color: rgba(99, 102, 241, 0.15) !important;
+      border-color: rgba(99, 102, 241, 0.35) !important;
+    }
+    body:not(.day-mode) #eth-usd-price {
+      color: #c7d2fe !important;
+    }
+
+    /* Dark Mode Cards & Panels */
+    body:not(.day-mode) .grid-stack-item-content {
+      background: #141722 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+      color: #f1f5f9 !important;
+    }
+    body:not(.day-mode) .grid-stack-item-content h2,
+    body:not(.day-mode) .grid-stack-item-content h3 {
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) .grid-stack-item-content p,
+    body:not(.day-mode) .grid-stack-item-content label {
+      color: #94a3b8 !important;
+    }
+    body:not(.day-mode) .grid-stack-item-content .border-b,
+    body:not(.day-mode) .grid-stack-item-content .border-slate-100,
+    body:not(.day-mode) .grid-stack-item-content .border-slate-200 {
+      border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    body:not(.day-mode) .grid-stack-item-content input:not([type="checkbox"]):not([type="radio"]),
+    body:not(.day-mode) .grid-stack-item-content select,
+    body:not(.day-mode) .grid-stack-item-content textarea {
+      background-color: #0d1017 !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) .grid-stack-item-content input::placeholder,
+    body:not(.day-mode) .grid-stack-item-content textarea::placeholder {
+      color: #64748b !important;
+    }
+    body:not(.day-mode) .grid-stack-item-content input:focus,
+    body:not(.day-mode) .grid-stack-item-content select:focus,
+    body:not(.day-mode) .grid-stack-item-content textarea:focus {
+      border-color: rgba(168, 85, 247, 0.5) !important;
+      box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.25) !important;
+    }
+    body:not(.day-mode) .bg-slate-50,
+    body:not(.day-mode) .bg-slate-100 {
+      background-color: #0f121d !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+      color: #e2e8f0 !important;
+    }
+
+    /* Rules Deck Views in Dark Mode */
+    body:not(.day-mode) #deck-view-floor,
+    body:not(.day-mode) #deck-view-rarity,
+    body:not(.day-mode) #deck-view-trait,
+    body:not(.day-mode) #deck-view-tokenId,
+    body:not(.day-mode) #deck-view-bento {
+      background: #0f121d !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #deck-view-floor span,
+    body:not(.day-mode) #deck-view-rarity span,
+    body:not(.day-mode) #deck-view-trait span,
+    body:not(.day-mode) #deck-view-tokenId span {
+      color: #f1f5f9 !important;
+    }
+
+    /* ⚡ LIVE STREAM FEED & ORDER BOOK IN DARK MODE */
+    body:not(.day-mode) #widget-stream table thead {
+      background-color: #101420 !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    body:not(.day-mode) #widget-stream table thead th {
+      color: #94a3b8 !important;
+      background-color: #101420 !important;
+    }
+    body:not(.day-mode) #widget-stream table tbody tr {
+      border-color: rgba(255, 255, 255, 0.06) !important;
+    }
+    body:not(.day-mode) #widget-stream table tbody tr:hover {
+      background-color: rgba(255, 255, 255, 0.03) !important;
+    }
+    body:not(.day-mode) #widget-stream table tbody td {
+      color: #f1f5f9 !important;
+    }
+    body:not(.day-mode) #widget-stream table tbody td a,
+    body:not(.day-mode) #widget-stream table tbody td a span {
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #widget-stream table tbody td .text-slate-900 {
+      color: #ffffff !important;
+    }
+    body:not(.day-mode) #widget-stream table tbody td .text-slate-500,
+    body:not(.day-mode) #widget-stream table tbody td .text-slate-400 {
+      color: #94a3b8 !important;
+    }
+
+    /* Terminal Console: ALWAYS stays deep dark high-contrast in BOTH modes */
+    .console-box, #widget-console, #console-logs, #wallet-console-logs {
+      background-color: #080b12 !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+      color: #10b981 !important;
+    }
+
+    /* Secondary views in Dark Mode */
+    body:not(.day-mode) #view-wallets,
+    body:not(.day-mode) #view-rpc,
+    body:not(.day-mode) #view-opensea {
+      background-color: transparent !important;
+      color: #e2e8f0 !important;
+    }
+    body:not(.day-mode) #view-wallets .bg-white,
+    body:not(.day-mode) #view-rpc .bg-white,
+    body:not(.day-mode) #view-opensea .bg-white {
+      background-color: #141722 !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+      color: #ffffff !important;
+    }
+
+    /* Footer in Dark Mode */
+    body:not(.day-mode) footer {
+      background-color: #080b12 !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+      color: #94a3b8 !important;
+    }
+
+    /* Modals in Dark Mode */
+    body:not(.day-mode) #custom-confirm-modal .bg-white,
+    body:not(.day-mode) #user-profile-modal .bg-white,
+    body:not(.day-mode) #admin-panel-modal .bg-white {
+      background-color: #141722 !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      color: #ffffff !important;
+    }
+
+
+    /* ══════════════════════════════════════════════════════════════
+       ☀️ DAY MODE (LIGHT) — Exact AeroMint V2 Implementation
+       ══════════════════════════════════════════════════════════════ */
+    body.day-mode {
+      background-color: #f8faff !important;
+      background-image: 
+        radial-gradient(ellipse 130% 60% at 50% 106%, rgba(186, 230, 253, 0.7) 0%, rgba(219, 234, 254, 0.5) 38%, rgba(240, 246, 255, 0.15) 70%, transparent 100%),
+        linear-gradient(180deg, #ffffff 0%, #fcfdff 35%, #f1f6fe 70%, #dbeafe 100%) !important;
+      background-size: 100% 100% !important;
+      background-attachment: fixed !important;
+      color: #090d16 !important;
+      color-scheme: light !important;
+    }
+
+    body.day-mode .bg-pro-canvas {
+      background: transparent !important;
+    }
+
+    /* Day Mode Top Header */
+    body.day-mode header {
+      background-color: #ffffff !important;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
+      color: #090d16 !important;
+    }
+    body.day-mode header h1,
+    body.day-mode header h1 span {
+      color: #090d16 !important;
+    }
+    body.day-mode header p {
+      color: #475569 !important;
+    }
+    body.day-mode header nav {
+      background-color: #e8edf5 !important;
+      border: 1px solid rgba(203, 213, 225, 0.6) !important;
+    }
+    body.day-mode header nav button {
+      color: #475569 !important;
+    }
+    body.day-mode header nav button:hover {
+      color: #7c3aed !important;
+    }
+    body.day-mode header nav button.bg-white,
+    body.day-mode header nav button[class*="text-indigo-600"],
+    body.day-mode header nav button[class*="text-amber-700"] {
+      background-color: #ffffff !important;
+      border: 1px solid rgba(255, 255, 255, 0.95) !important;
+      color: #6d28d9 !important;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
+    }
+    body.day-mode #btn-audio,
+    body.day-mode header div:has(> #top-live-clock),
+    body.day-mode header div:has(> #network-select) {
+      background-color: #f1f4f9 !important;
+      border: 1px solid #cbd5e1 !important;
+      color: #1e293b !important;
+    }
+    body.day-mode #top-live-clock,
+    body.day-mode #network-select {
+      color: #090d16 !important;
+    }
+
+    /* Day Mode Elevated 3D Porcelain Cards */
+    body.day-mode .grid-stack-item-content {
+      background: #ffffff !important;
+      border: 1px solid rgba(226, 232, 240, 0.95) !important;
+      box-shadow: 
+        0 1px 3px rgba(15, 23, 42, 0.02),
+        0 10px 28px -4px rgba(15, 23, 42, 0.06),
+        0 20px 42px -8px rgba(15, 23, 42, 0.03) !important;
+      color: #090d16 !important;
+    }
+    body.day-mode .grid-stack-item-content h2,
+    body.day-mode .grid-stack-item-content h3 {
+      color: #090d16 !important;
+      font-weight: 800 !important;
+    }
+    body.day-mode .grid-stack-item-content p,
+    body.day-mode .grid-stack-item-content label {
+      color: #334155 !important;
+    }
+    body.day-mode .grid-stack-item-content .border-b,
+    body.day-mode .grid-stack-item-content .border-slate-100,
+    body.day-mode .grid-stack-item-content .border-slate-200 {
+      border-color: rgba(226, 232, 240, 0.9) !important;
+    }
+    body.day-mode .grid-stack-item-content input:not([type="checkbox"]):not([type="radio"]),
+    body.day-mode .grid-stack-item-content select,
+    body.day-mode .grid-stack-item-content textarea {
+      background-color: #f1f4f9 !important;
+      border: 1px solid #cbd5e1 !important;
+      color: #090d16 !important;
+    }
+    body.day-mode .grid-stack-item-content input::placeholder,
+    body.day-mode .grid-stack-item-content textarea::placeholder {
+      color: #94a3b8 !important;
+    }
+    body.day-mode .grid-stack-item-content input:focus,
+    body.day-mode .grid-stack-item-content select:focus,
+    body.day-mode .grid-stack-item-content textarea:focus {
+      background-color: #ffffff !important;
+      border-color: #7c3aed !important;
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15) !important;
+    }
+    body.day-mode .bg-slate-50,
+    body.day-mode .bg-slate-100 {
+      background-color: #f8fafc !important;
+      border-color: #e2e8f0 !important;
+      color: #1e293b !important;
+    }
+
+    /* Day Mode Live Feed Table */
+    body.day-mode #widget-stream table thead {
+      background-color: #f1f5f9 !important;
+      border-color: rgba(203, 213, 225, 0.5) !important;
+    }
+    body.day-mode #widget-stream table thead th {
+      color: #475569 !important;
+      background-color: #f1f5f9 !important;
+    }
+    body.day-mode #widget-stream table tbody tr {
+      border-color: rgba(226, 232, 240, 0.8) !important;
+    }
+    body.day-mode #widget-stream table tbody tr:hover {
+      background-color: rgba(124, 58, 237, 0.04) !important;
+    }
+    body.day-mode #widget-stream table tbody td {
+      color: #1a202c !important;
+    }
+    body.day-mode #widget-stream table tbody td a,
+    body.day-mode #widget-stream table tbody td a span {
+      color: #090d16 !important;
+    }
+
+    /* Day Mode Tabs (#view-wallets, #view-rpc) */
+    body.day-mode #view-wallets,
+    body.day-mode #view-rpc,
+    body.day-mode #view-opensea {
+      background-color: transparent !important;
+      color: #090d16 !important;
+    }
+    body.day-mode #view-wallets .bg-white,
+    body.day-mode #view-rpc .bg-white,
+    body.day-mode #view-opensea .bg-white {
+      background-color: #ffffff !important;
+      border-color: #e2e8f0 !important;
+      color: #090d16 !important;
+      box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06) !important;
+    }
+
+    /* Day Mode Footer */
+    body.day-mode footer {
+      background-color: #ffffff !important;
+      border-top: 1px solid rgba(226, 232, 240, 0.8) !important;
+      color: #475569 !important;
+    }
+
     /* 📱 iPhone / iOS Style Day/Night Toggle Switch (AeroMint V2/V3 Exact Match) */
     .ios-theme-toggle {
       width: 52px;
@@ -146,13 +535,8 @@
     html.theme-transitioning *::after {
       transition: none !important;
     }
-    ::view-transition-group(root) {
-      animation: none !important;
-      z-index: auto !important;
-    }
-    ::view-transition-image-pair(root) {
-      isolation: isolate !important;
-    }
+    ::view-transition-group(root) { animation: none !important; z-index: auto !important; }
+    ::view-transition-image-pair(root) { isolation: isolate !important; }
     ::view-transition-old(root),
     ::view-transition-new(root) {
       animation: none !important;
@@ -163,135 +547,29 @@
       width: 100% !important;
       height: 100% !important;
     }
-    ::view-transition-old(root) {
-      z-index: 1 !important;
-    }
-    ::view-transition-new(root) {
-      z-index: 999999 !important;
-    }
+    ::view-transition-old(root) { z-index: 1 !important; }
+    ::view-transition-new(root) { z-index: 999999 !important; }
 
-    /* 🌙 NIGHT MODE COMPREHENSIVE OVERRIDES */
-    body.night-mode {
-      background-color: #060913 !important;
-      color: #e2e8f0 !important;
+    /* ══════════════════════════════════════════════════════════════
+       ✨ MAGIC DEVELOPER CONSOLE AUTH GATE (SCREENSHOT FIDELITY)
+       ══════════════════════════════════════════════════════════════ */
+    .magic-glow-orb {
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #ffb347 0%, #ff0066 32%, #800040 58%, rgba(6, 4, 10, 0) 74%);
+      filter: blur(55px);
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0.88;
+      animation: magic-orb-pulse 4.5s ease-in-out infinite alternate;
     }
-    body.night-mode .bg-pro-canvas {
-      background-color: #060913 !important;
-      background-image: 
-        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
-        radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.10) 0px, transparent 50%),
-        radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%) !important;
-    }
-    body.night-mode header {
-      background-color: #0c101d !important;
-      border-color: #1e293b !important;
-    }
-    body.night-mode header h1 span:first-child {
-      color: #ffffff !important;
-    }
-    body.night-mode header p {
-      color: #94a3b8 !important;
-    }
-    body.night-mode header nav {
-      background-color: #111728 !important;
-      border-color: #1e293b !important;
-    }
-    body.night-mode header nav button {
-      color: #94a3b8 !important;
-    }
-    body.night-mode header nav button:hover {
-      color: #ffffff !important;
-    }
-    body.night-mode header nav button.bg-white {
-      background-color: #1e293b !important;
-      color: #818cf8 !important;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
-    }
-    body.night-mode #btn-audio,
-    body.night-mode header div:has(> #top-live-clock),
-    body.night-mode header div:has(> #network-select) {
-      background-color: #111728 !important;
-      border-color: #1e293b !important;
-      color: #cbd5e1 !important;
-    }
-    body.night-mode #top-live-clock,
-    body.night-mode #network-select {
-      color: #f8fafc !important;
-    }
-    body.night-mode #network-select option {
-      background-color: #0f172a;
-      color: #ffffff;
-    }
-    body.night-mode #eth-price-container {
-      background-color: rgba(99, 102, 241, 0.15) !important;
-      border-color: rgba(99, 102, 241, 0.3) !important;
-    }
-    body.night-mode #eth-usd-price {
-      color: #c7d2fe !important;
-    }
-    body.night-mode .grid-stack-item-content {
-      background: #0c101d !important;
-      border-color: #1e293b !important;
-      color: #e2e8f0 !important;
-      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5) !important;
-    }
-    body.night-mode .grid-stack-item-content h2,
-    body.night-mode .grid-stack-item-content h3 {
-      color: #f8fafc !important;
-    }
-    body.night-mode .grid-stack-item-content .border-b,
-    body.night-mode .grid-stack-item-content .border-slate-100,
-    body.night-mode .grid-stack-item-content .border-slate-200 {
-      border-color: #1e293b !important;
-    }
-    body.night-mode .grid-stack-item-content input:not([type="checkbox"]):not([type="radio"]),
-    body.night-mode .grid-stack-item-content select,
-    body.night-mode .grid-stack-item-content textarea {
-      background-color: #111728 !important;
-      border-color: #1e293b !important;
-      color: #ffffff !important;
-    }
-    body.night-mode .grid-stack-item-content input::placeholder,
-    body.night-mode .grid-stack-item-content textarea::placeholder {
-      color: #64748b !important;
-    }
-    body.night-mode .bg-slate-50,
-    body.night-mode .bg-slate-100 {
-      background-color: #111728 !important;
-      border-color: #1e293b !important;
-    }
-    body.night-mode .text-slate-900,
-    body.night-mode .text-slate-800,
-    body.night-mode .text-slate-700 {
-      color: #e2e8f0 !important;
-    }
-    body.night-mode .text-slate-600,
-    body.night-mode .text-slate-500 {
-      color: #94a3b8 !important;
-    }
-    body.night-mode .border-slate-200,
-    body.night-mode .border-slate-100 {
-      border-color: #1e293b !important;
-    }
-    body.night-mode #view-wallets,
-    body.night-mode #view-rpc,
-    body.night-mode #view-opensea {
-      background-color: transparent !important;
-      color: #e2e8f0 !important;
-    }
-    body.night-mode #view-wallets .bg-white,
-    body.night-mode #view-rpc .bg-white,
-    body.night-mode #view-opensea .bg-white {
-      background-color: #0c101d !important;
-      border-color: #1e293b !important;
-    }
-    body.night-mode footer {
-      background-color: #080c16 !important;
-      border-color: #1e293b !important;
-    }
-    body.night-mode footer p,
-    body.night-mode footer span {
-      color: #94a3b8 !important;
+    @keyframes magic-orb-pulse {
+      0% { transform: translate(-50%, -50%) scale(0.92); opacity: 0.80; }
+      100% { transform: translate(-50%, -50%) scale(1.06); opacity: 0.95; }
     }
 
   </style>
@@ -316,158 +594,128 @@
   <!-- 🛡️ 0. HARD AUTH GATE: FULL-SCREEN VIP MEMBER ACCESS (AEROMINT V2 STYLE)   -->
   <!-- When not authenticated, the entire dashboard is hidden from DOM.          -->
   <!-- ========================================================================= -->
-  <div id="auth-gate-screen" class="fixed inset-0 z-50 bg-[#06080F] text-slate-100 flex items-center justify-center p-3 sm:p-6 overflow-y-auto font-sans selection:bg-violet-600 selection:text-white" style="display: flex;">
+  <div id="auth-gate-screen" class="fixed inset-0 z-50 bg-[#06040a] text-slate-100 flex flex-col justify-between p-6 sm:p-8 overflow-hidden font-mono-code selection:bg-rose-600 selection:text-white" style="display: flex;">
     
-    <!-- Ambient Radial Glows matching reference artwork -->
-    <div class="fixed inset-0 pointer-events-none overflow-hidden">
-      <div class="absolute -top-32 -left-32 w-96 h-96 bg-violet-600/20 rounded-full blur-[140px]"></div>
-      <div class="absolute -bottom-32 -right-32 w-[500px] h-[500px] bg-indigo-600/25 rounded-full blur-[150px]"></div>
-      <div class="absolute top-1/2 left-1/3 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-600/10 rounded-full blur-[170px]"></div>
-    </div>
+    <!-- 1. Central Glowing Radial Gradient Orb (Screenshots 1 & 2) -->
+    <div class="magic-glow-orb"></div>
 
-    <!-- Centered Split-Screen Master Card (Reference Image Fidelity) -->
-    <div class="relative z-10 max-w-5xl w-full bg-[#0B0F19]/95 border border-slate-800/80 rounded-[28px] sm:rounded-[36px] overflow-hidden shadow-2xl backdrop-blur-2xl flex flex-col md:flex-row my-auto">
-      
-      <!-- LEFT HERO COLUMN: 3D Medusa & Cyber Fluid Art + Live Mint/Snipe Telemetry -->
-      <div class="relative w-full md:w-1/2 min-h-[400px] md:min-h-[580px] bg-[#070A12] flex flex-col justify-between p-6 sm:p-8 overflow-hidden bg-cover bg-center" style="background-image: url('/auth-art-clean.png');">
-        
-        <!-- Dark Vignette Overlay for Crisp Typography & Controls -->
-        <div class="absolute inset-0 bg-gradient-to-b from-[#070A12]/80 via-transparent to-[#070A12]/90 pointer-events-none"></div>
-
-        <!-- Top Brand Bar -->
-        <div class="relative z-10 flex items-center justify-between">
-          <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-violet-600 via-indigo-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-violet-500/30">
-              <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="9"></circle>
-                <circle cx="12" cy="12" r="3" fill="currentColor" fill-opacity="0.25"></circle>
-                <line x1="12" y1="1" x2="12" y2="5"></line>
-                <line x1="12" y1="19" x2="12" y2="23"></line>
-                <line x1="1" y1="12" x2="5" y2="12"></line>
-                <line x1="19" y1="12" x2="23" y2="12"></line>
-                <circle cx="12" cy="12" r="1" fill="#fff"></circle>
-              </svg>
-            </div>
-            <div>
-              <span class="text-sm font-black tracking-wider text-white uppercase block leading-none font-sans">AERO-SNIPER</span>
-              <span class="text-[10px] font-bold text-violet-400 uppercase tracking-widest leading-none font-sans">PRO V2.0</span>
-            </div>
-          </div>
-          <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 backdrop-blur-md flex items-center gap-1.5 shadow-sm font-mono-code">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            SEAPORT 1.6
-          </span>
-        </div>
-
-        <!-- Bottom Telemetry Card: "Mint / Snipe Success" theme as requested -->
-        <div class="relative z-10 mt-auto pt-6 space-y-2.5">
-          <div class="bg-slate-950/80 backdrop-blur-xl border border-white/10 rounded-2xl p-3.5 shadow-2xl space-y-2">
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-emerald-400 font-extrabold flex items-center gap-1.5">
-                <i class="fa-solid fa-bolt text-xs"></i> ⚡ SNIPE SUCCESSFUL
-              </span>
-              <span class="text-[10px] font-mono-code text-slate-400 font-bold">BLOCK #57070193</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-                <span class="text-xs font-black text-slate-100 font-sans">Woodie Genesis #9735</span>
-              </div>
-              <span class="text-xs font-mono-code font-black bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">0.000015 ETH</span>
-            </div>
-            <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono-code pt-1 border-t border-white/10">
-              <span>OpenSea 6-Key Grid Pulse 1</span>
-              <span class="text-violet-300 font-black">Latency: 0.2ms</span>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono-code px-1">
-            <span>🔒 Verified Autonomous Engine</span>
-            <span>Mempool Zero-Hop</span>
-          </div>
-        </div>
-
+    <!-- 2. FOUR CORNERS HUD TELEMETRY (EXACT SCREENSHOT FIDELITY) -->
+    
+    <!-- TOP ROW (Left & Right) -->
+    <div class="relative z-20 flex items-center justify-between w-full pointer-events-auto">
+      <!-- TOP-LEFT: STATUS: OPERATIONAL -->
+      <div class="text-[11px] font-bold tracking-widest text-[#ff3377] flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>STATUS: <strong class="text-white">OPERATIONAL</strong></span>
       </div>
 
-      <!-- RIGHT HERO COLUMN: AUTHENTICATION CARD (Reference Image Layout) -->
-      <div class="w-full md:w-1/2 bg-[#0B0F19] p-7 sm:p-10 flex flex-col justify-center border-t md:border-t-0 md:border-l border-slate-800/80">
-        
-        <!-- Header Title -->
-        <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-white text-center mb-5 font-sans" id="gate-card-title">
-          Login
-        </h2>
+      <!-- TOP-RIGHT: NODE & LIVE BLOCK -->
+      <div class="text-[11px] font-bold tracking-widest text-[#ff3377] flex items-center gap-3">
+        <span>NODE: <strong class="text-white" id="gate-node-name">ROBINHOOD_MAINNET</strong></span>
+        <span class="text-slate-600">•</span>
+        <span>BLOCK: <strong class="text-cyan-400" id="gate-block-num">#44723181</strong></span>
+      </div>
+    </div>
 
-        <!-- Quick VIP Passkey / Demo Access Button -->
-        <div id="gate-quick-auth-row" class="mb-2">
-          <button type="button" onclick="handleQuickVipDemo()" class="w-full py-2.5 px-4 rounded-xl border border-violet-500/40 bg-violet-950/20 hover:bg-violet-900/30 text-white font-semibold text-xs flex items-center justify-center gap-2.5 transition-all shadow-sm">
-            <i class="fa-solid fa-key text-violet-400 text-xs"></i>
-            <span>Sign in with VIP Passkey</span>
+    <!-- CENTER CONTAINER: SCREENSHOT 1 BUTTON OR SCREENSHOT 2 MODAL -->
+    <div class="relative z-20 flex-1 flex items-center justify-center my-auto w-full">
+      
+      <!-- VIEW A: THE CENTER BUTTON (Screenshot 1: MAGIC DEVELOPER CONSOLE) -->
+      <div id="gate-landing-view" class="flex flex-col items-center justify-center space-y-4">
+        <button onclick="openGateConsoleModal()" class="px-8 py-3.5 rounded-xl bg-[#ff0066] hover:bg-[#e6005c] active:scale-95 text-white font-mono-code font-black text-xs sm:text-sm tracking-widest uppercase shadow-[0_0_40px_rgba(255,0,102,0.6)] hover:shadow-[0_0_55px_rgba(255,0,102,0.8)] transition-all border border-rose-400/40 cursor-pointer">
+          AERO-SNIPER CONSOLE
+        </button>
+        <span class="text-[10px] text-rose-300/70 tracking-widest uppercase font-mono-code">Click to Initialize Secure Access</span>
+      </div>
+
+      <!-- VIEW B: THE AUTHENTICATION MODAL (Screenshot 2: Log in or sign up) -->
+      <div id="gate-console-modal" class="hidden relative w-full max-w-[420px] bg-[#121622]/95 border border-slate-700/70 rounded-3xl p-6 sm:p-7 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] backdrop-blur-2xl text-slate-100 font-sans transition-all">
+        
+        <!-- Modal Top Bar -->
+        <div class="flex items-center justify-between border-b border-slate-800/80 pb-3.5 mb-4">
+          <h2 class="text-base font-extrabold text-white tracking-tight" id="gate-card-title">
+            Log in or sign up
+          </h2>
+          <button type="button" onclick="closeGateConsoleModal()" title="Close to Console" class="w-7 h-7 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer text-xs">
+            <i class="fa-solid fa-xmark"></i>
           </button>
         </div>
 
-        <!-- Subtle Divider -->
-        <div class="flex items-center gap-3 my-3">
-          <div class="flex-1 h-[1px] bg-slate-800"></div>
-          <span class="text-[11px] text-slate-500 font-sans uppercase font-bold">or</span>
-          <div class="flex-1 h-[1px] bg-slate-800"></div>
-        </div>
-
-        <!-- Main Form -->
-        <form onsubmit="handleGateAuthSubmit(event)" class="space-y-4 font-sans text-xs">
+        <!-- Auth Form -->
+        <form onsubmit="handleGateAuthSubmit(event)" class="space-y-3 font-sans">
           
-          <div>
-            <label class="text-xs text-slate-300 font-medium block mb-1.5">Email:</label>
+          <!-- Primary Input Field: Screenshot 2 Style with Arrow Button -->
+          <div class="space-y-1">
+            <label class="text-[11px] text-slate-300 font-semibold block" id="gate-email-label">Email or VIP Account ID:</label>
             <div class="relative">
-              <input type="email" id="gate-input-email" required placeholder="mail@example.com" class="w-full bg-[#131722] border border-slate-800 rounded-xl px-4 py-3 text-xs font-semibold text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all shadow-inner">
-            </div>
-          </div>
-
-          <div>
-            <label class="text-xs text-slate-300 font-medium block mb-1.5">Password:</label>
-            <div class="relative">
-              <input type="password" id="gate-input-password" required minlength="6" placeholder="min of 6 characters" class="w-full bg-[#131722] border border-slate-800 rounded-xl pl-4 pr-10 py-3 text-xs font-semibold text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 transition-all shadow-inner">
-              <button type="button" onclick="togglePasswordVisibility('gate-input-password')" class="absolute right-3.5 top-3.5 text-slate-500 hover:text-slate-300 transition-colors">
-                <i class="fa-solid fa-eye text-xs"></i>
+              <input type="email" id="gate-input-email" required placeholder="Enter Developer ID / Email" class="w-full bg-[#0d1019] border border-rose-500/60 focus:border-rose-400 rounded-xl pl-3.5 pr-11 py-2.5 text-xs font-semibold text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-rose-400 shadow-inner transition-all">
+              <button type="submit" id="gate-arrow-submit-btn" title="Proceed" class="absolute right-2 top-1.5 w-7 h-7 rounded-lg bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center text-xs font-bold transition-all shadow-sm cursor-pointer">
+                →
               </button>
             </div>
           </div>
 
-          <!-- Invite Code Group (Visible only in Sign Up / Register mode) -->
-          <div id="gate-invite-group" class="hidden space-y-1.5">
-            <label class="text-xs text-violet-400 font-bold block">VIP Invitation Key:</label>
-            <input type="text" id="gate-input-invite" placeholder="e.g. VIP-SNIPER-2026" class="w-full bg-violet-950/30 border border-violet-500/50 rounded-xl px-4 py-3 text-xs font-bold text-violet-200 placeholder:text-violet-500/50 uppercase focus:outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400 transition-all shadow-inner">
-            <p class="text-[11px] text-slate-400 font-sans">Enter the exclusive VIP license key issued by administrator.</p>
+          <!-- Password Field -->
+          <div class="space-y-1">
+            <label class="text-[11px] text-slate-300 font-semibold block">Password:</label>
+            <div class="relative">
+              <input type="password" id="gate-input-password" required minlength="6" placeholder="••••••••" class="w-full bg-[#0d1019] border border-slate-700 focus:border-violet-500 rounded-xl pl-3.5 pr-10 py-2.5 text-xs font-semibold text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-violet-400 shadow-inner transition-all">
+              <button type="button" onclick="togglePasswordVisibility('gate-input-password')" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200 text-xs">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
           </div>
 
-          <!-- Remember Me & Forgot Password Row -->
-          <div class="flex items-center justify-between text-xs py-1" id="gate-remember-row">
-            <label class="flex items-center gap-2 text-slate-400 cursor-pointer select-none">
-              <input type="checkbox" id="gate-remember-me" checked class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-violet-600 focus:ring-violet-500 focus:ring-offset-slate-900 cursor-pointer accent-violet-600">
-              <span>Remember Me</span>
-            </label>
-            <button type="button" onclick="showForgotPasswordHelp()" class="text-violet-400 hover:text-violet-300 font-medium transition-colors">Forgot Password?</button>
+          <!-- Invite Code Group (Register Mode Only) -->
+          <div id="gate-invite-group" class="hidden space-y-1">
+            <label class="text-[11px] text-rose-400 font-bold block">VIP License Access Key:</label>
+            <input type="text" id="gate-input-invite" placeholder="e.g. VIP-SNIPER-2026" class="w-full bg-rose-950/30 border border-rose-500/50 rounded-xl px-3.5 py-2.5 text-xs font-black text-rose-200 placeholder:text-rose-400/50 uppercase focus:outline-none focus:border-rose-400 shadow-inner">
           </div>
 
-          <!-- Error & Success Message Banner -->
-          <div id="gate-feedback-banner" class="hidden p-3 rounded-xl text-xs font-bold"></div>
+          <!-- Error / Success Feedback Banner -->
+          <div id="gate-feedback-banner" class="hidden p-2.5 rounded-xl text-xs font-bold my-1 font-mono-code"></div>
 
-          <!-- Submit Button (Vibrant Violet matching Reference Image) -->
-          <button type="submit" id="gate-submit-btn" class="w-full py-3.5 px-6 rounded-xl bg-[#6C38FF] hover:bg-[#5b2bf0] text-white font-bold text-sm shadow-lg shadow-violet-600/30 transition-all flex items-center justify-center gap-2 mt-2">
-            <span id="gate-submit-text">Log In</span>
+          <!-- Divider: Screenshot 2 "OR" -->
+          <div class="flex items-center gap-3 my-2 pt-1">
+            <div class="flex-1 h-[1px] bg-slate-800"></div>
+            <span class="text-[10px] text-slate-500 uppercase font-black tracking-wider">OR</span>
+            <div class="flex-1 h-[1px] bg-slate-800"></div>
+          </div>
+
+          <!-- Primary Gradient Button (Screenshot 2: ME WALLET style) -->
+          <button type="submit" id="gate-submit-btn" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#8b5cf6] via-[#7c3aed] to-[#6366f1] hover:from-[#7c3aed] hover:to-[#4f46e5] text-white font-black text-xs tracking-wider uppercase shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2 transition-all cursor-pointer">
+            <i class="fa-solid fa-bolt text-amber-300 text-xs"></i>
+            <span id="gate-submit-text">VIP ACCESS (SEAPORT 1.6)</span>
           </button>
+
+          <!-- Secondary Mode Switch Button (Screenshot 2: "View all wallets 570+ available" style) -->
+          <button type="button" onclick="toggleGateRegisterMode()" id="gate-toggle-register-btn" class="w-full py-2.5 px-4 rounded-xl bg-[#181d2a] hover:bg-[#202738] border border-slate-700/80 text-slate-300 text-xs font-semibold flex items-center justify-between transition-all cursor-pointer mt-2">
+            <span id="gate-toggle-register-label">Activate VIP License Key</span>
+            <span class="text-[10px] font-mono-code text-indigo-400 bg-indigo-950/60 border border-indigo-500/30 px-2 py-0.5 rounded font-bold" id="gate-toggle-register-chip">V2.0 PRO</span>
+          </button>
+
+          <!-- Fine Print Footer (Screenshot 2 exact wording adapted) -->
+          <p class="text-[10px] text-slate-500 text-center leading-relaxed pt-2">
+            If you have not logged in before, enter your VIP invitation key to activate your private account. By proceeding, you agree to our Institutional Terms of Service &amp; Privacy Policy.
+          </p>
 
         </form>
 
-        <!-- Bottom Mode Toggle Prompt -->
-        <div class="text-center pt-5 text-xs text-slate-400">
-          <span id="gate-switch-prompt">Don't have an account?</span>
-          <button type="button" onclick="toggleGateMode()" id="gate-switch-link" class="text-violet-400 hover:text-violet-300 font-semibold ml-1 underline-offset-2 hover:underline transition-colors">
-            Sign up
-          </button>
-        </div>
-
       </div>
 
+    </div>
+
+    <!-- BOTTOM ROW (Left & Right) -->
+    <div class="relative z-20 flex items-center justify-between w-full pointer-events-auto">
+      <!-- BOTTOM-LEFT: CLIENT IP -->
+      <div class="text-[11px] font-bold tracking-widest text-[#ff3377]">
+        CLIENT IP: <strong class="text-white" id="gate-client-ip">103.177.XXX.XXX</strong>
+      </div>
+
+      <!-- BOTTOM-RIGHT: PROTOCOL -->
+      <div class="text-[11px] font-bold tracking-widest text-[#ff3377]">
+        PROTOCOL: <strong class="text-white">SEAPORT_V1.6</strong> • ENGINE: <strong class="text-white">V2.0</strong>
+      </div>
     </div>
 
   </div>
@@ -7783,31 +8031,88 @@
       const inviteGroup = document.getElementById('gate-invite-group');
       const inviteInput = document.getElementById('gate-input-invite');
       const submitText = document.getElementById('gate-submit-text');
-      const modalTitle = document.getElementById('gate-card-title');
-      const rememberRow = document.getElementById('gate-remember-row');
-      const switchPrompt = document.getElementById('gate-switch-prompt');
-      const switchLink = document.getElementById('gate-switch-link');
+      const cardTitle = document.getElementById('gate-card-title');
+      const toggleBtn = document.getElementById('gate-toggle-register-btn');
+      const toggleLabel = document.getElementById('gate-toggle-register-label');
+      const toggleChip = document.getElementById('gate-toggle-register-chip');
       const feedbackBanner = document.getElementById('gate-feedback-banner');
       if (feedbackBanner) feedbackBanner.classList.add('hidden');
 
       if (tab === 'register') {
         if (inviteGroup) inviteGroup.classList.remove('hidden');
         if (inviteInput) inviteInput.required = true;
-        if (submitText) submitText.innerText = 'Activate Key & Register';
-        if (modalTitle) modalTitle.innerText = 'Activate Access';
-        if (rememberRow) rememberRow.classList.add('hidden');
-        if (switchPrompt) switchPrompt.innerText = 'Already have an account?';
-        if (switchLink) switchLink.innerText = 'Log In';
+        if (submitText) submitText.innerText = 'Activate License & Access';
+        if (cardTitle) cardTitle.innerText = 'Activate VIP Access Key';
+        if (toggleLabel) toggleLabel.innerText = 'Already have an account? Sign In';
+        if (toggleChip) toggleChip.innerText = 'SIGN IN';
       } else {
         if (inviteGroup) inviteGroup.classList.add('hidden');
         if (inviteInput) inviteInput.required = false;
-        if (submitText) submitText.innerText = 'Log In';
-        if (modalTitle) modalTitle.innerText = 'Login';
-        if (rememberRow) rememberRow.classList.remove('hidden');
-        if (switchPrompt) switchPrompt.innerText = "Don't have an account?";
-        if (switchLink) switchLink.innerText = 'Sign up';
+        if (submitText) submitText.innerText = 'VIP ACCESS (SEAPORT 1.6)';
+        if (cardTitle) cardTitle.innerText = 'Log in or sign up';
+        if (toggleLabel) toggleLabel.innerText = 'Activate VIP License Key';
+        if (toggleChip) toggleChip.innerText = 'V2.0 PRO';
       }
     }
+
+    
+    // ══════════════════════════════════════════════════════════════
+    // ✨ MAGIC DEVELOPER CONSOLE AUTH GATE CONTROLLER
+    // ══════════════════════════════════════════════════════════════
+    function openGateConsoleModal() {
+      const landing = document.getElementById('gate-landing-view');
+      const modal = document.getElementById('gate-console-modal');
+      if (landing) landing.classList.add('hidden');
+      if (modal) modal.classList.remove('hidden');
+      document.getElementById('gate-input-email')?.focus();
+    }
+
+    function closeGateConsoleModal() {
+      const landing = document.getElementById('gate-landing-view');
+      const modal = document.getElementById('gate-console-modal');
+      if (modal) modal.classList.add('hidden');
+      if (landing) landing.classList.remove('hidden');
+    }
+
+    function toggleGateRegisterMode() {
+      const newMode = (activeGateTab === 'login') ? 'register' : 'login';
+      switchGateTab(newMode);
+    }
+
+    // Dynamic Real Client IP Telemetry
+    async function fetchRealClientIp() {
+      const el = document.getElementById('gate-client-ip');
+      if (!el) return;
+      try {
+        const res = await fetch('/api/my-ip');
+        const data = await res.json();
+        if (data && data.ip && data.ip !== '::1' && data.ip !== '127.0.0.1') {
+          el.innerText = data.ip;
+          return;
+        }
+      } catch(e) {}
+      try {
+        const res = await fetch('https://api.ipify.org?format=json');
+        const data = await res.json();
+        if (data && data.ip) {
+          el.innerText = data.ip;
+        }
+      } catch(e) {}
+    }
+
+    // Dynamic Real-Time Block Counter Telemetry
+    async function fetchRealTimeBlockNum() {
+      const el = document.getElementById('gate-block-num');
+      if (!el) return;
+      try {
+        const provider = new ethers.JsonRpcProvider('https://rpc.robinhood.com');
+        const block = await provider.getBlockNumber();
+        if (block) {
+          el.innerText = '#' + block.toLocaleString();
+        }
+      } catch(e) {}
+    }
+
 
     function showForgotPasswordHelp() {
       const banner = document.getElementById('gate-feedback-banner');
@@ -9346,6 +9651,9 @@
 
     // 🛡️ INITIALIZE HARD AUTH GATE (IMPERMEABLE FULL-PAGE VIP ENFORCEMENT)
     initThemeFromStorage();
+    fetchRealClientIp();
+    fetchRealTimeBlockNum();
+    setInterval(fetchRealTimeBlockNum, 6000);
     const isAuthed = checkAuthState();
     if (isAuthed) {
       checkAuthHeartbeat();
