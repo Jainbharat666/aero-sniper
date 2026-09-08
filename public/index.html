@@ -1527,6 +1527,101 @@
       background-color: rgba(244, 63, 94, 0.2) !important;
     }
 
+
+    /* ─── FIX: Stream Table thead bg in dark mode ─── */
+    body:not(.day-mode) #widget-stream table thead,
+    body:not(.day-mode) thead.bg-slate-50\/95 {
+      background-color: #0e1220 !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    body:not(.day-mode) #widget-stream table thead th {
+      color: #64748b !important;
+      border-color: rgba(255, 255, 255, 0.06) !important;
+    }
+
+    /* ─── FIX: Stream filter bar bg in dark mode ─── */
+    body:not(.day-mode) #widget-stream .bg-slate-50 {
+      background-color: #0e1220 !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+    }
+    body:not(.day-mode) #widget-stream .flt-btn.bg-white {
+      background-color: #181d2a !important;
+      border-color: rgba(255, 255, 255, 0.1) !important;
+      color: #cbd5e1 !important;
+    }
+    body:not(.day-mode) #widget-stream .flt-btn.bg-white:hover {
+      background-color: #22293a !important;
+      color: #fff !important;
+    }
+    body:not(.day-mode) #widget-stream #stream-search {
+      background-color: #0c0f18 !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #fff !important;
+    }
+    body:not(.day-mode) #widget-stream #stream-sort {
+      background-color: #0c0f18 !important;
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      color: #cbd5e1 !important;
+    }
+    body:not(.day-mode) #widget-stream #stream-sort option {
+      background-color: #0c0f18 !important;
+      color: #e2e8f0 !important;
+    }
+
+    /* ─── FIX: RPC Routing Control — strategy box bg ─── */
+    body:not(.day-mode) #widget-rpc-control .bg-indigo-50\/60,
+    body:not(.day-mode) [gs-id="widget-rpc-control"] .bg-indigo-50\/60 {
+      background-color: rgba(99, 102, 241, 0.1) !important;
+      border-color: rgba(99, 102, 241, 0.25) !important;
+    }
+    body:not(.day-mode) #widget-rpc-control label.text-indigo-950,
+    body:not(.day-mode) [gs-id="widget-rpc-control"] .text-indigo-950 {
+      color: #c7d2fe !important;
+    }
+    body:not(.day-mode) #widget-rpc-control #bt-top5,
+    body:not(.day-mode) #widget-rpc-control #bt-all {
+      background-color: #181d2a !important;
+      border-color: rgba(99, 102, 241, 0.3) !important;
+      color: #a5b4fc !important;
+    }
+    body:not(.day-mode) #widget-rpc-control #bt-top5:hover,
+    body:not(.day-mode) #widget-rpc-control #bt-all:hover {
+      background-color: rgba(99, 102, 241, 0.2) !important;
+      color: #fff !important;
+    }
+    body:not(.day-mode) #widget-rpc-control .bg-amber-50 {
+      background-color: rgba(245, 158, 11, 0.12) !important;
+      border-color: rgba(245, 158, 11, 0.35) !important;
+      color: #fcd34d !important;
+    }
+    body:not(.day-mode) #widget-rpc-control .bg-indigo-50 {
+      background-color: rgba(99, 102, 241, 0.12) !important;
+      border-color: rgba(99, 102, 241, 0.35) !important;
+      color: #a5b4fc !important;
+    }
+
+    /* ─── FIX: OpenSea Round-Robin Multi-Key Pool banner ─── */
+    body:not(.day-mode) #view-opensea .bg-indigo-50\/50,
+    body:not(.day-mode) .bg-indigo-50\/50 {
+      background-color: rgba(99, 102, 241, 0.1) !important;
+      border-color: rgba(99, 102, 241, 0.35) !important;
+    }
+    body:not(.day-mode) #view-opensea .bg-indigo-50\/50 .text-slate-900 {
+      color: #f8fafc !important;
+    }
+    body:not(.day-mode) #view-opensea .bg-indigo-50\/50 .text-slate-600 {
+      color: #94a3b8 !important;
+    }
+
+    /* ─── FIX: Fleet Terminal in Day Mode - slightly lighter dark ─── */
+    body.day-mode .console-unibody-card {
+      background-color: #0f1424 !important;
+      border: 1px solid rgba(99, 102, 241, 0.15) !important;
+      box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(99, 102, 241, 0.08) !important;
+    }
+    body.day-mode #fleet-terminal-title {
+      color: #ffffff !important;
+    }
   </style>
   <script>
     (function() {
@@ -2311,7 +2406,7 @@
 
             <div class="flex items-center gap-2 font-mono-code text-xs">
               <div class="relative flex-1">
-                <input type="text" id="stream-search" name="stream_token_search_noautofill" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" oninput="filterStreamTable()" placeholder="Search Token ID (#793)..." class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500 pl-7 shadow-inner">
+                <input type="search" id="stream-search" name="stream_nofill_xyzq" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-form-type="other" data-1p-ignore="true" readonly onfocus="this.removeAttribute('readonly')" oninput="filterStreamTable()" placeholder="Search Token ID (#793)..." class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs text-slate-900 font-bold focus:outline-none focus:border-indigo-500 pl-7 shadow-inner">
                 <i class="fa-solid fa-magnifying-glass absolute left-2 top-2 text-slate-400 text-[10px]"></i>
               </div>
               <select id="stream-sort" onchange="sortStreamTable(this.value)" class="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-[11px] font-bold text-slate-700 focus:outline-none cursor-pointer">
@@ -10012,6 +10107,9 @@
       setTimeout(purgeAutofilledEmail, 50);
       setTimeout(purgeAutofilledEmail, 200);
       setTimeout(purgeAutofilledEmail, 500);
+      setTimeout(purgeAutofilledEmail, 1000);
+      setTimeout(purgeAutofilledEmail, 2000);
+      setTimeout(purgeAutofilledEmail, 3000);
     }
 
     function closeAdminModal() {
