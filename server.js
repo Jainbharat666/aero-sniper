@@ -273,6 +273,37 @@ async function dbSaveUserConfig(userId, newConfig) {
     const existing = await dbGetUserConfig(userId);
     if (existing !== null && existing !== undefined) {
       const merged = { ...existing, ...newConfig };
+
+      const existingWallets = existing.walletFleet || existing.wallets;
+      const incomingWallets = newConfig.walletFleet !== undefined ? newConfig.walletFleet : newConfig.wallets;
+
+      // 🛡️ WALLET PRESERVATION SAFEGUARD:
+      // If existing config has wallets, and incoming is empty [] without explicit_wipe, PRESERVE them!
+      if (
+        Array.isArray(existingWallets) && existingWallets.length > 0 &&
+        Array.isArray(incomingWallets) && incomingWallets.length === 0 &&
+        !newConfig.explicit_wipe
+      ) {
+        merged.walletFleet = existingWallets;
+        merged.wallets = existingWallets;
+        if (existing.masterWalletIndex !== undefined && merged.masterWalletIndex === null) {
+          merged.masterWalletIndex = existing.masterWalletIndex;
+        }
+      }
+
+      // Keep both walletFleet and wallets identical for 100% cross-compatibility
+      if (merged.walletFleet && !merged.wallets) merged.wallets = merged.walletFleet;
+      if (merged.wallets && !merged.walletFleet) merged.walletFleet = merged.wallets;
+
+      // Also preserve custom_rpcs if incoming is empty without explicit_wipe
+      if (
+        Array.isArray(existing.custom_rpcs) && existing.custom_rpcs.length > 0 &&
+        Array.isArray(newConfig.custom_rpcs) && newConfig.custom_rpcs.length === 0 &&
+        !newConfig.explicit_wipe
+      ) {
+        merged.custom_rpcs = existing.custom_rpcs;
+      }
+
       await axios.patch(`${SUPABASE_URL}/rest/v1/sniper_user_configs?user_id=eq.${encodeURIComponent(userId)}`, {
         config: merged,
         updated_at: new Date().toISOString()
@@ -280,6 +311,8 @@ async function dbSaveUserConfig(userId, newConfig) {
       return merged;
     } else {
       const merged = { ...newConfig };
+      if (merged.walletFleet && !merged.wallets) merged.wallets = merged.walletFleet;
+      if (merged.wallets && !merged.walletFleet) merged.walletFleet = merged.wallets;
       await axios.post(`${SUPABASE_URL}/rest/v1/sniper_user_configs?on_conflict=user_id`, {
         user_id: userId,
         config: merged,

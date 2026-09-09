@@ -4644,7 +4644,9 @@
     // ☁️ USER-CONTROLLED CLOUD VAULT (AEROMINT V2 ARCHITECTURE)
     function isCloudVaultEnabled(userId) {
       if (!userId) return false;
-      return localStorage.getItem('sniper_u_' + userId + '_cloud_vault_enabled') === 'true';
+      const val = localStorage.getItem('sniper_u_' + userId + '_cloud_vault_enabled');
+      if (val === 'false') return false;
+      return true; // Default to true for authenticated accounts to sync across devices
     }
 
     function setCloudVaultEnabledLocally(userId, enabled) {
@@ -4653,7 +4655,7 @@
       updateCloudVaultUI(enabled);
     }
 
-    function updateCloudVaultUI(enabled) {
+    function updateCloudVaultUI(enabled, walletCountOverride, rpcCountOverride, lastSyncOverride) {
       const toggleInput = document.getElementById('prof-vault-toggle-input');
       const toggleBadge = document.getElementById('prof-vault-toggle-badge');
       const statusDesc = document.getElementById('prof-vault-status-desc');
@@ -4682,13 +4684,15 @@
       const elRpcsCount = document.getElementById('prof-vault-rpcs-count');
       const elLastSync = document.getElementById('prof-vault-last-sync');
 
-      if (elWalletsCount) elWalletsCount.innerText = walletFleet.length;
+      const wCount = (walletCountOverride !== undefined) ? walletCountOverride : walletFleet.length;
+      if (elWalletsCount) elWalletsCount.innerText = wCount;
+
       if (elRpcsCount) {
-        const customCount = rpcFleet.filter(r => r.isCustom || (!r.isSystem && !r.isFleet && !isSystemRpcUrl(r.url))).length;
+        const customCount = (rpcCountOverride !== undefined) ? rpcCountOverride : rpcFleet.filter(r => r.isCustom || (!r.isSystem && !r.isFleet && !isSystemRpcUrl(r.url))).length;
         elRpcsCount.innerText = customCount;
       }
       if (elLastSync) {
-        const lastSync = localStorage.getItem('sniper_last_cloud_sync');
+        const lastSync = lastSyncOverride || localStorage.getItem('sniper_last_cloud_sync');
         elLastSync.innerText = lastSync ? ('Last synced: ' + lastSync) : 'Last synced: Never';
       }
     }
@@ -4699,7 +4703,7 @@
       setCloudVaultEnabledLocally(uid, enabled);
 
       if (enabled) {
-        await syncUserWalletsToCloud(true);
+        await syncUserVaultToCloud(true);
         showToast('🔒 Cloud Vault Backup Enabled: Wallets synced to Cloud!', false);
       } else {
         try {
@@ -4721,51 +4725,79 @@
       }
     }
 
-    // ☁️ AUTO-SYNC WALLETS TO CLOUD (ONLY IF USER HAS ENABLED CLOUD VAULT, OR ON MANUAL FORCE)
-    let isSyncingWalletsToCloud = false;
-    async function syncUserWalletsToCloud(force = false) {
+    // ☁️ UNIFIED ATOMIC CLOUD VAULT SYNC (WALLETS + RPCS + SETTINGS IN ONE SINGLE PAYLOAD)
+    let isSyncingVaultToCloud = false;
+    async function syncUserVaultToCloud(force = false) {
       if (!currentUser || !currentUser.id) return;
       const uid = currentUser.id;
       const isEnabled = isCloudVaultEnabled(uid);
-      if (!isEnabled && !force) {
-        // Local-Only Mode: Wallets are NEVER uploaded to cloud without user consent!
-        return;
-      }
-      if (isSyncingWalletsToCloud) return;
-      isSyncingWalletsToCloud = true;
+      if (!isEnabled && !force) return;
+
+      if (isSyncingVaultToCloud) return;
+      isSyncingVaultToCloud = true;
+
       try {
-        const payload = {
-          userId: uid,
-          walletFleet: walletFleet.map(w => ({
-            name: w.name,
-            address: w.address,
-            privateKey: w.privateKey,
-            selected: w.selected
-          })),
+        const customOnly = (Array.isArray(rpcFleet) ? rpcFleet : [])
+          .filter(r => r.isCustom || (!r.isSystem && !r.isFleet && !isSystemRpcUrl(r.url)))
+          .map(r => ({
+            id: r.id,
+            name: r.name,
+            url: r.url,
+            isCustom: true,
+            isPrimary: Boolean(r.isPrimary),
+            pingMs: r.pingMs || 0
+          }));
+
+        const cleanWallets = (Array.isArray(walletFleet) ? walletFleet : []).map(w => ({
+          name: w.name,
+          address: w.address,
+          privateKey: w.privateKey,
+          selected: w.selected
+        }));
+
+        const payloadConfig = {
+          walletFleet: cleanWallets,
+          wallets: cleanWallets,
           masterWalletIndex: masterWalletIndex,
+          custom_rpcs: customOnly,
           cloud_vault_enabled: true,
+          activeFloorPercentPreset,
+          activeRarityMultiplier,
+          activeGasPreset,
+          activeWorkerStrategy,
+          activeMaxSnipesLimit,
+          activeRuleStates,
           timestamp: Date.now()
         };
+
         const res = await fetch('/api/user-config', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             ...(sessionToken ? { 'Authorization': 'Bearer ' + sessionToken } : {})
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({
+            userId: uid,
+            config: payloadConfig
+          })
         });
+
         if (res.ok) {
           const timeStr = new Date().toLocaleTimeString();
           localStorage.setItem('sniper_last_cloud_sync', timeStr);
-          const elSync = document.getElementById('prof-vault-last-sync');
-          if (elSync) elSync.innerText = 'Last synced: ' + timeStr;
+          setCloudVaultEnabledLocally(uid, true);
+          updateCloudVaultUI(true, cleanWallets.length, customOnly.length, timeStr);
         }
       } catch (e) {
-        console.warn('[Cloud Wallet Sync] Failed:', e.message);
+        console.warn('[Cloud Vault Sync] Failed:', e.message);
       } finally {
-        isSyncingWalletsToCloud = false;
+        isSyncingVaultToCloud = false;
       }
     }
+
+    // Backward-compatibility aliases so no existing calls break
+    const syncUserWalletsToCloud = syncUserVaultToCloud;
+    const syncUserCustomRpcsToCloud = syncUserVaultToCloud;
 
     // 🎯 UNIVERSAL INSTANT HYDRATION FROM CLOUD (CROSS-DEVICE / CROSS-CHROME PROFILE SYNC)
     function hydrateFromCloudConfig(cfg) {
@@ -4775,20 +4807,19 @@
       // 1. Vault enabled toggle state from Cloud
       if (cfg.cloud_vault_enabled !== undefined) {
         setCloudVaultEnabledLocally(uid, Boolean(cfg.cloud_vault_enabled));
+      } else {
+        setCloudVaultEnabledLocally(uid, true);
       }
-      const isEnabled = isCloudVaultEnabled(uid);
 
-      // 2. Hydrate Wallets from Cloud ONLY IF user enabled Cloud Vault
-      if (isEnabled || cfg.cloud_vault_enabled) {
-        const remoteWallets = cfg.walletFleet || cfg.wallets || cfg.activeWallets;
-        if (Array.isArray(remoteWallets) && remoteWallets.length > 0) {
-          if (walletFleet.length === 0) {
-            walletFleet = remoteWallets;
-            masterWalletIndex = typeof cfg.masterWalletIndex === 'number' ? cfg.masterWalletIndex : (walletFleet.length > 0 ? 0 : null);
-            persistUserWalletsEncrypted();
-            renderWalletFleetUI();
-            refreshAllBalances();
-          }
+      // 2. Hydrate Wallets from Cloud (Always restore if cloud has wallets and memory is empty)
+      const remoteWallets = cfg.walletFleet || cfg.wallets || cfg.activeWallets;
+      if (Array.isArray(remoteWallets) && remoteWallets.length > 0) {
+        if (walletFleet.length === 0) {
+          walletFleet = remoteWallets;
+          masterWalletIndex = typeof cfg.masterWalletIndex === 'number' ? cfg.masterWalletIndex : (walletFleet.length > 0 ? 0 : null);
+          persistUserWalletsEncrypted();
+          renderWalletFleetUI();
+          refreshAllBalances();
         }
       }
 
@@ -4817,6 +4848,15 @@
         return;
       }
       const uid = currentUser.id;
+
+      // 1. If memory ALREADY has wallets loaded, never wipe them!
+      if (Array.isArray(walletFleet) && walletFleet.length > 0) {
+        renderWalletFleetUI();
+        refreshAllBalances();
+        return;
+      }
+
+      // 2. Check local encrypted vault
       const encKey = 'sniper_u_' + uid + '_vault_wallets_enc';
       const encData = localStorage.getItem(encKey);
 
@@ -4836,7 +4876,7 @@
         }
       }
 
-      // Legacy scoped key migration (auto-encrypt into isolated vault, then purge plaintext)
+      // 3. Legacy scoped key migration (auto-encrypt into isolated vault, then purge plaintext)
       const legacyKey = 'sniper_user_' + uid + '_wallets';
       const legacyFleet = localStorage.getItem(legacyKey);
       if (legacyFleet) {
@@ -4849,12 +4889,12 @@
           localStorage.removeItem('sniper_user_' + uid + '_master_idx');
           renderWalletFleetUI();
           refreshAllBalances();
-          syncUserWalletsToCloud();
+          syncUserVaultToCloud(true);
           return;
         } catch(e) {}
       }
 
-      // 🎯 IF LOCAL STORAGE IS EMPTY (e.g. New Chrome Profile / New Device), CHECK CLOUD VAULT:
+      // 4. 🎯 IF LOCAL STORAGE IS EMPTY (e.g. Desktop App / Fresh Browser), FETCH CLOUD VAULT:
       try {
         const res = await fetch('/api/user-config?userId=' + encodeURIComponent(uid), {
           headers: { ...(sessionToken ? { 'Authorization': 'Bearer ' + sessionToken } : {}) }
@@ -4863,20 +4903,17 @@
           const cData = await res.json();
           if (cData.success && cData.config) {
             const cfg = cData.config;
-            if (cfg.cloud_vault_enabled !== undefined) {
-              setCloudVaultEnabledLocally(uid, Boolean(cfg.cloud_vault_enabled));
-            }
-            // ONLY restore wallets if cloud_vault_enabled is explicitly true!
-            if (cfg.cloud_vault_enabled) {
-              const remoteWallets = cfg.walletFleet || cfg.wallets;
-              if (Array.isArray(remoteWallets) && remoteWallets.length > 0) {
-                walletFleet = remoteWallets;
-                masterWalletIndex = typeof cfg.masterWalletIndex === 'number' ? cfg.masterWalletIndex : (walletFleet.length > 0 ? 0 : null);
-                await persistUserWalletsEncrypted();
-                renderWalletFleetUI();
-                refreshAllBalances();
-                return;
-              }
+            const remoteWallets = cfg.walletFleet || cfg.wallets;
+            if (Array.isArray(remoteWallets) && remoteWallets.length > 0) {
+              walletFleet = remoteWallets;
+              masterWalletIndex = typeof cfg.masterWalletIndex === 'number' ? cfg.masterWalletIndex : (walletFleet.length > 0 ? 0 : null);
+              setCloudVaultEnabledLocally(uid, true);
+              await persistUserWalletsEncrypted();
+              renderWalletFleetUI();
+              refreshAllBalances();
+              const timeStr = cfg.timestamp ? new Date(cfg.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+              updateCloudVaultUI(true, remoteWallets.length, (cfg.custom_rpcs || []).length, timeStr);
+              return;
             }
           }
         }
@@ -4884,11 +4921,13 @@
         console.warn('[Vault] Cloud wallet fetch fallback:', err.message);
       }
 
-      // Clean account or local-only mode with no wallets on this browser
-      walletFleet = [];
-      masterWalletIndex = null;
-      renderWalletFleetUI();
-      refreshAllBalances();
+      // 5. Only if absolutely no local or cloud wallets exist:
+      if (!walletFleet || walletFleet.length === 0) {
+        walletFleet = [];
+        masterWalletIndex = null;
+        renderWalletFleetUI();
+        refreshAllBalances();
+      }
     }
 
     // ================= ⚡ AEROMINT V2 RPC ARCHITECTURE (2 SYSTEM NODES + USER ISOLATED CLOUD RPCS) =================
@@ -5024,42 +5063,6 @@
       }
     }
 
-    // ☁️ DIRECT AUTO-SAVE TO CLOUD FOR EVERY USER'S CUSTOM RPCS
-    async function syncUserCustomRpcsToCloud() {
-      if (!currentUser || !currentUser.id) return;
-      const uid = currentUser.id;
-      try {
-        const customOnly = rpcFleet
-          .filter(r => r.isCustom || (!r.isSystem && !r.isFleet && !isSystemRpcUrl(r.url)))
-          .map(r => ({
-            id: r.id,
-            name: r.name,
-            url: r.url,
-            isCustom: true,
-            isPrimary: Boolean(r.isPrimary),
-            pingMs: r.pingMs || 0
-          }));
-
-        localStorage.setItem(`sniper_u_${uid}_custom_rpcs`, JSON.stringify(customOnly));
-
-        if (sessionToken) {
-          await fetch('/api/user-config', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${sessionToken}`
-            },
-            body: JSON.stringify({
-              userId: uid,
-              custom_rpcs: customOnly
-            })
-          });
-        }
-      } catch (e) {
-        console.warn('[Cloud RPC Sync] Error:', e.message);
-      }
-    }
-
     const DEFAULT_USER_LAYOUT = [
       { "x": 0, "y": 0, "w": 4, "h": 6, "id": "widget-detector", "noResize": true, "noMove": true },
       { "x": 0, "y": 6, "w": 4, "h": 10, "id": "widget-rules", "noResize": true, "noMove": true },
@@ -5081,8 +5084,7 @@
     function persistState() {
       try {
         persistUserWalletsEncrypted();
-        syncUserWalletsToCloud();
-        syncUserCustomRpcsToCloud();
+        syncUserVaultToCloud();
 
         localStorage.setItem('sniper_rpc_strategy', currentRpcStrategy);
         localStorage.setItem('sniper_blast_target', activeBlastTarget);
@@ -5834,12 +5836,14 @@
               if (masterWalletIndex === null && walletFleet.length > 0) masterWalletIndex = 0;
               const inputEl = document.getElementById('import-keys-input');
               if (inputEl) inputEl.value = '';
+              if (currentUser && currentUser.id) setCloudVaultEnabledLocally(currentUser.id, true);
               persistState();
+              syncUserVaultToCloud(true);
               renderWalletFleetUI();
               refreshAllBalances();
               playBeep(900, 'sine', 0.1);
               logConsole(`✔ [AEROMINT JSON] Imported ${jsonCount} wallets into active fleet.`);
-              showToast(`Imported ${jsonCount} wallets from AeroMint JSON!`);
+              showToast(`Imported ${jsonCount} wallets from AeroMint JSON & synced to Cloud!`);
               return jsonCount;
             }
           }
@@ -5936,12 +5940,14 @@
         if (masterWalletIndex === null && walletFleet.length > 0) masterWalletIndex = 0;
         const inputEl = document.getElementById('import-keys-input');
         if (inputEl) inputEl.value = '';
+        if (currentUser && currentUser.id) setCloudVaultEnabledLocally(currentUser.id, true);
         persistState();
+        syncUserVaultToCloud(true);
         renderWalletFleetUI();
         refreshAllBalances();
         playBeep(900, 'sine', 0.1);
         logConsole(`✔ [AEROMINT TXT] Imported & loaded ${count} wallets into active fleet.`);
-        showToast(`Imported ${count} wallets successfully!`);
+        showToast(`Imported ${count} wallets & synced to Cloud!`);
       } else if (!customText) {
         showToast('No valid private keys found in input!', true);
       }
@@ -6060,6 +6066,7 @@
         masterWalletIndex--;
       }
       persistState();
+      syncUserVaultToCloud(true);
       renderWalletFleetUI();
       showToast(`Deleted ${removed.name}`);
     }
@@ -9931,7 +9938,7 @@
 
       // Populate Cloud Vault counters and AeroMint V2 toggle state
       if (currentUser && currentUser.id) {
-        updateCloudVaultUI(isCloudVaultEnabled(currentUser.id));
+        refreshCloudVaultStatsFromRemote();
       }
 
       switchProfileTab(tab);
@@ -9939,6 +9946,33 @@
 
       const m = document.getElementById('user-profile-modal');
       if (m) m.classList.remove('hidden');
+    }
+
+    async function refreshCloudVaultStatsFromRemote() {
+      if (!currentUser || !currentUser.id) return;
+      const uid = currentUser.id;
+      const isEnabled = isCloudVaultEnabled(uid);
+      updateCloudVaultUI(isEnabled);
+
+      try {
+        const res = await fetch('/api/user-config?userId=' + encodeURIComponent(uid), {
+          headers: { ...(sessionToken ? { 'Authorization': 'Bearer ' + sessionToken } : {}) }
+        });
+        if (res.ok) {
+          const d = await res.json();
+          if (d.success && d.config) {
+            const cfg = d.config;
+            const remoteW = (cfg.walletFleet || cfg.wallets || []).length;
+            const remoteR = (cfg.custom_rpcs || []).length;
+            const displayW = Math.max(remoteW, walletFleet.length);
+            const syncTime = cfg.timestamp ? new Date(cfg.timestamp).toLocaleTimeString() : (cfg.updated_at ? new Date(cfg.updated_at).toLocaleTimeString() : null);
+            if (cfg.cloud_vault_enabled !== undefined) {
+              setCloudVaultEnabledLocally(uid, Boolean(cfg.cloud_vault_enabled));
+            }
+            updateCloudVaultUI(isCloudVaultEnabled(uid), displayW, remoteR, syncTime);
+          }
+        }
+      } catch (e) {}
     }
 
     function closeUserProfileModal() {
@@ -9970,7 +10004,7 @@
 
       if (tab === 'cloud_vault') {
         if (currentUser && currentUser.id) {
-          updateCloudVaultUI(isCloudVaultEnabled(currentUser.id));
+          refreshCloudVaultStatsFromRemote();
         }
       }
     }
@@ -10044,15 +10078,27 @@
       const uid = currentUser.id;
       setCloudVaultEnabledLocally(uid, true);
 
-      const customOnly = rpcFleet.filter(r => r.isCustom || (!r.isSystem && !r.isFleet && !isSystemRpcUrl(r.url)));
+      const customOnly = (Array.isArray(rpcFleet) ? rpcFleet : [])
+        .filter(r => r.isCustom || (!r.isSystem && !r.isFleet && !isSystemRpcUrl(r.url)))
+        .map(r => ({
+          id: r.id,
+          name: r.name,
+          url: r.url,
+          isCustom: true,
+          isPrimary: Boolean(r.isPrimary),
+          pingMs: r.pingMs || 0
+        }));
+
+      const cleanWallets = (Array.isArray(walletFleet) ? walletFleet : []).map(w => ({
+        name: w.name,
+        address: w.address,
+        privateKey: w.privateKey,
+        selected: w.selected
+      }));
 
       const payloadConfig = {
-        walletFleet: walletFleet.map(w => ({
-          name: w.name,
-          address: w.address,
-          privateKey: w.privateKey,
-          selected: w.selected
-        })),
+        walletFleet: cleanWallets,
+        wallets: cleanWallets,
         masterWalletIndex,
         custom_rpcs: customOnly,
         cloud_vault_enabled: true,
@@ -10079,8 +10125,8 @@
         if (data.success) {
           const timeStr = new Date().toLocaleTimeString();
           localStorage.setItem('sniper_last_cloud_sync', timeStr);
-          updateCloudVaultUI(true);
-          showToast('⚡ Private Cloud Vault Synced & Secured!');
+          updateCloudVaultUI(true, cleanWallets.length, customOnly.length, timeStr);
+          showToast(`⚡ Cloud Vault Synced: ${cleanWallets.length} Wallets & ${customOnly.length} RPCs Secured!`);
           playBeep(784, 'sine', 0.15);
         } else {
           showToast(data.error || 'Cloud sync failed', true);
@@ -10106,22 +10152,29 @@
           const cfg = data.config;
           setCloudVaultEnabledLocally(uid, true);
 
-          if (Array.isArray(cfg.walletFleet) && cfg.walletFleet.length > 0) {
-            walletFleet = cfg.walletFleet;
+          const remoteWallets = cfg.walletFleet || cfg.wallets;
+          let restoredCount = 0;
+          if (Array.isArray(remoteWallets) && remoteWallets.length > 0) {
+            walletFleet = remoteWallets;
             if (typeof cfg.masterWalletIndex === 'number') {
               masterWalletIndex = cfg.masterWalletIndex;
+            } else if (walletFleet.length > 0) {
+              masterWalletIndex = 0;
             }
             await persistUserWalletsEncrypted();
             renderWalletFleetUI();
             refreshAllBalances();
+            restoredCount = remoteWallets.length;
           }
 
           const remoteCustom = cfg.custom_rpcs || cfg.rpcFleet;
+          let restoredRpcs = 0;
           if (Array.isArray(remoteCustom)) {
             const customOnly = remoteCustom.filter(r => !isSystemRpcUrl(r.url) && !r.isSystem);
             localStorage.setItem('sniper_u_' + uid + '_custom_rpcs', JSON.stringify(customOnly));
             rpcFleet = assembleUserRpcFleet(DEFAULT_ADMIN_CLUSTER_RPC, customOnly);
             renderRpcFleet();
+            restoredRpcs = customOnly.length;
           }
 
           if (cfg.activeRuleStates) {
@@ -10129,13 +10182,13 @@
             if (typeof refreshAllRuleSwitchesUI === 'function') refreshAllRuleSwitchesUI();
           }
 
-          const timeStr = new Date().toLocaleTimeString();
+          const timeStr = cfg.timestamp ? new Date(cfg.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
           localStorage.setItem('sniper_last_cloud_sync', timeStr);
-          updateCloudVaultUI(true);
-          showToast('⚡ Private Cloud Vault Restored Successfully!');
+          updateCloudVaultUI(true, restoredCount, restoredRpcs, timeStr);
+          showToast(`⚡ Restored ${restoredCount} Wallets & ${restoredRpcs} RPCs from Cloud!`);
           playBeep(659, 'sine', 0.15);
         } else {
-          showToast('No existing Cloud Vault backup found for this account.');
+          showToast('No existing Cloud Vault backup found for this account.', true);
         }
       } catch(e) {
         showToast('Failed to restore vault: ' + e.message, true);
@@ -10156,7 +10209,7 @@
         if (data.success) {
           setCloudVaultEnabledLocally(uid, false);
           localStorage.removeItem('sniper_last_cloud_sync');
-          updateCloudVaultUI(false);
+          updateCloudVaultUI(false, 0, 0, 'Never');
           showToast('Remote Cloud Vault wiped successfully.');
         } else {
           showToast(data.error || 'Failed to wipe cloud data', true);
@@ -10261,7 +10314,6 @@
         renderRpcFleet();
       }
       persistState();
-      syncUserCustomRpcsToCloud();
       renderUserCustomRpcs();
       showToast('Custom Node Removed');
     }
