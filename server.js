@@ -827,10 +827,15 @@ async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = performanc
   let reason = '';
 
   // 🎯 RULE 4: SPECIFIC TOKEN ID TRAP (HIGHEST PRIORITY)
-  if (activeSniperEngine.ruleStates.tokenId && activeSniperEngine.specificTokenIds.has(tokenIdStr)) {
-    if (activeSniperEngine.specificTokenMaxEth > 0 && parsed.price <= activeSniperEngine.specificTokenMaxEth) {
+  const isTokenIdActive = Boolean(activeSniperEngine.ruleStates?.tokenId || (activeSniperEngine.specificTokenIds && activeSniperEngine.specificTokenIds.size > 0));
+  const cleanTokenId = String(parsed.tokenId || '').trim().replace(/[^0-9]/g, '');
+  if (isTokenIdActive && cleanTokenId && activeSniperEngine.specificTokenIds && activeSniperEngine.specificTokenIds.has(cleanTokenId)) {
+    const maxEth = activeSniperEngine.specificTokenMaxEth > 0
+      ? activeSniperEngine.specificTokenMaxEth
+      : (activeSniperEngine.maxFloorEth > 0 ? activeSniperEngine.maxFloorEth : Infinity);
+    if (parsed.price <= maxEth) {
       triggered = true;
-      reason = `🎯 Target Token #${parsed.tokenId}: ${parsed.price} ETH <= Target ${activeSniperEngine.specificTokenMaxEth} ETH`;
+      reason = `🎯 Target Token #${cleanTokenId}: ${parsed.price} ETH <= Cap ${maxEth === Infinity ? 'Market' : maxEth + ' ETH'}`;
     }
   }
 
@@ -2110,12 +2115,14 @@ app.post('/api/snipe/arm', async (req, res) => {
       workerPool.push({ signer, address: buyerAddress, name: buyerName || 'Worker', privateKey: buyerPrivateKey });
     }
 
-    // Parse specific token IDs set
+    // Parse specific token IDs set with regex split and full sanitization
     const tokenSet = new Set();
     if (specificTokenIds) {
-      const items = Array.isArray(specificTokenIds) ? specificTokenIds : String(specificTokenIds).split(',');
+      const items = Array.isArray(specificTokenIds) 
+        ? specificTokenIds 
+        : String(specificTokenIds).split(/[\s,]+/);
       items.forEach(id => {
-        const clean = String(id).trim().replace('#', '');
+        const clean = String(id).trim().replace(/[^0-9]/g, '');
         if (clean) tokenSet.add(clean);
       });
     }
@@ -2160,8 +2167,8 @@ app.post('/api/snipe/arm', async (req, res) => {
       ruleStates: {
         floor: ruleStates?.floor !== false,
         rarity: ruleStates?.rarity !== false,
-        trait: !!ruleStates?.trait,
-        tokenId: !!ruleStates?.tokenId
+        trait: !!ruleStates?.trait || (Array.isArray(traitFilters) && traitFilters.length > 0) || !!traitFilter,
+        tokenId: !!ruleStates?.tokenId || (tokenSet.size > 0)
       },
       authenticatedUserId: userId || null
     };

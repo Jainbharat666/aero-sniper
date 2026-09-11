@@ -2684,7 +2684,7 @@
                 <div class="grid grid-cols-3 gap-2">
                   <div class="col-span-2">
                     <label class="text-[9px] text-slate-500 uppercase font-black">Target Token IDs</label>
-                    <input type="text" placeholder="e.g. 7129, 8485, 1" id="param-token-ids" class="w-full bg-white border border-cyan-300 rounded-xl px-2.5 py-1 text-xs text-slate-900 font-mono-code font-bold focus:outline-none focus:ring-2 focus:ring-cyan-300 shadow-inner">
+                    <input type="text" placeholder="e.g. 7129, 8485, 1" id="param-token-ids" oninput="handleTokenIdInput(this.value)" class="w-full bg-white border border-cyan-300 rounded-xl px-2.5 py-1 text-xs text-slate-900 font-mono-code font-bold focus:outline-none focus:ring-2 focus:ring-cyan-300 shadow-inner">
                   </div>
                   <div>
                     <label class="text-[9px] text-slate-500 uppercase font-black">Max ETH Cap</label>
@@ -8047,6 +8047,16 @@
           address: w.address
         }));
 
+        const rawTokenIds = (document.getElementById('param-token-ids')?.value || '').trim();
+        if (rawTokenIds) {
+          activeRuleStates.tokenId = true;
+          refreshSingleRuleSwitchUI('tokenId');
+        }
+        if (selectedTraitFilters && selectedTraitFilters.length > 0) {
+          activeRuleStates.trait = true;
+          refreshSingleRuleSwitchUI('trait');
+        }
+
         const armHeaders = { 'Content-Type': 'application/json' };
         if (sessionToken) {
           armHeaders['Authorization'] = `Bearer ${sessionToken}`;
@@ -8894,16 +8904,60 @@
         let triggered = false;
         let reason = '';
 
-        const isFloorActive = (typeof activeRuleStates !== 'undefined') ? activeRuleStates.floor : (activeTriggerMode === 'floor' || activeTriggerMode === 'both');
-        const isRarityActive = (typeof activeRuleStates !== 'undefined') ? activeRuleStates.rarity : (activeTriggerMode === 'rarity' || activeTriggerMode === 'both');
+        // 🎯 PRIORITY 1: TARGET SPECIFIC TOKEN ID TRAP
+        const targetTokenIdsRaw = document.getElementById('param-token-ids')?.value || '';
+        const targetTokenSet = new Set(
+          String(targetTokenIdsRaw)
+            .split(/[\s,]+/)
+            .map(s => s.replace(/[^0-9]/g, ''))
+            .filter(Boolean)
+        );
+        const isTokenTrapActive = (typeof activeRuleStates !== 'undefined')
+          ? (activeRuleStates.tokenId || targetTokenSet.size > 0)
+          : targetTokenSet.size > 0;
+        const cleanId = String(item.tokenId || '').trim().replace(/[^0-9]/g, '');
+        const tokenMaxEth = parseFloat(document.getElementById('param-token-max-eth')?.value) || 0;
+        const effectiveTokenCap = tokenMaxEth > 0 ? tokenMaxEth : (maxFloorEth > 0 ? maxFloorEth : Infinity);
 
-        if (isFloorActive && maxFloorEth > 0) {
+        if (isTokenTrapActive && cleanId && targetTokenSet.has(cleanId)) {
+          if (item.price <= effectiveTokenCap) {
+            triggered = true;
+            reason = `🎯 Target Token #${cleanId}: ${item.price} ETH <= Cap ${effectiveTokenCap === Infinity ? 'Market' : effectiveTokenCap + ' ETH'}`;
+          }
+        }
+
+        // 👑 PRIORITY 2: RARE TRAIT HUNTER
+        const isTraitActive = (typeof activeRuleStates !== 'undefined') ? activeRuleStates.trait : false;
+        if (!triggered && isTraitActive && selectedTraitFilters && selectedTraitFilters.length > 0) {
+          const traitMaxEth = parseFloat(document.getElementById('param-trait-max-eth')?.value) || 0;
+          const effectiveTraitCap = traitMaxEth > 0 ? traitMaxEth : (maxFloorEth > 0 ? maxFloorEth : Infinity);
+          if (item.price <= effectiveTraitCap) {
+            const itemTraits = item.traits || [];
+            const matchesTrait = selectedTraitFilters.some(f => {
+              return itemTraits.some(t => {
+                const typeMatch = !f.traitType || String(t.trait_type || t.traitType || '').toLowerCase() === f.traitType.toLowerCase();
+                const valMatch = !f.traitValue || String(t.value || '').toLowerCase() === f.traitValue.toLowerCase();
+                return typeMatch && valMatch;
+              });
+            });
+            if (matchesTrait) {
+              triggered = true;
+              reason = `👑 Rare Trait Match at ${item.price} ETH <= Cap ${effectiveTraitCap === Infinity ? 'Market' : effectiveTraitCap + ' ETH'}`;
+            }
+          }
+        }
+
+        // ⚡ PRIORITY 3: FLOOR UNDERPRICE TRAP
+        const isFloorActive = (typeof activeRuleStates !== 'undefined') ? activeRuleStates.floor : (activeTriggerMode === 'floor' || activeTriggerMode === 'both');
+        if (!triggered && isFloorActive && maxFloorEth > 0) {
           if (item.price <= maxFloorEth) {
             triggered = true;
             reason = `Floor Fat-Finger: ${item.price} ETH <= Target ${maxFloorEth} ETH`;
           }
         }
 
+        // 💎 PRIORITY 4: TOP RARITY RANK SNIPE
+        const isRarityActive = (typeof activeRuleStates !== 'undefined') ? activeRuleStates.rarity : (activeTriggerMode === 'rarity' || activeTriggerMode === 'both');
         if (!triggered && isRarityActive && maxRareEth > 0) {
           if (item.rarityRank && item.rarityRank <= maxRareRank && item.price <= maxRareEth) {
             triggered = true;
@@ -9159,26 +9213,29 @@
         if (b) b.className = 'flex-1 py-1 rounded-xl text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1 transition-all text-[10px]';
       });
 
+      const hasTokens = Boolean(document.getElementById('param-token-ids')?.value?.trim());
+      const hasTraits = Boolean(selectedTraitFilters && selectedTraitFilters.length > 0);
+
       if (mode === 'floor') {
         if (btnFloor) btnFloor.className = 'flex-1 py-1 rounded-xl bg-amber-600 text-white font-black shadow-md flex items-center justify-center gap-1 transition-all text-[10px]';
         activeRuleStates.floor = true;
         activeRuleStates.rarity = false;
-        activeRuleStates.trait = false;
-        activeRuleStates.tokenId = false;
+        activeRuleStates.trait = hasTraits;
+        activeRuleStates.tokenId = hasTokens;
         showToast('Mode: Floor Underprice Only');
       } else if (mode === 'rarity') {
         if (btnRarity) btnRarity.className = 'flex-1 py-1 rounded-xl bg-purple-600 text-white font-black shadow-md flex items-center justify-center gap-1 transition-all text-[10px]';
         activeRuleStates.floor = false;
         activeRuleStates.rarity = true;
-        activeRuleStates.trait = false;
-        activeRuleStates.tokenId = false;
+        activeRuleStates.trait = hasTraits;
+        activeRuleStates.tokenId = hasTokens;
         showToast('Mode: Top Rarity Only');
       } else if (mode === 'both') {
         if (btnBoth) btnBoth.className = 'flex-1 py-1 rounded-xl bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 text-white font-black shadow-md flex items-center justify-center gap-1 transition-all text-[10px]';
         activeRuleStates.floor = true;
         activeRuleStates.rarity = true;
-        activeRuleStates.trait = false;
-        activeRuleStates.tokenId = false;
+        activeRuleStates.trait = hasTraits;
+        activeRuleStates.tokenId = hasTokens;
         showToast('Mode: Dual (Floor + Rarity)');
       } else if (mode === 'pro') {
         if (btnPro) btnPro.className = 'flex-1 py-1 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white font-black shadow-md flex items-center justify-center gap-1 transition-all text-[10px]';
@@ -9235,6 +9292,16 @@
       updateLiveRadar();
       persistState();
       playBeep(activeRuleStates[ruleName] ? 820 : 450, 'sine', 0.06);
+    }
+
+    function handleTokenIdInput(val) {
+      const hasValue = Boolean(val && String(val).trim());
+      if (hasValue) {
+        activeRuleStates.tokenId = true;
+      }
+      refreshSingleRuleSwitchUI('tokenId');
+      updateLiveRadar();
+      persistState();
     }
 
     function refreshSingleRuleSwitchUI(ruleName) {
@@ -9403,13 +9470,16 @@
       let inRangeCount = 0;
       const rareTargetRank = parseInt(document.getElementById('param-rare-rank')?.value, 10) || 1200;
       const rareTargetEth = parseFloat(document.getElementById('param-rare-eth')?.value) || 0;
-      const targetTokenIdsStr = (document.getElementById('param-token-ids')?.value || '').toLowerCase();
+      const targetTokenIdsStr = document.getElementById('param-token-ids')?.value || '';
+      const radarTokenSet = new Set(targetTokenIdsStr.split(/[\s,]+/).map(s => s.replace(/[^0-9]/g, '')).filter(Boolean));
+      const tokenCap = parseFloat(document.getElementById('param-token-max-eth')?.value) || (floorTargetEth > 0 ? floorTargetEth : Infinity);
 
       liveListingsStore.forEach(item => {
         let match = false;
+        const cleanId = String(item.tokenId || '').trim().replace(/[^0-9]/g, '');
         if (activeRuleStates.floor && floorTargetEth > 0 && item.price <= floorTargetEth) match = true;
         if (!match && activeRuleStates.rarity && rareTargetEth > 0 && item.rarityRank && item.rarityRank <= rareTargetRank && item.price <= rareTargetEth) match = true;
-        if (!match && activeRuleStates.tokenId && targetTokenIdsStr && targetTokenIdsStr.includes(String(item.tokenId))) match = true;
+        if (!match && (activeRuleStates.tokenId || radarTokenSet.size > 0) && cleanId && radarTokenSet.has(cleanId) && item.price <= tokenCap) match = true;
         if (match) inRangeCount++;
       });
 
