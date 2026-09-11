@@ -2317,6 +2317,12 @@ app.post('/api/snipe/buy', async (req, res) => {
           if (tokenId && activeSniperEngine.snipedTokenIds) {
             activeSniperEngine.snipedTokenIds.add(String(tokenId));
           }
+        } else {
+          // Temporary error: rollback locks so retry is possible
+          if (tokIdStr) {
+            if (activeSniperEngine.pendingSnipes) activeSniperEngine.pendingSnipes.delete(tokIdStr);
+            if (activeSniperEngine.snipedTokenIds) activeSniperEngine.snipedTokenIds.delete(tokIdStr);
+          }
         }
         return res.status(400).json({
           success: false,
@@ -2358,10 +2364,15 @@ app.post('/api/snipe/buy', async (req, res) => {
       }
     }
 
+    if (tokIdStr) {
+      if (activeSniperEngine.pendingSnipes) activeSniperEngine.pendingSnipes.delete(tokIdStr);
+      if (activeSniperEngine.snipedTokenIds) activeSniperEngine.snipedTokenIds.delete(tokIdStr);
+    }
     return res.status(400).json({ success: false, error: 'Missing protocol order data or order hash' });
   } catch (err) {
-    if (tokIdStr && activeSniperEngine.pendingSnipes) {
-      activeSniperEngine.pendingSnipes.delete(tokIdStr);
+    if (tokIdStr) {
+      if (activeSniperEngine.pendingSnipes) activeSniperEngine.pendingSnipes.delete(tokIdStr);
+      if (activeSniperEngine.snipedTokenIds) activeSniperEngine.snipedTokenIds.delete(tokIdStr);
     }
     const errDetail = err.response?.data?.errors?.join(', ') || err.response?.data?.detail || err.message;
     return res.status(500).json({ success: false, error: errDetail });
