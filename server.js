@@ -1049,18 +1049,34 @@ async function fetchLiveTelemetry() {
 setInterval(fetchLiveTelemetry, 2500);
 fetchLiveTelemetry();
 
-// ─── HIGH-SPEED MULTI-KEY REST FETCHER WITH FAILOVER ─────────────────────────
+// ─── HIGH-SPEED MULTI-KEY REST FETCHER WITH FAILOVER & 429 BACKOFF ───────────
+const keyCooldownMap = new Map(); // key -> cooldownUntilMs
+
 async function fetchOpenSeaWithFallback(pathStr, preferredKeyIndex = null) {
-  const restPool = config.opensea.apiKeys.slice(1); // Keys #2..#6 for REST
-  const keysToTry = preferredKeyIndex !== null && config.opensea.apiKeys[preferredKeyIndex]
-    ? [config.opensea.apiKeys[preferredKeyIndex], ...restPool.filter(k => k !== config.opensea.apiKeys[preferredKeyIndex])]
-    : restPool;
+  const allKeys = config.opensea.apiKeys;
+  const preferredKey = preferredKeyIndex !== null && allKeys[preferredKeyIndex] ? allKeys[preferredKeyIndex] : null;
+
+  // Build candidate key list: preferred key first, then other REST keys, then Key #1 as ultimate fallback
+  const candidateKeys = [];
+  if (preferredKey) candidateKeys.push(preferredKey);
+  for (let i = 1; i < allKeys.length; i++) {
+    if (!candidateKeys.includes(allKeys[i])) candidateKeys.push(allKeys[i]);
+  }
+  if (!candidateKeys.includes(allKeys[0])) candidateKeys.push(allKeys[0]);
+
+  // Sort candidate keys so those NOT in 429 cooldown come first
+  const now = Date.now();
+  candidateKeys.sort((a, b) => {
+    const aCool = (keyCooldownMap.get(a) || 0) > now ? 1 : 0;
+    const bCool = (keyCooldownMap.get(b) || 0) > now ? 1 : 0;
+    return aCool - bCool;
+  });
 
   const sep = pathStr.includes('?') ? '&' : '?';
   const url = `${config.opensea.restApiBase}${pathStr}${sep}_t=${Date.now()}`;
 
   let lastErr = null;
-  for (const key of keysToTry) {
+  for (const key of candidateKeys) {
     const t0 = Date.now();
     try {
       const res = await apiClient.get(url, {
@@ -1073,11 +1089,16 @@ async function fetchOpenSeaWithFallback(pathStr, preferredKeyIndex = null) {
       });
       const latency = Date.now() - t0;
       trackKeyUse(key, latency, '200 OK');
+      keyCooldownMap.delete(key); // Clear cooldown on success
       return res.data;
     } catch (err) {
       lastErr = err;
-      const status = err.response?.status || 'Timeout';
+      const status = err.response?.status || err.code || 'Timeout';
       trackKeyUse(key, Date.now() - t0, `${status}`);
+      if (status === 429) {
+        keyCooldownMap.set(key, Date.now() + 3000);
+        await new Promise(r => setTimeout(r, 40));
+      }
     }
   }
   throw lastErr || new Error('All OpenSea API keys failed');
@@ -2525,37 +2546,50 @@ app.post('/api/scan', async (req, res) => {
   if (input.includes('opensea.io/collection/')) {
     const parts = input.split('opensea.io/collection/');
     input = parts[1].split('/')[0].split('?')[0].trim();
+  } else if (input.includes('opensea.io/assets/')) {
+    const parts = input.split('opensea.io/assets/')[1].split('/');
+    if (parts.length >= 2 && parts[1].startsWith('0x')) {
+      input = parts[1].split('?')[0].trim();
+    }
   }
   let slug = resolveClosestCollectionSlug(input.toLowerCase());
 
   try {
-    // ⚡ 1. PARALLEL 1-SHOT ULTRA-FAST INGESTION (< 500ms)
-    let [colData, tRes, page1Res, directStats] = await Promise.all([
-      fetchOpenSeaWithFallback(`/collections/${slug}`, 4).catch(() => null),
-      fetchOpenSeaWithFallback(`/traits/${slug}`, 2).catch(() => null),
-      fetchOpenSeaWithFallback(`/listings/collection/${slug}/all?limit=100`, 3).catch(() => null),
-      fetchOpenSeaAuthoritativeStats(slug).catch(() => null)
-    ]);
+    // ⚡ 1. RESOLVE COLLECTION METADATA (Key #1 priority + smart contract fallback + backoff retry)
+    let colData = null;
+    try {
+      colData = await fetchOpenSeaWithFallback(`/collections/${slug}`, 0);
+    } catch (e) {}
 
-    // Fallback if slug was a contract address or typo
+    // Fallback if slug was a contract address or 0x address
     if (!colData && slug.startsWith('0x')) {
       try {
-        const cRes = await fetchOpenSeaWithFallback(`/chain/robinhood/contract/${slug}`, 5);
+        const cRes = await fetchOpenSeaWithFallback(`/chain/robinhood/contract/${slug}`, 0);
         if (cRes?.collection) {
           slug = cRes.collection;
-          [colData, tRes, page1Res, directStats] = await Promise.all([
-            fetchOpenSeaWithFallback(`/collections/${slug}`, 4).catch(() => null),
-            fetchOpenSeaWithFallback(`/traits/${slug}`, 2).catch(() => null),
-            fetchOpenSeaWithFallback(`/listings/collection/${slug}/all?limit=100`, 3).catch(() => null),
-            fetchOpenSeaAuthoritativeStats(slug).catch(() => null)
-          ]);
+          colData = await fetchOpenSeaWithFallback(`/collections/${slug}`, 0);
         }
+      } catch(e) {}
+    }
+
+    // Failsafe Retry: If colData is still null (e.g. momentary 429 burst), wait 150ms and try once more
+    if (!colData) {
+      await new Promise(r => setTimeout(r, 150));
+      try {
+        colData = await fetchOpenSeaWithFallback(`/collections/${slug}`, 0);
       } catch(e) {}
     }
 
     if (!colData) {
       return res.status(404).json({ success: false, error: `Collection "${input}" not found on OpenSea. Please verify the slug/contract.` });
     }
+
+    // ⚡ 2. FETCH TRAITS, INITIAL LISTINGS & DIRECT STATS IN PARALLEL
+    const [tRes, page1Res, directStats] = await Promise.all([
+      fetchOpenSeaWithFallback(`/traits/${slug}`, 2).catch(() => null),
+      fetchOpenSeaWithFallback(`/listings/collection/${slug}/all?limit=50`, 3).catch(() => null),
+      fetchOpenSeaAuthoritativeStats(slug).catch(() => null)
+    ]);
 
     // Immediately initialize activeCollectionStats with authoritative direct count
     activeCollectionStats = {
@@ -2581,9 +2615,9 @@ app.post('/api/scan', async (req, res) => {
     let allRawListings = Array.isArray(page1Res?.listings) ? page1Res.listings : [];
     let cursor = page1Res?.next;
     let scanPage = 1;
-    // 🛡️ Penetrate bot-flooded collections (e.g. NTRPY has 1200 duplicate orders across 12 pages for 4 floor tokens)
-    const targetUniqueTokens = 150;
-    const maxScanPages = 25;
+    // 🛡️ Lean 3-page scan ensures instant sub-second response and prevents OpenSea 429 rate limit triggers
+    const targetUniqueTokens = 60;
+    const maxScanPages = 3;
 
     // Track unique tokens by ID keeping lowest price
     const tokenBestListingMap = new Map();
@@ -2599,13 +2633,12 @@ app.post('/api/scan', async (req, res) => {
       }
     });
 
-    // If page 1 had fewer than targetUniqueTokens (e.g. bots flooded page 1 with duplicate orders for the same 7 floor tokens),
-    // follow next cursor across 5 API keys until we reach targetUniqueTokens or maxScanPages!
+    // If page 1 had fewer than targetUniqueTokens, follow next cursor up to maxScanPages
     while (cursor && tokenBestListingMap.size < targetUniqueTokens && scanPage < maxScanPages) {
       scanPage++;
       try {
         const keyIdx = (scanPage % 5) + 1;
-        const pageRes = await fetchOpenSeaWithFallback(`/listings/collection/${slug}/all?limit=100&next=${cursor}`, keyIdx);
+        const pageRes = await fetchOpenSeaWithFallback(`/listings/collection/${slug}/all?limit=50&next=${cursor}`, keyIdx);
         const items = Array.isArray(pageRes?.listings) ? pageRes.listings : [];
         items.forEach(item => {
           const tokenId = String(item.asset?.identifier || item.protocol_data?.parameters?.offer?.[0]?.identifierOrCriteria || '0');
