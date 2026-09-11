@@ -816,6 +816,13 @@ async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = performanc
   const orderHash = parsed.orderHash || parsed.protocolData?.orderHash;
   if (orderHash && activeSniperEngine.invalidOrderHashes && activeSniperEngine.invalidOrderHashes.has(orderHash)) return;
 
+  // 🛡️ VALID SEAPORT ORDER GUARD: Skip incomplete listings that lack both orderHash and parameters
+  const hasOrderHash = Boolean(orderHash && orderHash.length > 10);
+  const hasProtocolParams = Boolean(parsed.protocolData?.parameters && parsed.protocolData?.signature);
+  if (!hasOrderHash && !hasProtocolParams) {
+    return; // Wait until order hash or protocol data is populated by OpenSea
+  }
+
   let triggered = false;
   let reason = '';
 
@@ -2873,6 +2880,10 @@ app.get('/api/listings/live', async (req, res) => {
       if (activeSniperEngine.isArmed) {
         const minArmedTime = activeSniperEngine.armedTimestamp ? (activeSniperEngine.armedTimestamp - 5000) : Date.now();
         for (const item of listings) {
+          const hasHash = Boolean(item.orderHash && item.orderHash.length > 10);
+          const hasParams = Boolean(item.protocolData?.parameters && item.protocolData?.signature);
+          if (!hasHash && !hasParams) continue; // Skip incomplete OpenSea events until orderHash is indexed
+
           const isAfterArm = item.eventTimestamp >= minArmedTime;
           const isFresh = item.ageSeconds <= 30;
           if (isAfterArm && isFresh) {

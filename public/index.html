@@ -8832,7 +8832,7 @@
             }
           }
         } catch(e) {}
-      }, 7000);
+      }, 1500);
     }
 
     function triggerSnipeCheer(tokenId, priceEth, buyerName, txHash) {
@@ -8875,6 +8875,13 @@
         if (!item || item.sniped) return;
         const itemHash = item.orderHash || item.protocolData?.orderHash;
         if (itemHash && clientDeadOrdersSet.has(itemHash)) return;
+
+        // 🛡️ CRITICAL GUARD: Must have orderHash or protocolData before evaluating!
+        const hasOrderHash = Boolean(itemHash && itemHash.length > 10);
+        const hasProtocolParams = Boolean(item.protocolData?.parameters && item.protocolData?.signature);
+        if (!hasOrderHash && !hasProtocolParams) {
+          return; // Skip items without orderHash / Seaport signature
+        }
 
         // 🛡️ CRITICAL GUARD: Only auto-snipe fresh listings that occurred AFTER the sniper was armed
         const itemTs = item.eventTimestamp || Date.now();
