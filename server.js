@@ -2244,17 +2244,26 @@ app.post('/api/snipe/buy', async (req, res) => {
   }
 
   const tokIdStr = String(tokenId || '');
-  if (tokIdStr && activeSniperEngine.pendingSnipes && activeSniperEngine.pendingSnipes.has(tokIdStr)) {
-    return res.json({
-      success: true,
-      alreadyProcessing: true,
-      message: `Token #${tokIdStr} is already being processed by zero-hop engine.`
-    });
+  if (!activeSniperEngine.pendingSnipes) activeSniperEngine.pendingSnipes = new Set();
+  if (!activeSniperEngine.snipedTokenIds) activeSniperEngine.snipedTokenIds = new Set();
+
+  if (tokIdStr) {
+    if (activeSniperEngine.pendingSnipes.has(tokIdStr) || activeSniperEngine.snipedTokenIds.has(tokIdStr)) {
+      return res.json({
+        success: true,
+        alreadyProcessing: true,
+        message: `Token #${tokIdStr} is already being processed by zero-hop engine.`
+      });
+    }
+    // 🛡️ ATOMIC SYNCHRONOUS LOCK: Claim token in RAM immediately to block concurrent backend dispatch
+    activeSniperEngine.pendingSnipes.add(tokIdStr);
+    activeSniperEngine.snipedTokenIds.add(tokIdStr);
   }
 
   try {
     // Helper function to handle post-buy circuit breaker & stats
     const handleSnipeSuccess = (txHash, blockNumber) => {
+      if (tokIdStr && activeSniperEngine.pendingSnipes) activeSniperEngine.pendingSnipes.delete(tokIdStr);
       if (tokenId) activeSniperEngine.snipedTokenIds.add(String(tokenId));
       activeSniperEngine.snipesExecutedCount++;
 
@@ -2351,6 +2360,9 @@ app.post('/api/snipe/buy', async (req, res) => {
 
     return res.status(400).json({ success: false, error: 'Missing protocol order data or order hash' });
   } catch (err) {
+    if (tokIdStr && activeSniperEngine.pendingSnipes) {
+      activeSniperEngine.pendingSnipes.delete(tokIdStr);
+    }
     const errDetail = err.response?.data?.errors?.join(', ') || err.response?.data?.detail || err.message;
     return res.status(500).json({ success: false, error: errDetail });
   }
