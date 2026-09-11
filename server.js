@@ -840,9 +840,14 @@ async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = performanc
   }
 
   // 👑 RULE 3: RARE TRAIT HUNTER (PRIORITY 2 - MULTI-TRAIT & DYNAMIC RESOLUTION)
-  if (!triggered && activeSniperEngine.ruleStates.trait && (activeSniperEngine.traitFilter || (activeSniperEngine.traitFilters && activeSniperEngine.traitFilters.length > 0))) {
-    const maxEth = activeSniperEngine.traitMaxEth || activeSniperEngine.traitFilter?.maxEth || 0;
-    if (maxEth > 0 && parsed.price <= maxEth) {
+  const isTraitActive = Boolean(activeSniperEngine.ruleStates?.trait || (activeSniperEngine.traitFilters && activeSniperEngine.traitFilters.length > 0) || activeSniperEngine.traitFilter);
+  if (!triggered && isTraitActive && (activeSniperEngine.traitFilter || (activeSniperEngine.traitFilters && activeSniperEngine.traitFilters.length > 0))) {
+    const maxEth = activeSniperEngine.traitMaxEth > 0
+      ? activeSniperEngine.traitMaxEth
+      : (activeSniperEngine.traitFilter?.maxEth > 0
+          ? activeSniperEngine.traitFilter.maxEth
+          : (activeSniperEngine.maxFloorEth > 0 ? activeSniperEngine.maxFloorEth : Infinity));
+    if (parsed.price <= maxEth) {
       let itemTraits = parsed.rawEvent?.payload?.item?.metadata?.traits || parsed.traits || [];
       if (!itemTraits || itemTraits.length === 0) {
         const cachedInfo = rarityEngine.getTokenInfoSync(parsed.tokenId);
@@ -879,7 +884,7 @@ async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = performanc
 
       if (match) {
         triggered = true;
-        reason = `👑 Trait Match [${matchedFilterName}]: ${parsed.price} ETH <= Target ${maxEth} ETH`;
+        reason = `👑 Trait Match [${matchedFilterName}]: ${parsed.price} ETH <= Cap ${maxEth === Infinity ? 'Market' : maxEth + ' ETH'}`;
       }
     }
   }
@@ -893,7 +898,10 @@ async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = performanc
   }
 
   // 👑 RULE 2: TOP RARITY RANK SNIPE (PRIORITY 4)
-  if (!triggered && activeSniperEngine.ruleStates.rarity && activeSniperEngine.maxRareEth > 0) {
+  const maxRareCap = activeSniperEngine.maxRareEth > 0
+    ? activeSniperEngine.maxRareEth
+    : (activeSniperEngine.maxFloorEth > 0 ? activeSniperEngine.maxFloorEth : 0);
+  if (!triggered && activeSniperEngine.ruleStates.rarity && maxRareCap > 0) {
     let rank = rarityEngine.getRaritySync(parsed.tokenId);
     if (rank === null) {
       const streamContract = parsed.contractAddress || rarityEngine.contractAddress;
@@ -902,9 +910,9 @@ async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = performanc
       rank = resolved?.rank || null;
     }
 
-    if (rank && rank <= activeSniperEngine.maxRareRank && parsed.price <= activeSniperEngine.maxRareEth) {
+    if (rank && rank <= activeSniperEngine.maxRareRank && parsed.price <= maxRareCap) {
       triggered = true;
-      reason = `👑 Top Rarity #${rank} at ${parsed.price} ETH <= Target ${activeSniperEngine.maxRareEth} ETH`;
+      reason = `👑 Top Rarity #${rank} at ${parsed.price} ETH <= Target ${maxRareCap} ETH`;
     }
   }
 

@@ -8958,10 +8958,11 @@
 
         // 💎 PRIORITY 4: TOP RARITY RANK SNIPE
         const isRarityActive = (typeof activeRuleStates !== 'undefined') ? activeRuleStates.rarity : (activeTriggerMode === 'rarity' || activeTriggerMode === 'both');
-        if (!triggered && isRarityActive && maxRareEth > 0) {
-          if (item.rarityRank && item.rarityRank <= maxRareRank && item.price <= maxRareEth) {
+        const effectiveRareCap = maxRareEth > 0 ? maxRareEth : (maxFloorEth > 0 ? maxFloorEth : 0);
+        if (!triggered && isRarityActive && effectiveRareCap > 0) {
+          if (item.rarityRank && item.rarityRank <= maxRareRank && item.price <= effectiveRareCap) {
             triggered = true;
-            reason = `Top Rarity #${item.rarityRank} at ${item.price} ETH <= Target ${maxRareEth} ETH`;
+            reason = `Top Rarity #${item.rarityRank} at ${item.price} ETH <= Target ${effectiveRareCap} ETH`;
           }
         }
 
