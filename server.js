@@ -517,6 +517,57 @@ function broadcastSnipeLog(msg) {
   });
 }
 
+/**
+ * 🏪 UNIVERSAL RULEBOOK: High-Speed Seaport Fulfillment via 24/7 Rotating API Shop
+ * Never locked to a single key. Rotates dynamically across all 6 OpenSea API Keys.
+ * If a key returns 429, marks it in 3s cooldown and immediately retries on the next healthy key (<5ms).
+ * If OpenSea confirms order is dead/cancelled/expired/invalid, stops immediately and reports isDeadOrder.
+ */
+async function fetchSeaportFulfillmentWithShop(orderHash, chain, buyerAddress, tokenId) {
+  const candidateKeys = config.opensea.getCandidateKeys();
+  let lastErr = null;
+
+  for (let i = 0; i < Math.min(candidateKeys.length, 5); i++) {
+    const apiKey = candidateKeys[i];
+    const t0 = Date.now();
+    try {
+      const res = await apiClient.post(`${config.opensea.restApiBase}/listings/fulfillment_data`, {
+        listing: {
+          hash: orderHash,
+          chain: chain || 'robinhood',
+          protocol_address: config.seaport.v1_6
+        },
+        fulfiller: { address: buyerAddress }
+      }, {
+        headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json' },
+        timeout: 3500
+      });
+      const latency = Date.now() - t0;
+      trackKeyUse(apiKey, latency, '200 OK');
+      config.opensea.clearKeyCooldown(apiKey);
+      return { success: true, data: res.data, apiKey };
+    } catch (err) {
+      lastErr = err;
+      const status = err.response?.status || err.code || 'Timeout';
+      const errDetail = err.response?.data?.errors?.join(', ') || err.response?.data?.detail || err.message;
+      trackKeyUse(apiKey, Date.now() - t0, `${status}`);
+
+      const isDeadOrder = /not valid|not found|cancelled|expired|inactive/i.test(errDetail) || err.response?.status === 400;
+      if (isDeadOrder) {
+        return { success: false, isDeadOrder: true, error: errDetail };
+      }
+
+      if (status === 429) {
+        config.opensea.markKeyCooldown(apiKey, 3000);
+        continue;
+      }
+    }
+  }
+
+  const finalDetail = lastErr?.response?.data?.errors?.join(', ') || lastErr?.response?.data?.detail || lastErr?.message || 'All OpenSea API keys failed';
+  return { success: false, isDeadOrder: false, error: finalDetail };
+}
+
 // ⚡ ZERO-HOP DIRECT SUB-MILLISECOND SNIPE EXECUTION (AEROMINT MULTI-RPC BLAST)
 async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
   if (!activeSniperEngine.isArmed) return;
@@ -590,31 +641,16 @@ async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
         activeSniperEngine.customGas
       );
     } else if (orderHash) {
-      // Path B: OpenSea Fulfillment API Fallback
-      broadcastSnipeLog(`📡 [SEAPORT FULFILLMENT] Fetching OpenSea Seaport calldata for hash ${orderHash.slice(0, 14)}... via Key #2...`);
-      const apiKey = config.opensea.fulfillmentKey;
-      let fulRes;
-      try {
-        fulRes = await apiClient.post(`${config.opensea.restApiBase}/listings/fulfillment_data`, {
-          listing: {
-            hash: orderHash,
-            chain: parsed.chain || 'robinhood',
-            protocol_address: config.seaport.v1_6
-          },
-          fulfiller: { address: buyerAddress }
-        }, {
-          headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json' },
-          timeout: 4000
-        });
-      } catch (fulErr) {
-        const errDetail = fulErr.response?.data?.errors?.join(', ') || fulErr.response?.data?.detail || fulErr.message;
-        const isDeadOrder = /not valid|not found|cancelled|expired|inactive/i.test(errDetail) || fulErr.response?.status === 400;
-        if (isDeadOrder) {
+      // Path B: OpenSea Fulfillment API Fallback via Rotating 24/7 API Shop
+      broadcastSnipeLog(`📡 [SEAPORT FULFILLMENT] Fetching OpenSea Seaport calldata for hash ${orderHash.slice(0, 14)}... via 24/7 API Shop...`);
+      const fulRes = await fetchSeaportFulfillmentWithShop(orderHash, parsed.chain || 'robinhood', buyerAddress, tokenId);
+      if (!fulRes.success) {
+        if (fulRes.isDeadOrder) {
           if (orderHash) activeSniperEngine.invalidOrderHashes.add(orderHash);
           activeSniperEngine.snipedTokenIds.add(tokenId);
           broadcastSnipeLog(`ℹ [ORDER INACTIVE] #${tokenId} (${orderHash ? orderHash.slice(0, 14) + '...' : ''}) is no longer active on OpenSea (cancelled/filled). Blacklisted.`);
         } else {
-          broadcastSnipeLog(`❌ [FULFILLMENT ERROR] OpenSea returned error for #${tokenId}: ${errDetail}`);
+          broadcastSnipeLog(`❌ [FULFILLMENT ERROR] OpenSea returned error for #${tokenId}: ${fulRes.error}`);
         }
         activeSniperEngine.pendingSnipes.delete(tokenId);
         return;
@@ -1050,27 +1086,12 @@ setInterval(fetchLiveTelemetry, 2500);
 fetchLiveTelemetry();
 
 // ─── HIGH-SPEED MULTI-KEY REST FETCHER WITH FAILOVER & 429 BACKOFF ───────────
-const keyCooldownMap = new Map(); // key -> cooldownUntilMs
-
 async function fetchOpenSeaWithFallback(pathStr, preferredKeyIndex = null) {
   const allKeys = config.opensea.apiKeys;
   const preferredKey = preferredKeyIndex !== null && allKeys[preferredKeyIndex] ? allKeys[preferredKeyIndex] : null;
 
-  // Build candidate key list: preferred key first, then other REST keys, then Key #1 as ultimate fallback
-  const candidateKeys = [];
-  if (preferredKey) candidateKeys.push(preferredKey);
-  for (let i = 1; i < allKeys.length; i++) {
-    if (!candidateKeys.includes(allKeys[i])) candidateKeys.push(allKeys[i]);
-  }
-  if (!candidateKeys.includes(allKeys[0])) candidateKeys.push(allKeys[0]);
-
-  // Sort candidate keys so those NOT in 429 cooldown come first
-  const now = Date.now();
-  candidateKeys.sort((a, b) => {
-    const aCool = (keyCooldownMap.get(a) || 0) > now ? 1 : 0;
-    const bCool = (keyCooldownMap.get(b) || 0) > now ? 1 : 0;
-    return aCool - bCool;
-  });
+  // Use Central API Shop: candidate keys with healthy non-cooldown keys sorted first
+  const candidateKeys = config.opensea.getCandidateKeys(preferredKey);
 
   const sep = pathStr.includes('?') ? '&' : '?';
   const url = `${config.opensea.restApiBase}${pathStr}${sep}_t=${Date.now()}`;
@@ -1089,14 +1110,14 @@ async function fetchOpenSeaWithFallback(pathStr, preferredKeyIndex = null) {
       });
       const latency = Date.now() - t0;
       trackKeyUse(key, latency, '200 OK');
-      keyCooldownMap.delete(key); // Clear cooldown on success
+      config.opensea.clearKeyCooldown(key); // Clear cooldown on success
       return res.data;
     } catch (err) {
       lastErr = err;
       const status = err.response?.status || err.code || 'Timeout';
       trackKeyUse(key, Date.now() - t0, `${status}`);
       if (status === 429) {
-        keyCooldownMap.set(key, Date.now() + 3000);
+        config.opensea.markKeyCooldown(key, 3000);
         await new Promise(r => setTimeout(r, 40));
       }
     }
@@ -2237,7 +2258,8 @@ app.post('/api/snipe/buy', async (req, res) => {
       if (tokenId) activeSniperEngine.snipedTokenIds.add(String(tokenId));
       activeSniperEngine.snipesExecutedCount++;
 
-      if (activeSniperEngine.maxSnipesLimit > 0 && activeSniperEngine.snipesExecutedCount >= activeSniperEngine.maxSnipesLimit) {
+      const isCircuitBreakerHit = activeSniperEngine.maxSnipesLimit > 0 && activeSniperEngine.snipesExecutedCount >= activeSniperEngine.maxSnipesLimit;
+      if (isCircuitBreakerHit) {
         activeSniperEngine.isArmed = false;
         broadcastSnipeLog(`🛑 [CIRCUIT BREAKER] Completed ${activeSniperEngine.snipesExecutedCount} of ${activeSniperEngine.maxSnipesLimit} allowed snipes. Auto-disarmed.`);
         broadcastToClients({
@@ -2246,6 +2268,12 @@ app.post('/api/snipe/buy', async (req, res) => {
           limit: activeSniperEngine.maxSnipesLimit
         });
       }
+
+      return {
+        isCircuitBreakerHit,
+        snipesExecuted: activeSniperEngine.snipesExecutedCount,
+        maxLimit: activeSniperEngine.maxSnipesLimit
+      };
     };
 
     // 1. Direct Seaport protocol_data execution if provided
@@ -2254,38 +2282,26 @@ app.post('/api/snipe/buy', async (req, res) => {
       const tx = await signer.sendTransaction(txObj);
       const receipt = await tx.wait(1);
 
-      handleSnipeSuccess(tx.hash, receipt.blockNumber);
+      const cbStatus = handleSnipeSuccess(tx.hash, receipt.blockNumber);
 
       return res.json({
         success: true,
         txHash: tx.hash,
         blockNumber: receipt.blockNumber,
         buyer: buyerAddress,
-        tokenId
+        tokenId,
+        circuitBreakerHit: cbStatus.isCircuitBreakerHit,
+        executedCount: cbStatus.snipesExecuted,
+        maxLimit: cbStatus.maxLimit
       });
     }
 
-    // 2. Fallback to OpenSea Fulfillment API using Key #2
+    // 2. Fallback to OpenSea Fulfillment API using 24/7 API Shop
     const hashToFulfill = orderHash || protocolData?.orderHash;
     if (hashToFulfill) {
-      const apiKey = config.opensea.fulfillmentKey;
-      let fulRes;
-      try {
-        fulRes = await apiClient.post(`${config.opensea.restApiBase}/listings/fulfillment_data`, {
-          listing: {
-            hash: hashToFulfill,
-            chain: 'robinhood',
-            protocol_address: config.seaport.v1_6
-          },
-          fulfiller: { address: buyerAddress }
-        }, {
-          headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json' },
-          timeout: 4000
-        });
-      } catch (fulErr) {
-        const errDetail = fulErr.response?.data?.errors?.join(', ') || fulErr.response?.data?.detail || fulErr.message;
-        const isDeadOrder = /not valid|not found|cancelled|expired|inactive/i.test(errDetail) || fulErr.response?.status === 400;
-        if (isDeadOrder) {
+      const fulRes = await fetchSeaportFulfillmentWithShop(hashToFulfill, 'robinhood', buyerAddress, tokenId);
+      if (!fulRes.success) {
+        if (fulRes.isDeadOrder) {
           if (hashToFulfill && activeSniperEngine.invalidOrderHashes) {
             activeSniperEngine.invalidOrderHashes.add(hashToFulfill);
           }
@@ -2295,8 +2311,8 @@ app.post('/api/snipe/buy', async (req, res) => {
         }
         return res.status(400).json({
           success: false,
-          isDeadOrder: isDeadOrder,
-          error: `OpenSea Fulfillment API: ${errDetail}`
+          isDeadOrder: fulRes.isDeadOrder,
+          error: `OpenSea Fulfillment API: ${fulRes.error}`
         });
       }
 
@@ -2318,14 +2334,17 @@ app.post('/api/snipe/buy', async (req, res) => {
         const tx = await signer.sendTransaction(txObj);
         const receipt = await tx.wait(1);
 
-        handleSnipeSuccess(tx.hash, receipt.blockNumber);
+        const cbStatus = handleSnipeSuccess(tx.hash, receipt.blockNumber);
 
         return res.json({
           success: true,
           txHash: tx.hash,
           blockNumber: receipt.blockNumber,
           buyer: buyerAddress,
-          tokenId
+          tokenId,
+          circuitBreakerHit: cbStatus.isCircuitBreakerHit,
+          executedCount: cbStatus.snipesExecuted,
+          maxLimit: cbStatus.maxLimit
         });
       }
     }

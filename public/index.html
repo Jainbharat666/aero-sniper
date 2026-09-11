@@ -8025,6 +8025,7 @@
       const btn = document.getElementById('btn-master-action');
 
       if (isArmed) {
+        snipesExecutedCount = 0;
         clientArmedTimestamp = Date.now();
         clientDeadOrdersSet.clear();
         const bgGrad = isDryRun 
@@ -8101,8 +8102,9 @@
         });
 
       } else {
+        snipesExecutedCount = 0;
         clientArmedTimestamp = 0;
-        btn.className = 'w-full py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 transition-all';
+        btn.className = 'w-full py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer';
         btn.innerHTML = isDryRun
           ? `<i class="fa-solid fa-flask text-sm"></i> ARM PAPER SNIPER (SIMULATED - 0 ETH)`
           : `<i class="fa-solid fa-crosshairs text-sm"></i> ARM AUTO-SNIPER (MAINNET LIVE)`;
@@ -8551,6 +8553,22 @@
     let streamEventSource = null;
     const loggedStreamTokensSet = new Set(); // 🛡️ Ensure each token is logged to console ONLY ONCE per session
 
+    // 🛑 UNIVERSAL RULEBOOK: Master Client Circuit Breaker Lock
+    function handleClientCircuitBreakerHit(executed, limit) {
+      isArmed = false;
+      clientArmedTimestamp = 0;
+      snipesExecutedCount = executed || snipesExecutedCount || 1;
+      playBeep(320, 'sawtooth', 0.3);
+      const btn = document.getElementById('btn-master-action');
+      if (btn) {
+        btn.className = 'w-full py-3 px-4 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-lg shadow-rose-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer';
+        btn.innerHTML = `<i class="fa-solid fa-hand text-sm"></i> 🛑 CIRCUIT BREAKER HIT (${snipesExecutedCount}/${limit || activeMaxSnipesLimit}) - CLICK TO RESET`;
+      }
+      logConsole(`🛑 [CIRCUIT BREAKER HIT] Reached max buy limit (${snipesExecutedCount}/${limit || activeMaxSnipesLimit} snipes). Sniper auto-paused.`);
+      showToast(`🛑 Circuit Breaker: Auto-paused after ${snipesExecutedCount} snipe(s)!`, true);
+      fetch('/api/snipe/disarm', { method: 'POST' }).catch(() => {});
+    }
+
     function startRealTimeWebSocketStream(slug) {
       if (streamEventSource) {
         streamEventSource.close();
@@ -8652,15 +8670,7 @@
               }
             }
           } else if (payload.type === 'circuit_breaker_paused') {
-            isArmed = false;
-            playBeep(320, 'sawtooth', 0.3);
-            const btn = document.getElementById('btn-master-action');
-            if (btn) {
-              btn.className = 'w-full py-3 px-4 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-lg shadow-rose-500/25 flex items-center justify-center gap-2 transition-all';
-              btn.innerHTML = `<i class="fa-solid fa-hand text-sm"></i> 🛑 CIRCUIT BREAKER HIT (${payload.executed}/${payload.limit}) - CLICK TO RESET`;
-            }
-            logConsole(`🛑 [CIRCUIT BREAKER HIT] Reached max buy limit (${payload.executed}/${payload.limit} snipes). Sniper auto-paused to protect wallet.`);
-            showToast(`🛑 Circuit Breaker: Auto-paused after ${payload.executed} snipes!`, true);
+            handleClientCircuitBreakerHit(payload.executed, payload.limit);
           } else if (payload.type === 'zero_hop_snipe_confirmed') {
             logConsole(`🎉 [ZERO-HOP BUY CONFIRMED] Token #${payload.tokenId} confirmed in Block #${payload.blockNumber} (Tx: ${payload.txHash.slice(0, 14)}...)!`);
             showToast(`🎉 NFT #${payload.tokenId} bought successfully by ${payload.buyerName}!`);
@@ -8936,16 +8946,33 @@
                 // Zero-hop backend engine is already processing this token in RAM
                 return;
               }
+              snipesExecutedCount++;
               logConsole(`🎉 BUY MINED ON-CHAIN: Token #${item.tokenId} confirmed in Block #${data.blockNumber} (TxHash: ${data.txHash.slice(0, 14)}...)!`);
               showToast(`NFT #${item.tokenId} bought successfully by ${buyer.name}!`);
               triggerSnipeCheer(item.tokenId, item.price, buyer.name, data.txHash);
               refreshAllBalances();
+
+              // 🛑 UNIVERSAL RULEBOOK: Immediate Dual Circuit Breaker Lock
+              const isLimitHit = (activeMaxSnipesLimit > 0 && snipesExecutedCount >= activeMaxSnipesLimit) || data.circuitBreakerHit;
+              if (isLimitHit) {
+                handleClientCircuitBreakerHit(data.executedCount || snipesExecutedCount, data.maxLimit || activeMaxSnipesLimit);
+              }
             } else {
               // 🛡️ DEAD ORDER BLACKLIST: If order was cancelled/invalid on OpenSea, never retry it!
               if (data.isDeadOrder || /not valid|not found|cancelled|expired/i.test(data.error || '')) {
                 item.sniped = true;
                 item.isDeadOrder = true;
                 if (itemHash) clientDeadOrdersSet.add(itemHash);
+                const row = document.querySelector(`tr[data-token="${item.tokenId}"]`);
+                if (row) {
+                  row.style.opacity = '0.4';
+                  const rowBtn = row.querySelector('button');
+                  if (rowBtn) {
+                    rowBtn.disabled = true;
+                    rowBtn.innerText = 'INACTIVE';
+                    rowBtn.className = 'px-3 py-1 text-[10px] font-bold rounded-lg bg-slate-700 text-slate-400 cursor-not-allowed';
+                  }
+                }
                 logConsole(`ℹ [ORDER INACTIVE] #${item.tokenId} is no longer valid on OpenSea. Skipping.`);
               } else {
                 item.sniped = false;
@@ -9017,9 +9044,33 @@
           showToast(`Buy confirmed for #${tokenId} by ${buyer.name}!`);
           triggerSnipeCheer(tokenId, price, buyer.name, data.txHash);
           refreshAllBalances();
+
+          if (isArmed) {
+            snipesExecutedCount++;
+            const isLimitHit = (activeMaxSnipesLimit > 0 && snipesExecutedCount >= activeMaxSnipesLimit) || data.circuitBreakerHit;
+            if (isLimitHit) {
+              handleClientCircuitBreakerHit(data.executedCount || snipesExecutedCount, data.maxLimit || activeMaxSnipesLimit);
+            }
+          }
         } else {
-          logConsole(`❌ ON-CHAIN BUY FAILED: ${data.error || 'Transaction reverted'}`);
-          showToast(data.error || 'Buy failed on-chain', true);
+          if (data.isDeadOrder || /not valid|not found|cancelled|expired/i.test(data.error || '')) {
+            if (orderHash) clientDeadOrdersSet.add(orderHash);
+            const row = document.querySelector(`tr[data-token="${tokenId}"]`);
+            if (row) {
+              row.style.opacity = '0.4';
+              const rowBtn = row.querySelector('button');
+              if (rowBtn) {
+                rowBtn.disabled = true;
+                rowBtn.innerText = 'INACTIVE';
+                rowBtn.className = 'px-3 py-1 text-[10px] font-bold rounded-lg bg-slate-700 text-slate-400 cursor-not-allowed';
+              }
+            }
+            logConsole(`ℹ [ORDER INACTIVE] Token #${tokenId} is no longer active on OpenSea (cancelled or bought).`);
+            showToast(`Order #${tokenId} is no longer active`, true);
+          } else {
+            logConsole(`❌ ON-CHAIN BUY FAILED: ${data.error || 'Transaction reverted'}`);
+            showToast(data.error || 'Buy failed on-chain', true);
+          }
         }
       } catch (err) {
         logConsole(`❌ BUY ERROR: ${err.message}`);

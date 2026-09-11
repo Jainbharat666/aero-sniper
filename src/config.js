@@ -18,11 +18,13 @@ const DEFAULT_KEYS = [
 
 const pool = allKeys.length >= 6 ? allKeys : DEFAULT_KEYS;
 
-let restKeyIndex = 1; // Keys 1..5 for REST, Key 0 reserved for Stream
+// 🏪 CENTRAL "API SHOP" 24/7 CONTINUOUS ROTATING CAROUSEL
+let globalKeyIndex = 0;
+const keyCooldownMap = new Map(); // apiKey -> cooldownUntilTimestampMs
 
 export const config = {
   opensea: {
-    // Key #1 is dedicated exclusively to the 24/7 WebSocket Stream
+    // Legacy single-purpose mappings preserved for backward compatibility
     streamKey: process.env.OPENSEA_API_KEY_STREAM || pool[0],
     fulfillmentKey: process.env.OPENSEA_API_KEY_FULFILLMENT || pool[1],
     rarityKey: process.env.OPENSEA_API_KEY_RARITY || pool[2],
@@ -31,12 +33,83 @@ export const config = {
     streamWsUrl: 'wss://stream.openseabeta.com/socket',
     restApiBase: 'https://api.opensea.io/api/v2',
 
-    // Round-Robin Load Balancer across REST keys (Leaves Key #0 untouched for Stream)
+    /**
+     * 🏪 CENTRAL API SHOP: 24/7 Continuous Carousel across all 6 OpenSea API Keys.
+     * Every module draws from this round-robin pool.
+     * Automatically skips keys in 429 quarantine!
+     */
+    getNextApiKey(excludeStreamKey = false) {
+      const now = Date.now();
+      const activePool = excludeStreamKey ? pool.slice(1) : pool;
+
+      // Find the next available key that is NOT currently in cooldown
+      for (let attempt = 0; attempt < activePool.length; attempt++) {
+        const key = activePool[globalKeyIndex % activePool.length];
+        globalKeyIndex++;
+        const cooldownUntil = keyCooldownMap.get(key) || 0;
+        if (cooldownUntil <= now) {
+          return key;
+        }
+      }
+
+      // If all keys are momentarily cooled down, pick the one that expires soonest
+      let bestKey = activePool[0];
+      let minCooldown = Infinity;
+      for (const k of activePool) {
+        const cd = keyCooldownMap.get(k) || 0;
+        if (cd < minCooldown) {
+          minCooldown = cd;
+          bestKey = k;
+        }
+      }
+      return bestKey;
+    },
+
+    /**
+     * Backward-compatible alias for REST endpoints
+     */
     getNextRestKey() {
-      const restPool = pool.slice(1);
-      const key = restPool[restKeyIndex % restPool.length];
-      restKeyIndex++;
-      return key;
+      return this.getNextApiKey(true);
+    },
+
+    /**
+     * 🛡️ 429 Quarantine: Put an API key into cooldown (default 3000ms)
+     */
+    markKeyCooldown(key, durationMs = 3000) {
+      if (!key) return;
+      keyCooldownMap.set(key, Date.now() + durationMs);
+    },
+
+    /**
+     * Clear cooldown when a key succeeds
+     */
+    clearKeyCooldown(key) {
+      if (!key) return;
+      keyCooldownMap.delete(key);
+    },
+
+    /**
+     * Check if a key is currently in cooldown
+     */
+    isKeyCooledDown(key) {
+      return (keyCooldownMap.get(key) || 0) > Date.now();
+    },
+
+    /**
+     * Get candidate keys sorted so healthy (non-cooldown) keys come first
+     */
+    getCandidateKeys(preferredKey = null) {
+      const now = Date.now();
+      const list = preferredKey ? [preferredKey] : [];
+      for (const k of pool) {
+        if (!list.includes(k)) list.push(k);
+      }
+      list.sort((a, b) => {
+        const aCool = (keyCooldownMap.get(a) || 0) > now ? 1 : 0;
+        const bCool = (keyCooldownMap.get(b) || 0) > now ? 1 : 0;
+        return aCool - bCool;
+      });
+      return list;
     },
 
     // Get any key by index
