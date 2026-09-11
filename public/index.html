@@ -4142,7 +4142,7 @@
   </div>
 
   <!-- ================= 5A-5. 👑 MASTER ADMIN CONTROLS MODAL (EXCLUSIVE FOR OWNER) ================= -->
-  <div id="admin-panel-modal" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 hidden font-mono-code text-xs">
+  <div id="admin-panel-modal" class="fixed inset-0 z-[99999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden font-mono-code text-xs">
     <div class="bg-white border border-slate-200 rounded-3xl shadow-2xl max-w-5xl w-full h-[88vh] flex flex-col p-6 space-y-4 animate-in fade-in zoom-in duration-200 overflow-hidden text-slate-900">
       
       <!-- Modal Header -->
@@ -4383,6 +4383,7 @@
             <div class="text-sm font-black text-slate-800 flex items-center gap-1.5">
               <span class="w-2 h-2 rounded-full bg-purple-500"></span> Seaport v1.6 Zero-Hop
             </div>
+          </div>
         </div>
         <div class="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 font-mono-code text-[11px] overflow-y-auto space-y-1.5 text-slate-600 shadow-inner" id="admin-telemetry-log">
           <div>✔ [DATABASE] Connected to Supabase Cloud PostgreSQL.</div>
@@ -4413,7 +4414,7 @@
   </div>
 
   <!-- ================= 6. FOOTER ================= -->
-  <footer class="bg-white border-t border-slate-200 px-6 py-3 text-xs text-slate-500 font-mono-code shrink-0 shadow-sm">
+  <footer class="bg-white border-t border-slate-200 px-6 py-3 text-xs text-slate-500 font-mono-code shrink-0 shadow-sm relative z-0">
     <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px]">
       <div class="flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -4944,7 +4945,7 @@
 
     const DEFAULT_ADMIN_CLUSTER_RPC = {
       id: 'sys-rpc-admin-cluster',
-      name: '⚡ Robinhood Alchemy Fast Route (Admin)',
+      name: '⚡ Sniper Official RPC',
       url: 'https://robinhood-mainnet.g.alchemy.com/v2/alch_FtrEfyyJYzEBZ0SQ3ctbJ',
       isPrimary: true,
       isSystem: true,
@@ -5031,7 +5032,7 @@
           if (activeFromAdmin) {
             activeAdminNode = {
               id: activeFromAdmin.id || 'sys-rpc-admin-cluster',
-              name: activeFromAdmin.name || '⚡ Robinhood Cluster Node (Admin)',
+              name: activeFromAdmin.name || '⚡ Sniper Official RPC',
               url: activeFromAdmin.url,
               isPrimary: true,
               isSystem: true,
@@ -5238,9 +5239,10 @@
       node.statusStr = `${node.pingMs}ms`;
       node.status = ms < 999 ? 'online' : 'offline';
 
+      const info = getRpcDisplayInfo(node);
       renderRpcFleet();
-      logConsole(`✔ Node "${node.name}" Ping Latency: ${node.pingMs}ms (Optimal).`);
-      showToast(`Ping "${node.name}": ${node.pingMs}ms`);
+      logConsole(`✔ Node "${info.displayName}" Ping Latency: ${node.pingMs}ms (Optimal).`);
+      showToast(`Ping "${info.displayName}": ${node.pingMs}ms`);
     }
 
     async function pingAllFleet() {
@@ -5257,14 +5259,16 @@
         node.pingMs = ms < 999 ? ms : 999;
         node.statusStr = `${node.pingMs}ms`;
         node.status = ms < 999 ? 'online' : 'offline';
-        logConsole(`  ● [${node.name}]: ${node.pingMs}ms`);
+        const info = getRpcDisplayInfo(node);
+        logConsole(`  ● [${info.displayName}]: ${node.pingMs}ms`);
       }
 
       rpcFleet.sort((a, b) => a.pingMs - b.pingMs);
       renderRpcFleet();
       isCheckingPings = false;
-      logConsole(`✔ RPC latency checking completed. Fastest: "${rpcFleet[0]?.name}" (${rpcFleet[0]?.pingMs}ms).`);
-      showToast(`Fastest Node: ${rpcFleet[0]?.name} (${rpcFleet[0]?.pingMs}ms)`);
+      const fastestInfo = getRpcDisplayInfo(rpcFleet[0]);
+      logConsole(`✔ RPC latency checking completed. Fastest: "${fastestInfo.displayName}" (${rpcFleet[0]?.pingMs}ms).`);
+      showToast(`Fastest Node: ${fastestInfo.displayName} (${rpcFleet[0]?.pingMs}ms)`);
       
       btns.forEach(b => b.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600"></i> <span class="text-emerald-800 font-black">Pinged!</span>`);
       setTimeout(() => {
@@ -5282,12 +5286,13 @@
       logConsole(`📊 Running RPC stability checks (5x pings average)...`);
 
       for (const node of rpcFleet) {
-        logConsole(`  Testing node: "${node.name}" (5 consecutive roundtrips)...`);
+        const info = getRpcDisplayInfo(node);
+        logConsole(`  Testing node: "${info.displayName}" (5 consecutive roundtrips)...`);
         const res = await testRpcLatencyMulti(node.url, 5);
         node.pingMs = res.avgMs;
         node.statusStr = res.statusStr;
         node.status = res.successCount > 0 ? 'online' : 'offline';
-        logConsole(`  ✔ [${node.name}]: Avg ${res.avgMs}ms | Packets: ${res.successCount}/5 (${res.successCount === 5 ? '100% Reliability' : (res.successCount * 20) + '% Reliability'})`);
+        logConsole(`  ✔ [${info.displayName}]: Avg ${res.avgMs}ms | Packets: ${res.successCount}/5 (${res.successCount === 5 ? '100% Reliability' : (res.successCount * 20) + '% Reliability'})`);
       }
 
       rpcFleet.sort((a, b) => a.pingMs - b.pingMs);
@@ -5426,6 +5431,31 @@
       return txHash;
     }
 
+    function getRpcDisplayInfo(node) {
+      if (!node) return { displayName: 'None', displayUrlHtml: '', isMasked: false };
+      const isOwnerAdmin = currentUser && (currentUser.role === 'admin' || currentUser.email === 'jainbharat666@gmail.com');
+      const isFleetNode = Boolean(
+        node.isFleet ||
+        node.id === 'sys-rpc-admin-cluster' ||
+        String(node.id).startsWith('fleet-') ||
+        (!node.isCustom && !node.url?.includes('rpc.mainnet.chain.robinhood.com') && !node.url?.includes('mainnet.chain.robinhood.com/rpc'))
+      );
+
+      if (!isOwnerAdmin && isFleetNode) {
+        return {
+          displayName: '⚡ Sniper Official RPC',
+          displayUrlHtml: '<p class="text-[10px] text-indigo-600 font-mono-code font-bold flex items-center gap-1.5"><i class="fa-solid fa-lock text-[9px]"></i> 🔒 Institutional Private Gateway (Secured)</p>',
+          isMasked: true
+        };
+      }
+      const safeUrl = String(node.url || '').replace(/"/g, '&quot;');
+      return {
+        displayName: node.name || 'RPC Node',
+        displayUrlHtml: `<p class="text-[10px] text-slate-400 font-mono-code truncate">${safeUrl}</p>`,
+        isMasked: false
+      };
+    }
+
     function renderRpcFleet() {
       persistState();
       const container = document.getElementById('rpc-fleet-list');
@@ -5438,24 +5468,26 @@
       rpcFleet.forEach(node => {
         if (node.pingMs < fastestNode.pingMs) fastestNode = node;
       });
-      document.getElementById('stat-fastest-node').innerText = `${fastestNode.name} (${fastestNode.pingMs}ms)`;
+      const fastestInfo = getRpcDisplayInfo(fastestNode);
+      document.getElementById('stat-fastest-node').innerText = `${fastestInfo.displayName} (${fastestNode.pingMs}ms)`;
 
       if (container) {
         container.innerHTML = '';
         rpcFleet.forEach((node) => {
+          const info = getRpcDisplayInfo(node);
           const item = document.createElement('div');
           item.className = `p-2.5 sm:px-3.5 sm:py-2 rounded-2xl border ${node.isPrimary ? 'border-indigo-300 bg-indigo-50/40' : 'border-slate-200 bg-slate-50/70'} flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all hover:bg-white hover:shadow-sm`;
           
           item.innerHTML = `
             <div class="min-w-0 flex-1 space-y-0.5">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="font-black text-xs text-slate-900">${node.name}</span>
+                <span class="font-black text-xs text-slate-900">${info.displayName}</span>
                 ${node.isPrimary ? '<span class="px-2 py-0.5 rounded-lg bg-indigo-600 text-white font-black text-[9px] uppercase tracking-wider">PRIMARY NODE</span>' : '<span class="px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-700 font-bold text-[9px]">SECONDARY</span>'}
                 <span class="px-2 py-0.5 rounded-lg ${node.pingMs < 150 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-800 border border-amber-300'} font-black text-[10px]">
                   ● ${node.statusStr || node.pingMs + 'ms'}
                 </span>
               </div>
-              <p class="text-[10px] text-slate-400 font-mono-code truncate">${node.url}</p>
+              ${info.displayUrlHtml}
             </div>
 
             <div class="flex items-center gap-1.5 shrink-0">
@@ -5463,7 +5495,7 @@
               <button onclick="pingSingleNode('${node.id}')" class="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-all" title="Test Ping">
                 <i class="fa-solid fa-bolt text-amber-500"></i> Ping
               </button>
-              ${node.isSystem ? `
+              ${(node.isSystem || info.isMasked) ? `
                 <span class="px-2.5 py-1 bg-slate-100 text-slate-500 font-bold text-[10px] rounded-xl border border-slate-200 flex items-center gap-1 cursor-not-allowed" title="Permanent System Managed Node">
                   <i class="fa-solid fa-shield-halved text-indigo-500"></i> System
                 </span>
@@ -5481,13 +5513,14 @@
       if (miniContainer) {
         miniContainer.innerHTML = '';
         rpcFleet.slice(0, 3).forEach((node) => {
+          const info = getRpcDisplayInfo(node);
           const mItem = document.createElement('div');
           mItem.className = 'flex items-center justify-between py-0.5 px-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 cursor-pointer';
           mItem.onclick = () => setPrimaryNode(node.id);
           mItem.innerHTML = `
             <label class="flex items-center gap-2 cursor-pointer truncate">
               <input type="radio" name="mini_rpc_select" ${node.isPrimary ? 'checked' : ''} class="w-3.5 h-3.5 text-indigo-600">
-              <span class="${node.isPrimary ? 'font-black text-slate-900' : 'font-bold text-slate-700'} truncate text-xs uppercase">${node.name}</span>
+              <span class="${node.isPrimary ? 'font-black text-slate-900' : 'font-bold text-slate-700'} truncate text-xs uppercase">${info.displayName}</span>
               ${node.isPrimary ? '<span class="text-[8px] bg-indigo-100 text-indigo-700 px-1.5 py-0.2 rounded font-black">PRIMARY</span>' : ''}
             </label>
             <span class="font-black text-emerald-600 text-[10px] shrink-0">${node.pingMs}ms</span>
@@ -5504,9 +5537,10 @@
       renderRpcFleet();
       syncUserCustomRpcsToCloud();
       const node = rpcFleet.find(n => n.id === id);
+      const info = getRpcDisplayInfo(node);
       playBeep(900, 'sine', 0.08);
-      logConsole(`Primary RPC Node set to: "${node.name}".`);
-      showToast(`Primary Node: ${node.name}`);
+      logConsole(`Primary RPC Node set to: "${info.displayName}".`);
+      showToast(`Primary Node: ${info.displayName}`);
     }
 
     function addNewRpcNode() {
@@ -6355,13 +6389,16 @@
         showToast('No custom RPC endpoints to export!', true);
         return;
       }
+      const isOwnerAdmin = currentUser && (currentUser.role === 'admin' || currentUser.email === 'jainbharat666@gmail.com');
+      const filteredFleet = isOwnerAdmin ? rpcFleet : rpcFleet.filter(r => !r.isFleet && r.id !== 'sys-rpc-admin-cluster' && !String(r.id).startsWith('fleet-') && (r.isCustom || r.url?.includes('rpc.mainnet.chain.robinhood.com')));
+
       const backupData = {
         app: 'AeroMint Premium',
         type: 'RPC_BACKUP',
         network: 'robinhood',
         timestamp: new Date().toISOString(),
         rpcMode: currentRpcStrategy || 'dynamic',
-        rpcs: rpcFleet.map(r => ({
+        rpcs: filteredFleet.map(r => ({
           name: r.name,
           url: r.url,
           latency: r.statusStr || (r.pingMs ? r.pingMs + 'ms' : 'Unchecked'),
@@ -6371,7 +6408,7 @@
           isCustom: true,
           network: 'robinhood'
         })),
-        rpcFleet: rpcFleet.map(r => ({
+        rpcFleet: filteredFleet.map(r => ({
           id: r.id,
           name: r.name,
           url: r.url,
@@ -10600,6 +10637,7 @@
       }
       const m = document.getElementById('admin-panel-modal');
       if (m) m.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
 
       // Clear search query so all registered members are displayed by default
       const searchInp = document.getElementById('admin-user-search');
@@ -10626,6 +10664,7 @@
     function closeAdminModal() {
       const m = document.getElementById('admin-panel-modal');
       if (m) m.classList.add('hidden');
+      document.body.style.overflow = '';
     }
 
     function switchAdminTab(tab) {

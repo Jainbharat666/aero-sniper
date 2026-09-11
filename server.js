@@ -1549,7 +1549,7 @@ app.delete('/api/user-config', async (req, res) => {
 // ─── 6B. MANAGED FLEET RPC CLUSTER SERVICES (CLOUD SYNCED) ──────────────────
 const DEFAULT_GLOBAL_FLEET = {
   robinhood: [
-    { id: 'fleet-rbh-1', network_key: 'robinhood', name: '⚡ Robinhood Alchemy Fast Route', url: 'https://robinhood-mainnet.g.alchemy.com/v2/alch_FtrEfyyJYzEBZ0SQ3ctbJ', is_active: true, priority: 1 },
+    { id: 'fleet-rbh-1', network_key: 'robinhood', name: '⚡ Sniper Official RPC', url: 'https://robinhood-mainnet.g.alchemy.com/v2/alch_FtrEfyyJYzEBZ0SQ3ctbJ', is_active: true, priority: 1 },
     { id: 'fleet-rbh-2', network_key: 'robinhood', name: '⚡ Robinhood Official Sequencer', url: 'https://rpc.mainnet.chain.robinhood.com', is_active: true, priority: 2 },
     { id: 'fleet-rbh-3', network_key: 'robinhood', name: '⚡ Robinhood Direct Node', url: 'https://mainnet.chain.robinhood.com/rpc', is_active: true, priority: 3 }
   ],
