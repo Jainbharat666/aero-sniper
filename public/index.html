@@ -2095,9 +2095,35 @@
           document.documentElement.classList.add('day-mode');
           if (document.body) document.body.classList.add('day-mode');
         }
+
+        // 🛡️ FRAME 0 SYNCHRONOUS AUTH DETECTION (ELIMINATES ALL FLICKER)
+        const token = localStorage.getItem('sniper_token');
+        const user = localStorage.getItem('sniper_user');
+        if (token && user) {
+          document.documentElement.classList.add('authenticated');
+        }
       } catch(e) {}
     })();
   </script>
+  <style>
+    /* 🛡️ FRAME 0 HARD AUTH SECURITY GUARD: Prevents any 1-sec dashboard leak */
+    html:not(.authenticated) #auth-gate-screen {
+      display: flex !important;
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 99999 !important;
+      background-color: #06040a !important;
+    }
+    html:not(.authenticated) #authenticated-app {
+      display: none !important;
+    }
+    html.authenticated #auth-gate-screen {
+      display: none !important;
+    }
+    html.authenticated #authenticated-app {
+      display: flex !important;
+    }
+  </style>
 </head>
 <body class="bg-[#070b14] text-slate-800 min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white overflow-x-hidden">
 
@@ -9905,6 +9931,7 @@
       const appRoot = document.getElementById('authenticated-app');
 
       if (!currentUser || !sessionToken) {
+        document.documentElement.classList.remove('authenticated');
         if (authGate) {
           authGate.classList.remove('hidden');
           authGate.style.display = 'flex';
@@ -9915,6 +9942,7 @@
         }
         return false;
       } else {
+        document.documentElement.classList.add('authenticated');
         if (authGate) {
           authGate.classList.add('hidden');
           authGate.style.display = 'none';
@@ -10744,16 +10772,27 @@
 
     async function checkAuthHeartbeat() {
       if (!currentUser || !sessionToken) return;
+
+      // Platform Owner is exempt from client heartbeat invalidation (matches AeroMint V2 parity)
+      const isOwner = currentUser.email?.toLowerCase() === 'jainbharat666@gmail.com' || currentUser.role === 'admin';
+      if (isOwner) return;
+
       try {
         const res = await fetch(`/api/auth/heartbeat?userId=${encodeURIComponent(currentUser.id || '')}&sessionToken=${encodeURIComponent(sessionToken)}&email=${encodeURIComponent(currentUser.email || '')}`, {
           headers: { 'Authorization': `Bearer ${sessionToken}` }
         });
+        if (!res.ok) {
+          // If server is starting up or temporary network hiccup, keep session intact
+          return;
+        }
         const data = await res.json();
         if (!data.valid) {
           showToast(data.message || 'Session invalidated: Logged in from another device or expired!', true);
           logoutUser();
         }
-      } catch(e) {}
+      } catch(e) {
+        // Network offline or server starting up: keep session intact
+      }
     }
     setInterval(checkAuthHeartbeat, 25000);
 

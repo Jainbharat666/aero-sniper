@@ -1397,16 +1397,6 @@ app.get('/api/auth/heartbeat', async (req, res) => {
     }
 
     if (isOwner) {
-      if (sessionToken && user.id) {
-        const config = await dbGetUserConfig(user.id);
-        if (config && config.session_token && config.session_token !== sessionToken) {
-          return res.json({
-            valid: false,
-            reason: 'CONCURRENT_LOGIN',
-            message: '⚠️ Session Overwritten: Your admin account was accessed from another browser or window.'
-          });
-        }
-      }
       return res.json({
         valid: true,
         valid_until: '2099-12-31T23:59:59+00:00',

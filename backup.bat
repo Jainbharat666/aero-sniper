@@ -20,16 +20,23 @@ echo [1/3] Detecting next backup version number in:
 echo       %BACKUP_DIR%
 echo.
 
-set NEXT_NUM=1
-:find_loop
-if exist "%BACKUP_DIR%\%NEXT_NUM%" (
-    set /a NEXT_NUM+=1
-    goto find_loop
+:: Scan for highest existing version number (MAX + 1 logic)
+set MAX_NUM=0
+setlocal enabledelayedexpansion
+for /f "delims=" %%D in ('dir /b /ad "%BACKUP_DIR%" 2^>nul') do (
+    echo %%D| findstr /r "^[1-9][0-9]*$" >nul && (
+        set /a val=%%D
+        if !val! GTR !MAX_NUM! set /a MAX_NUM=!val!
+    )
 )
-if exist "%BACKUP_DIR%\%NEXT_NUM%.zip" (
-    set /a NEXT_NUM+=1
-    goto find_loop
+for /f "delims=" %%F in ('dir /b /a-d "%BACKUP_DIR%\*.zip" 2^>nul') do (
+    echo %%~nF| findstr /r "^[1-9][0-9]*$" >nul && (
+        set /a val=%%~nF
+        if !val! GTR !MAX_NUM! set /a MAX_NUM=!val!
+    )
 )
+set /a CALC_NEXT=MAX_NUM+1
+endlocal & set NEXT_NUM=%CALC_NEXT%
 
 echo 👉 Next Backup Version will be: [%NEXT_NUM%]
 echo.
