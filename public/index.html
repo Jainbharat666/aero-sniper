@@ -8517,6 +8517,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               tokenIds: unrequested,
+              slug: currentScannedProject.slug,
               chain: currentScannedProject.chain || 'robinhood',
               contractAddress: currentScannedProject.contractAddress
             })

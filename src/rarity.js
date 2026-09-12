@@ -255,8 +255,18 @@ export class RarityEngine {
    * HIGH-SPEED BATCH RARITY RESOLVER (6-Key Parallel Laser Grid)
    * Resolves floor token rarities smoothly across all 6 keys without aborting or exceeding rate limits.
    */
-  async batchFetchRarities(tokenIds, chain = this.chain, contract = this.contractAddress) {
+  async batchFetchRarities(tokenIds, chain = this.chain, contract = this.contractAddress, slug = this.collectionSlug) {
     if (!Array.isArray(tokenIds) || tokenIds.length === 0) return {};
+    if (slug && (!this.collectionSlug || this.collectionSlug !== slug.toLowerCase())) {
+      this.collectionSlug = slug.toLowerCase();
+      this.loadFromDiskCache();
+    }
+    if (contract && (!this.contractAddress || this.contractAddress.toLowerCase() !== contract.toLowerCase())) {
+      this.contractAddress = contract.toLowerCase();
+    }
+    if (this.tokenRarityMap.size === 0) {
+      this.loadFromDiskCache();
+    }
     const targetChain = (chain || this.chain || 'robinhood').toLowerCase();
     const targetContract = contract || this.contractAddress;
     if (!targetContract) return {};

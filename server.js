@@ -2968,7 +2968,7 @@ app.get('/api/token/rarity', async (req, res) => {
 });
 
 app.post('/api/tokens/rarity-batch', async (req, res) => {
-  const { tokenIds, chain, contractAddress } = req.body || {};
+  const { tokenIds, chain, contractAddress, slug } = req.body || {};
   if (!Array.isArray(tokenIds) || tokenIds.length === 0) {
     return res.json({ success: true, rarities: {} });
   }
@@ -2976,7 +2976,8 @@ app.post('/api/tokens/rarity-batch', async (req, res) => {
     const rarities = await rarityEngine.batchFetchRarities(
       tokenIds,
       chain || rarityEngine.chain,
-      contractAddress || rarityEngine.contractAddress
+      contractAddress || rarityEngine.contractAddress,
+      slug || rarityEngine.collectionSlug
     );
     res.json({ success: true, rarities });
   } catch (e) {
