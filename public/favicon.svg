@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <!-- Background Gradient (Aero Signature Indigo-Purple-Rose) -->
+    <linearGradient id="sniperBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="50%" stop-color="#7c3aed" />
+      <stop offset="100%" stop-color="#e11d48" />
+    </linearGradient>
+    <!-- Laser Core Glow -->
+    <radialGradient id="laserGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff007a" stop-opacity="1" />
+      <stop offset="100%" stop-color="#ff007a" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Modern Squircle Icon Container -->
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#sniperBg)" />
+
+  <!-- Tactical Corner Angle Brackets -->
+  <path d="M12 20 V14 H20" stroke="rgba(255,255,255,0.45)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  <path d="M52 20 V14 H44" stroke="rgba(255,255,255,0.45)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  <path d="M12 44 V50 H20" stroke="rgba(255,255,255,0.45)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  <path d="M52 44 V50 H44" stroke="rgba(255,255,255,0.45)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+
+  <!-- Outer Sniper Scope Ring -->
+  <circle cx="32" cy="32" r="19" stroke="#ffffff" stroke-width="2.5" fill="none" opacity="0.95" />
+
+  <!-- Inner Elevation Ring -->
+  <circle cx="32" cy="32" r="10" stroke="#ffffff" stroke-width="1.6" stroke-dasharray="3 2" fill="none" opacity="0.85" />
+
+  <!-- Crosshair Precision Lines -->
+  <line x1="32" y1="8" x2="32" y2="24" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+  <line x1="32" y1="40" x2="32" y2="56" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+  <line x1="8" y1="32" x2="24" y2="32" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+  <line x1="40" y1="32" x2="56" y2="32" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+
+  <!-- Center Laser Target Lock -->
+  <circle cx="32" cy="32" r="7" fill="url(#laserGlow)" opacity="0.7" />
+  <circle cx="32" cy="32" r="3" fill="#ffffff" />
+  <circle cx="32" cy="32" r="1.5" fill="#e11d48" />
+</svg>
