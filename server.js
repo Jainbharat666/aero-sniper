@@ -1861,15 +1861,17 @@ app.post('/api/users/delete', adminAuthMiddleware, async (req, res) => {
   }
 });
 
-// Record on-chain snipe operation
-app.post('/api/users/record-snipe', async (req, res) => {
+// Record on-chain snipe operation (Authenticated)
+app.post('/api/users/record-snipe', userAuthMiddleware, async (req, res) => {
   try {
     const { user_id, email, count } = req.body;
-    const identifier = user_id || email;
-    if (identifier) {
-      const newTotal = await dbRecordUserSnipe(identifier, parseInt(count) || 1);
-      if (newTotal !== null) return res.json({ success: true, total_snipes: newTotal });
+    const identifier = user_id || email || req.authenticatedUser.id;
+    const isOwnerOrAdmin = req.authenticatedUser.role === 'admin' || req.authenticatedUser.email?.toLowerCase() === OWNER_EMAIL;
+    if (!isOwnerOrAdmin && req.authenticatedUser.id !== identifier && req.authenticatedUser.email?.toLowerCase() !== String(identifier).toLowerCase()) {
+      return res.status(403).json({ success: false, error: 'Unauthorized. You can only record snipes for your own account.' });
     }
+    const newTotal = await dbRecordUserSnipe(identifier, parseInt(count) || 1);
+    if (newTotal !== null) return res.json({ success: true, total_snipes: newTotal });
     return res.status(404).json({ success: false, error: 'User not found' });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -3003,8 +3005,8 @@ app.post('/api/opensea/test-key', async (req, res) => {
   }
 });
 
-// ─── MULTI-WALLET FLEET FUNDING & ZERO-DUST SWEEPING ────────────────────────
-app.post('/api/wallet/fund', async (req, res) => {
+// ─── MULTI-WALLET FLEET FUNDING & ZERO-DUST SWEEPING (AUTHENTICATED) ────────
+app.post('/api/wallet/fund', userAuthMiddleware, async (req, res) => {
   const { masterPrivateKey, workers, amountEth } = req.body;
   if (!masterPrivateKey || !Array.isArray(workers) || workers.length === 0 || !amountEth) {
     return res.status(400).json({ success: false, error: 'Missing required funding parameters' });
@@ -3060,7 +3062,7 @@ app.post('/api/wallet/fund', async (req, res) => {
   }
 });
 
-app.post('/api/wallet/sweep', async (req, res) => {
+app.post('/api/wallet/sweep', userAuthMiddleware, async (req, res) => {
   const { masterAddress, workers } = req.body;
   if (!masterAddress || !Array.isArray(workers) || workers.length === 0) {
     return res.status(400).json({ success: false, error: 'Missing masterAddress or workers array' });
@@ -3132,7 +3134,7 @@ app.post('/api/wallet/sweep', async (req, res) => {
   }
 });
 
-app.post('/api/wallet/send', async (req, res) => {
+app.post('/api/wallet/send', userAuthMiddleware, async (req, res) => {
   const { fromPrivateKey, toAddress, amountEth } = req.body;
   if (!fromPrivateKey || !toAddress || !amountEth) {
     return res.status(400).json({ success: false, error: 'Missing transfer parameters' });
