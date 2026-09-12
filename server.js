@@ -23,9 +23,34 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Universal CORS: Allow localhost + any deployed web domain (Vercel, Netlify, Render, custom domain)
+// Restricted CORS: Protect against malicious 3rd-party cross-site requests
+const ALLOWED_ORIGINS = [
+  'https://aero-sniper.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
+  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()) : [])
+];
+
 const corsOptions = {
-  origin: true,
+  origin: function (origin, callback) {
+    // Allow non-browser requests (curl, server-to-server, node scripts)
+    if (!origin) return callback(null, true);
+
+    // Exact match against whitelist
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Allow official Vercel preview deployments for aero-sniper
+    if (/^https:\/\/aero-sniper.*\.vercel\.app$/.test(origin)) {
+      return callback(null, true);
+    }
+
+    // Reject untrusted cross-origin requests
+    return callback(null, false);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'x-session-token', 'x-app-id']
@@ -3159,6 +3184,16 @@ app.post('/api/wallet/send', userAuthMiddleware, async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
+});
+
+// ─── GLOBAL ERROR HANDLER MIDDLEWARE (FAIL-SAFE) ─────────────────────────────
+app.use((err, req, res, next) => {
+  console.error('[Sniper Global Error]:', err.message || err);
+  if (res.headersSent) return next(err);
+  return res.status(err.status || 500).json({
+    success: false,
+    error: err.message || 'An internal server error occurred.'
+  });
 });
 
 if (!process.env.VERCEL) {
