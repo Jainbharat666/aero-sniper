@@ -746,40 +746,21 @@ async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
     let txHash = '';
 
     if (isSim) {
-      const blastRes = await seaportExecutor.multiRpcBroadcast(null, true);
-      txHash = blastRes.txHash;
-      broadcastSnipeLog(`🧪 [PAPER SNIPE] Token #${tokenId} simulated in ${blastRes.latencyMs}ms! MockTx: ${txHash}`);
+      const simulatedLatency = Math.floor(Math.random() * 3) + 1;
+      txHash = '0xsimulated_' + Date.now().toString(16) + Math.random().toString(16).slice(2, 10);
+      broadcastSnipeLog(`🧪 [PAPER SNIPE] Token #${tokenId} simulated in ${simulatedLatency}ms! MockTx: ${txHash}`);
     } else {
-      let txNonce;
-      try {
-        txNonce = await getNextNonce(currentWorker.provider, buyerAddress);
-      } catch (nErr) {
-        txNonce = await currentWorker.getNonce('pending');
-      }
-      txObj.nonce = txNonce;
-      if (!txObj.chainId) txObj.chainId = 4663;
-
-      broadcastSnipeLog(`➔ [RAM SIGN & BLAST] Signing & broadcasting across ${seaportExecutor.rpcs.length} RPCs for #${tokenId} (Worker: ${buyerName} - ${buyerAddress.slice(0, 6)}... Nonce: ${txNonce})...`);
-
-      let blastRes;
-      try {
-        const signedRawTx = await currentWorker.signTransaction(txObj);
-        blastRes = await seaportExecutor.multiRpcBroadcast(signedRawTx, false);
-      } catch (blastErr) {
-        walletNonceMap.delete(buyerAddress);
-        broadcastSnipeLog(`❌ [MEMPOOL REJECTED] Failed to broadcast tx for #${tokenId}: ${blastErr.message}`);
-        activeSniperEngine.pendingSnipes.delete(tokenId);
-        return;
-      }
-
-      txHash = blastRes.txHash;
+      broadcastSnipeLog(`➔ [RAM SIGN & BLAST] Broadcasting transaction for #${tokenId} (Worker: ${buyerName} - ${buyerAddress.slice(0, 6)}...)...`);
+      
+      const txResponse = await currentWorker.sendTransaction(txObj);
+      txHash = txResponse.hash;
       const tSigned = performance.now();
       const latencyMs = (tSigned - tTriggerStart).toFixed(2);
       
-      broadcastSnipeLog(`🚀 [MEMPOOL ACCEPTED] TxHash: ${txHash} (${latencyMs}ms via ${blastRes.rpcUrl}) ➔ Mining on Robinhood Chain...`);
+      broadcastSnipeLog(`🚀 [MEMPOOL ACCEPTED] TxHash: ${txHash} (${latencyMs}ms) ➔ Mining on Robinhood Chain...`);
 
       // Track receipt in background
-      currentWorker.provider.waitForTransaction(txHash, 1).then(receipt => {
+      txResponse.wait(1).then(receipt => {
         if (receipt) {
           broadcastSnipeLog(`🎉 [ON-CHAIN CONFIRMED] Block #${receipt.blockNumber}! Token #${tokenId} secured by ${buyerName} (Tx: ${txHash.slice(0, 14)}...)!`);
           broadcastToClients({
@@ -790,7 +771,7 @@ async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
             buyerName: buyerName,
             txHash: txHash,
             blockNumber: receipt.blockNumber,
-            timestamp: getNow()
+            timestamp: Date.now()
           });
         }
       }).catch(e => {
@@ -1188,31 +1169,27 @@ const collectionMetadataCache = new Map(); // slug -> { colData, tRes, directSta
 const liveListingsCache = new Map(); // slug -> { listings, expiresAt }
 
 // ─── HIGH-SPEED MULTI-KEY REST FETCHER WITH FAILOVER & 429 BACKOFF ───────────
-async function fetchOpenSeaWithFallback(pathStr, preferredKeyIndex = null, forceBypassCache = false) {
+async function fetchOpenSeaWithFallback(pathStr, preferredKeyIndex = null) {
   const allKeys = config.opensea.apiKeys;
   const preferredKey = preferredKeyIndex !== null && allKeys[preferredKeyIndex] ? allKeys[preferredKeyIndex] : null;
 
   // Use Central API Shop: candidate keys with healthy non-cooldown keys sorted first (all 6 keys)
   const candidateKeys = config.opensea.getCandidateKeys(preferredKey, false);
 
-  const url = forceBypassCache
-    ? `${config.opensea.restApiBase}${pathStr}${pathStr.includes('?') ? '&' : '?'}_t=${Date.now()}`
-    : `${config.opensea.restApiBase}${pathStr}`;
+  const sep = pathStr.includes('?') ? '&' : '?';
+  const url = `${config.opensea.restApiBase}${pathStr}${sep}_t=${Date.now()}`;
 
   let lastErr = null;
   for (const key of candidateKeys) {
     const t0 = Date.now();
     try {
-      const headers = {
-        'X-API-KEY': key,
-        'Accept': 'application/json'
-      };
-      if (forceBypassCache) {
-        headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
-      }
       const res = await apiClient.get(url, {
-        headers,
-        timeout: 4500
+        headers: {
+          'X-API-KEY': key,
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        },
+        timeout: 5000
       });
       const latency = Date.now() - t0;
       trackKeyUse(key, latency, '200 OK');
@@ -2425,117 +2402,88 @@ app.post('/api/snipe/buy', async (req, res) => {
 
     // 1. Direct Seaport protocol_data execution if provided
     if (protocolData?.parameters && protocolData?.signature) {
-      txObj = seaportExecutor.buildSeaportTransaction(protocolData, buyerAddress, gasSpeed || 'turbo');
-    } else {
-      // 2. Fallback to OpenSea Fulfillment API using 24/7 API Shop
-      const hashToFulfill = orderHash || protocolData?.orderHash;
-      if (hashToFulfill) {
-        const fulRes = await fetchSeaportFulfillmentWithShop(hashToFulfill, 'robinhood', buyerAddress, tokenId);
-        if (!fulRes.success) {
-          if (fulRes.isDeadOrder) {
-            if (hashToFulfill && activeSniperEngine.invalidOrderHashes) {
-              activeSniperEngine.invalidOrderHashes.add(hashToFulfill);
-            }
-            if (tokenId && activeSniperEngine.snipedTokenIds) {
-              activeSniperEngine.snipedTokenIds.add(String(tokenId));
-            }
-          } else {
-            // Temporary error: rollback locks so retry is possible
-            if (tokIdStr) {
-              if (activeSniperEngine.pendingSnipes) activeSniperEngine.pendingSnipes.delete(tokIdStr);
-              if (activeSniperEngine.snipedTokenIds) activeSniperEngine.snipedTokenIds.delete(tokIdStr);
-            }
+      const txObj = seaportExecutor.buildSeaportTransaction(protocolData, buyerAddress, gasSpeed || 'turbo');
+      const tx = await signer.sendTransaction(txObj);
+      const receipt = await tx.wait(1);
+
+      const cbStatus = handleSnipeSuccess(tx.hash, receipt.blockNumber);
+
+      return res.json({
+        success: true,
+        txHash: tx.hash,
+        blockNumber: receipt.blockNumber,
+        buyer: buyerAddress,
+        tokenId,
+        circuitBreakerHit: cbStatus.isCircuitBreakerHit,
+        executedCount: cbStatus.snipesExecuted,
+        maxLimit: cbStatus.maxLimit
+      });
+    }
+
+    // 2. Fallback to OpenSea Fulfillment API using 24/7 API Shop
+    const hashToFulfill = orderHash || protocolData?.orderHash;
+    if (hashToFulfill) {
+      const fulRes = await fetchSeaportFulfillmentWithShop(hashToFulfill, 'robinhood', buyerAddress, tokenId);
+      if (!fulRes.success) {
+        if (fulRes.isDeadOrder) {
+          if (hashToFulfill && activeSniperEngine.invalidOrderHashes) {
+            activeSniperEngine.invalidOrderHashes.add(hashToFulfill);
           }
-          return res.status(400).json({
-            success: false,
-            isDeadOrder: fulRes.isDeadOrder,
-            error: `OpenSea Fulfillment API: ${fulRes.error}`
-          });
+          if (tokenId && activeSniperEngine.snipedTokenIds) {
+            activeSniperEngine.snipedTokenIds.add(String(tokenId));
+          }
+        } else {
+          // Temporary error: rollback locks so retry is possible
+          if (tokIdStr) {
+            if (activeSniperEngine.pendingSnipes) activeSniperEngine.pendingSnipes.delete(tokIdStr);
+            if (activeSniperEngine.snipedTokenIds) activeSniperEngine.snipedTokenIds.delete(tokIdStr);
+          }
         }
-
-        if (fulRes.data?.fulfillment_data?.transaction) {
-          const txData = fulRes.data.fulfillment_data.transaction;
-          const fnName = txData.function.split('(')[0];
-          let calldata = seaportExecutor.seaportInterface.encodeFunctionData(fnName, [txData.input_data.parameters]);
-          if (txData.calldata_suffix) calldata += txData.calldata_suffix.replace('0x', '');
-
-          txObj = {
-            to: txData.to,
-            data: calldata,
-            value: BigInt(txData.value || '0'),
-            gasLimit: 260000n,
-            gasPrice: (seaportExecutor.cachedBaseFee * 235n) / 100n,
-            type: 0
-          };
-        }
-      }
-    }
-
-    if (!txObj) {
-      if (tokIdStr) {
-        if (activeSniperEngine.pendingSnipes) activeSniperEngine.pendingSnipes.delete(tokIdStr);
-        if (activeSniperEngine.snipedTokenIds) activeSniperEngine.snipedTokenIds.delete(tokIdStr);
-      }
-      return res.status(400).json({ success: false, error: 'Missing protocol order data or order hash' });
-    }
-
-    // Assign atomic nonce and chainId
-    let txNonce;
-    try {
-      txNonce = await getNextNonce(signer.provider, buyerAddress);
-    } catch (nErr) {
-      txNonce = await signer.getNonce('pending');
-    }
-    txObj.nonce = txNonce;
-    if (!txObj.chainId) txObj.chainId = 4663;
-
-    let blastRes;
-    try {
-      const signedRawTx = await signer.signTransaction(txObj);
-      blastRes = await seaportExecutor.multiRpcBroadcast(signedRawTx);
-    } catch (blastErr) {
-      walletNonceMap.delete(buyerAddress);
-      if (tokIdStr) {
-        if (activeSniperEngine.pendingSnipes) activeSniperEngine.pendingSnipes.delete(tokIdStr);
-        if (activeSniperEngine.snipedTokenIds) activeSniperEngine.snipedTokenIds.delete(tokIdStr);
-      }
-      return res.status(500).json({ success: false, error: `Mempool broadcast failed: ${blastErr.message}` });
-    }
-
-    const txHash = blastRes.txHash;
-    const cbStatus = handleSnipeSuccess(txHash, null);
-
-    // Track on-chain confirmation in background without blocking HTTP response
-    signer.provider.waitForTransaction(txHash, 1).then(receipt => {
-      if (receipt) {
-        broadcastSnipeLog(`🎉 [ON-CHAIN CONFIRMED] Block #${receipt.blockNumber}! Token #${tokenId} manual buy confirmed! (Tx: ${txHash.slice(0, 14)}...)`);
-        broadcastToClients({
-          type: 'zero_hop_snipe_confirmed',
-          slug: activeSniperEngine.slug,
-          tokenId: tokenId,
-          buyerName: 'Manual Buy',
-          txHash: txHash,
-          blockNumber: receipt.blockNumber,
-          timestamp: getNow()
+        return res.status(400).json({
+          success: false,
+          isDeadOrder: fulRes.isDeadOrder,
+          error: `OpenSea Fulfillment API: ${fulRes.error}`
         });
       }
-    }).catch(e => {
-      broadcastSnipeLog(`❌ [TX REVERTED] Manual buy revert for #${tokenId}: ${e.message}`);
-      if (tokenId && activeSniperEngine.snipedTokenIds) activeSniperEngine.snipedTokenIds.delete(String(tokenId));
-    });
 
-    return res.json({
-      success: true,
-      txHash: txHash,
-      blockNumber: null,
-      buyer: buyerAddress,
-      tokenId,
-      circuitBreakerHit: cbStatus.isCircuitBreakerHit,
-      executedCount: cbStatus.snipesExecuted,
-      maxLimit: cbStatus.maxLimit,
-      broadcastRpc: blastRes.rpcUrl,
-      broadcastLatencyMs: blastRes.latencyMs
-    });
+      if (fulRes.data?.fulfillment_data?.transaction) {
+        const txData = fulRes.data.fulfillment_data.transaction;
+        const fnName = txData.function.split('(')[0];
+        let calldata = seaportExecutor.seaportInterface.encodeFunctionData(fnName, [txData.input_data.parameters]);
+        if (txData.calldata_suffix) calldata += txData.calldata_suffix.replace('0x', '');
+
+        const txObj = {
+          to: txData.to,
+          data: calldata,
+          value: BigInt(txData.value || '0'),
+          gasLimit: 260000n,
+          gasPrice: (seaportExecutor.cachedBaseFee * 235n) / 100n,
+          type: 0
+        };
+
+        const tx = await signer.sendTransaction(txObj);
+        const receipt = await tx.wait(1);
+
+        const cbStatus = handleSnipeSuccess(tx.hash, receipt.blockNumber);
+
+        return res.json({
+          success: true,
+          txHash: tx.hash,
+          blockNumber: receipt.blockNumber,
+          buyer: buyerAddress,
+          tokenId,
+          circuitBreakerHit: cbStatus.isCircuitBreakerHit,
+          executedCount: cbStatus.snipesExecuted,
+          maxLimit: cbStatus.maxLimit
+        });
+      }
+    }
+
+    if (tokIdStr) {
+      if (activeSniperEngine.pendingSnipes) activeSniperEngine.pendingSnipes.delete(tokIdStr);
+      if (activeSniperEngine.snipedTokenIds) activeSniperEngine.snipedTokenIds.delete(tokIdStr);
+    }
+    return res.status(400).json({ success: false, error: 'Missing protocol order data or order hash' });
   } catch (err) {
     if (tokIdStr) {
       if (activeSniperEngine.pendingSnipes) activeSniperEngine.pendingSnipes.delete(tokIdStr);
@@ -2776,17 +2724,17 @@ app.post('/api/scan', async (req, res) => {
 
     if (!colData) {
       try {
-        colData = await fetchOpenSeaWithFallback(`/collections/${slug}`);
+        colData = await fetchOpenSeaWithFallback(`/collections/${slug}`, 0);
       } catch (e) {}
     }
 
     // Fallback if slug was a contract address or 0x address
     if (!colData && slug.startsWith('0x')) {
       try {
-        const cRes = await fetchOpenSeaWithFallback(`/chain/robinhood/contract/${slug}`);
+        const cRes = await fetchOpenSeaWithFallback(`/chain/robinhood/contract/${slug}`, 0);
         if (cRes?.collection) {
           slug = cRes.collection;
-          colData = await fetchOpenSeaWithFallback(`/collections/${slug}`);
+          colData = await fetchOpenSeaWithFallback(`/collections/${slug}`, 0);
         }
       } catch(e) {}
     }
@@ -2795,7 +2743,7 @@ app.post('/api/scan', async (req, res) => {
     if (!colData) {
       await new Promise(r => setTimeout(r, 200));
       try {
-        colData = await fetchOpenSeaWithFallback(`/collections/${slug}`);
+        colData = await fetchOpenSeaWithFallback(`/collections/${slug}`, 0);
       } catch(e) {}
     }
 
@@ -2806,13 +2754,14 @@ app.post('/api/scan', async (req, res) => {
     }
 
     if (!colData) {
+      collectionMetadataCache.delete(slug);
       return res.status(404).json({ success: false, error: `Collection "${input}" not found on OpenSea. Please verify the slug/contract.` });
     }
 
-    // ⚡ 2. FETCH TRAITS, INITIAL LISTINGS & DIRECT STATS IN PARALLEL (Distributed across rotating counter)
+    // ⚡ 2. FETCH TRAITS, INITIAL LISTINGS & DIRECT STATS IN PARALLEL (Role-partitioned keys)
     const [tResFresh, page1Res, directStats] = await Promise.all([
-      tRes ? Promise.resolve(tRes) : fetchOpenSeaWithFallback(`/traits/${slug}`).catch(() => null),
-      fetchOpenSeaWithFallback(`/listings/collection/${slug}/all?limit=50`).catch(() => null),
+      tRes ? Promise.resolve(tRes) : fetchOpenSeaWithFallback(`/traits/${slug}`, 2).catch(() => null),
+      fetchOpenSeaWithFallback(`/listings/collection/${slug}/all?limit=50`, 3).catch(() => null),
       fetchOpenSeaAuthoritativeStats(slug).catch(() => null)
     ]);
     if (!tRes && tResFresh) tRes = tResFresh;
@@ -3035,115 +2984,64 @@ app.post('/api/tokens/rarity-batch', async (req, res) => {
   }
 });
 
-// Live Listings Poller (Real-Time Seaport Order Book + 2s Rate-Shield)
+// Live Listings Poller (Real-Time Chronological Listing Stream via Key #4)
 app.get('/api/listings/live', async (req, res) => {
   const slug = (req.query.slug || '').trim().toLowerCase();
   if (!slug) return res.json({ success: true, listings: [] });
 
-  // ⚡ 2-Second Cache Shield: Prevents 1.5s frontend poller from burning OpenSea rate limits
-  const cachedLive = liveListingsCache.get(slug);
-  if (cachedLive && cachedLive.expiresAt > Date.now()) {
-    return res.json({ success: true, listings: cachedLive.listings, fromCache: true });
-  }
-
   try {
+    const evData = await fetchOpenSeaWithFallback(`/events/collection/${slug}?event_type=listing&limit=15`, 3);
     let listings = [];
-
-    // ⚡ PATH 1 (PRIMARY): Real-Time Seaport 1.6 Order Book (<1-2s listing pickup)
-    try {
-      const listData = await fetchOpenSeaWithFallback(`/listings/collection/${slug}/all?limit=25&order_by=created_date&order_direction=desc`);
-      if (listData && Array.isArray(listData.listings) && listData.listings.length > 0) {
-        listings = listData.listings.map(item => {
-          const tokenId = item.asset?.identifier || String(item.order_hash || '0');
-          const valBig = BigInt(item.price?.current?.value || '0');
-          const decimals = item.price?.current?.decimals || 18;
-          const priceEth = Number(valBig) / Number(10n ** BigInt(decimals));
-          const createdAt = item.order_created_at ? (item.order_created_at * 1000) : getNow();
-
-          return {
-            tokenId,
-            name: `#${tokenId}`,
-            image: '',
-            imageUrl: '',
-            price: priceEth,
-            priceFormatted: formatEthPrecise(priceEth),
-            priceUsd: parseFloat((priceEth * cachedEthPrice).toFixed(2)),
-            rarityRank: rarityEngine.getRaritySync(tokenId),
-            seller: item.protocol_data?.parameters?.offerer ? `${item.protocol_data.parameters.offerer.slice(0, 6)}...${item.protocol_data.parameters.offerer.slice(-4)}` : '',
-            sellerFull: item.protocol_data?.parameters?.offerer || '',
-            orderHash: item.order_hash || '',
-            ageSeconds: Math.max(0, Math.round((getNow() - createdAt) / 1000)),
-            eventTimestamp: createdAt,
-            protocolData: item.protocol_data || null,
-            contractAddress: item.asset?.contract || (activeCollectionStats?.contractAddress || ''),
-            chain: item.chain || 'robinhood',
-            slug: slug,
-            sniped: activeSniperEngine.snipedTokenIds.has(String(tokenId))
-          };
-        }).filter(item => item.price > 0 && item.tokenId && item.tokenId !== '0');
-      }
-    } catch (e) {}
-
-    // ⚡ PATH 2 (FALLBACK): Historical Events query if order book returned empty
-    if (listings.length === 0) {
-      try {
-        const evData = await fetchOpenSeaWithFallback(`/events/collection/${slug}?event_type=listing&limit=15`);
-        if (evData && Array.isArray(evData.asset_events)) {
-          listings = evData.asset_events.map(ev => {
-            const asset = ev.asset || {};
-            const tokenId = asset.identifier || asset.token_id || String(ev.event_id || '0');
-            let priceEth = 0;
-            if (ev.payment?.quantity) {
-              priceEth = parseFloat(ev.payment.quantity) / (10 ** (ev.payment.decimals || 18));
-            } else if (ev.protocol_data?.parameters?.consideration?.[0]?.startAmount) {
-              priceEth = Number(BigInt(ev.protocol_data.parameters.consideration[0].startAmount)) / 1e18;
-            }
-            const eventTime = ev.event_timestamp ? (typeof ev.event_timestamp === 'number' ? (ev.event_timestamp > 1e11 ? ev.event_timestamp : ev.event_timestamp * 1000) : new Date(ev.event_timestamp).getTime()) : getNow();
-            return {
-              tokenId,
-              name: asset.name || `#${tokenId}`,
-              image: asset.image_url || asset.display_image_url || '',
-              imageUrl: asset.image_url || asset.display_image_url || '',
-              price: priceEth,
-              priceFormatted: formatEthPrecise(priceEth),
-              priceUsd: parseFloat((priceEth * cachedEthPrice).toFixed(2)),
-              rarityRank: rarityEngine.getRaritySync(tokenId),
-              seller: ev.maker ? `${ev.maker.slice(0, 6)}...${ev.maker.slice(-4)}` : '',
-              sellerFull: ev.maker || '',
-              orderHash: ev.order_hash || '',
-              ageSeconds: Math.max(0, Math.round((getNow() - eventTime) / 1000)),
-              eventTimestamp: eventTime,
-              protocolData: ev.protocol_data || null,
-              contractAddress: asset.asset_contract?.address || (activeCollectionStats?.contractAddress || ''),
-              chain: 'robinhood',
-              slug: slug,
-              sniped: activeSniperEngine.snipedTokenIds.has(String(tokenId))
-            };
-          }).filter(item => item.price > 0 && item.tokenId && item.tokenId !== '0');
+    if (evData && Array.isArray(evData.asset_events)) {
+      listings = evData.asset_events.map(ev => {
+        const asset = ev.asset || {};
+        const tokenId = asset.identifier || asset.token_id || String(ev.event_id || '0');
+        let priceEth = 0;
+        if (ev.payment?.quantity) {
+          priceEth = parseFloat(ev.payment.quantity) / (10 ** (ev.payment.decimals || 18));
+        } else if (ev.protocol_data?.parameters?.consideration?.[0]?.startAmount) {
+          priceEth = Number(BigInt(ev.protocol_data.parameters.consideration[0].startAmount)) / 1e18;
         }
-      } catch (e) {}
-    }
+        const eventTime = ev.event_timestamp ? (typeof ev.event_timestamp === 'number' ? (ev.event_timestamp > 1e11 ? ev.event_timestamp : ev.event_timestamp * 1000) : new Date(ev.event_timestamp).getTime()) : Date.now();
+        return {
+          tokenId,
+          name: asset.name || `#${tokenId}`,
+          image: asset.image_url || asset.display_image_url || '',
+          imageUrl: asset.image_url || asset.display_image_url || '',
+          price: priceEth,
+          priceFormatted: formatEthPrecise(priceEth),
+          priceUsd: parseFloat((priceEth * cachedEthPrice).toFixed(2)),
+          rarityRank: rarityEngine.getRaritySync(tokenId),
+          seller: ev.maker ? `${ev.maker.slice(0, 6)}...${ev.maker.slice(-4)}` : '',
+          sellerFull: ev.maker || '',
+          orderHash: ev.order_hash || '',
+          ageSeconds: Math.max(0, Math.round((Date.now() - eventTime) / 1000)),
+          eventTimestamp: eventTime,
+          protocolData: ev.protocol_data || null,
+          contractAddress: asset.asset_contract?.address || (activeCollectionStats?.contractAddress || ''),
+          chain: 'robinhood',
+          slug: slug,
+          sniped: activeSniperEngine.snipedTokenIds.has(String(tokenId))
+        };
+      }).filter(item => item.price > 0 && item.tokenId && item.tokenId !== '0');
 
-    // Cache valid listings for 2 seconds
-    if (listings.length > 0) {
-      liveListingsCache.set(slug, { listings, expiresAt: Date.now() + 2000 });
-    }
+      // 🛡️ DUAL-PATH REDUNDANCY: If sniper is armed, ONLY evaluate FRESH live listings!
+      // NEVER auto-snipe historical listings that took place before sniper was armed or older than 30s!
+      if (activeSniperEngine.isArmed) {
+        const minArmedTime = activeSniperEngine.armedTimestamp ? (activeSniperEngine.armedTimestamp - 5000) : Date.now();
+        for (const item of listings) {
+          const hasHash = Boolean(item.orderHash && item.orderHash.length > 10);
+          const hasParams = Boolean(item.protocolData?.parameters && item.protocolData?.signature);
+          if (!hasHash && !hasParams) continue; // Skip incomplete OpenSea events until orderHash is indexed
 
-    // 🛡️ DUAL-PATH REDUNDANCY: If sniper is armed, ONLY evaluate FRESH live listings!
-    if (activeSniperEngine.isArmed) {
-      const minArmedTime = activeSniperEngine.armedTimestamp ? (activeSniperEngine.armedTimestamp - 5000) : getNow();
-      for (const item of listings) {
-        const hasHash = Boolean(item.orderHash && item.orderHash.length > 10);
-        const hasParams = Boolean(item.protocolData?.parameters && item.protocolData?.signature);
-        if (!hasHash && !hasParams) continue;
-
-        const isAfterArm = item.eventTimestamp >= minArmedTime;
-        const isFresh = item.ageSeconds <= 45;
-        if (isAfterArm && isFresh) {
-          const tokStr = String(item.tokenId);
-          const isDead = item.orderHash && activeSniperEngine.invalidOrderHashes && activeSniperEngine.invalidOrderHashes.has(item.orderHash);
-          if (!activeSniperEngine.snipedTokenIds.has(tokStr) && !isDead) {
-            evaluateAndSnipe(item, slug);
+          const isAfterArm = item.eventTimestamp >= minArmedTime;
+          const isFresh = item.ageSeconds <= 30;
+          if (isAfterArm && isFresh) {
+            const tokStr = String(item.tokenId);
+            const isDead = item.orderHash && activeSniperEngine.invalidOrderHashes && activeSniperEngine.invalidOrderHashes.has(item.orderHash);
+            if (!activeSniperEngine.snipedTokenIds.has(tokStr) && !isDead) {
+              evaluateAndSnipe(item, slug);
+            }
           }
         }
       }

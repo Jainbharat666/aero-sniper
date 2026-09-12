@@ -9143,13 +9143,23 @@
         const tokId = String(item.tokenId);
         if (clientBoughtTokens.has(tokId)) return;
 
-        const itemHash = item.orderHash;
+        const itemHash = item.orderHash || item.protocolData?.orderHash;
         if (itemHash && typeof clientDeadOrdersSet !== 'undefined' && clientDeadOrdersSet.has(itemHash)) return;
 
-        // 🛡️ STRICT HISTORICAL FILTER: Do NOT auto-snipe old listings that existed before sniper was armed!
-        const itemTime = item.eventTimestamp ? Number(item.eventTimestamp) : 0;
-        if (clientArmedTimestamp > 0 && itemTime > 0 && itemTime < (clientArmedTimestamp - 3000)) {
-          return;
+        // 🛡️ CRITICAL GUARD: Must have orderHash or protocolData before evaluating!
+        const hasOrderHash = Boolean(itemHash && itemHash.length > 10);
+        const hasProtocolParams = Boolean(item.protocolData?.parameters && item.protocolData?.signature);
+        if (!hasOrderHash && !hasProtocolParams) {
+          return; // Skip items without orderHash / Seaport signature
+        }
+
+        // 🛡️ CRITICAL GUARD: Only auto-snipe fresh listings that occurred AFTER the sniper was armed
+        const minArmTime = clientArmedTimestamp ? (clientArmedTimestamp - 5000) : Date.now();
+        const itemTs = item.eventTimestamp ? Number(item.eventTimestamp) : Date.now();
+        const isAfterArm = itemTs >= minArmTime;
+        const isFresh = (item.ageSeconds || 0) <= 30;
+        if (!isAfterArm || !isFresh) {
+          return; // Skip historical listings loaded during initial scan!
         }
 
         let triggered = false;
