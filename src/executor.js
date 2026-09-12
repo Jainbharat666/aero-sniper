@@ -12,7 +12,11 @@ export class SeaportExecutor {
       'https://robinhood-mainnet.g.alchemy.com/v2/alch_FtrEfyyJYzEBZ0SQ3ctbJ',
       'https://rpc.mainnet.chain.robinhood.com'
     ]);
-    this.providers = this.rpcs.map(url => new ethers.JsonRpcProvider(url, undefined, { staticNetwork: true }));
+    this.providers = this.rpcs.map(url => {
+      const p = new ethers.JsonRpcProvider(url, undefined, { staticNetwork: true });
+      p.pollingInterval = 500;
+      return p;
+    });
     this.cachedBaseFee = 22000000n;
     this.gasTickerInterval = null;
     this.startGasTicker();
@@ -27,8 +31,29 @@ export class SeaportExecutor {
     const cleanUrls = rpcUrls.filter(u => typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://')));
     if (cleanUrls.length === 0) return;
     this.rpcs = cleanUrls;
-    this.providers = this.rpcs.map(url => new ethers.JsonRpcProvider(url, undefined, { staticNetwork: true }));
+    this.providers = this.rpcs.map(url => {
+      const p = new ethers.JsonRpcProvider(url, undefined, { staticNetwork: true });
+      p.pollingInterval = 500;
+      return p;
+    });
     console.log(`[EXECUTOR] ⚡ Dynamic RPC Fleet Updated: ${this.rpcs.length} active nodes armed.`);
+  }
+
+  /**
+   * ⚡ HOT RPC SOCKET PRE-WARMING (0ms TLS Handshake)
+   */
+  async preWarmConnections() {
+    const pingPromises = this.rpcs.map(async (url) => {
+      try {
+        await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method: 'eth_chainId', params: [] }),
+          signal: AbortSignal.timeout(2500)
+        });
+      } catch (e) {}
+    });
+    await Promise.allSettled(pingPromises);
   }
 
   startGasTicker() {

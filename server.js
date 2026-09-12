@@ -2272,6 +2272,20 @@ app.post('/api/snipe/arm', async (req, res) => {
       subscribeSlugToOpenSea(activeSniperEngine.slug);
     }
 
+    // ⚡ PRE-WARM ATOMIC NONCES & RPC SOCKETS IN RAM (Eliminates 500ms latency at T-0)
+    seaportExecutor.preWarmConnections().catch(() => {});
+    const activeProvider = seaportExecutor.providers[0];
+    if (activeProvider && Array.isArray(workerPool)) {
+      for (const w of workerPool) {
+        if (w.address) {
+          activeProvider.getTransactionCount(w.address, 'pending').then(n => {
+            walletNonceMap.set(w.address, n);
+            console.log(`⚡ [RAM NONCE PRE-WARMED] ${w.name || 'Worker'} (${w.address.slice(0, 6)}...): Nonce ${n} locked in RAM`);
+          }).catch(() => {});
+        }
+      }
+    }
+
     res.json({
       success: true,
       message: 'Ultra-Fast 8-Feature Sniper Engine ARMED in Node.js backend memory',
