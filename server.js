@@ -67,7 +67,7 @@ const apiClient = axios.create({
 
 // ─── SUPABASE POSTGRESQL CLOUD CONFIG (ISOLATED SNIPER V2 DATABASE) ─────────
 const SUPABASE_URL = (process.env.SUPABASE_URL || 'https://fjxarhcisasyvomfgtxl.supabase.co').replace(/\/$/, '');
-const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || 'sb_publishable_QkC4wXZTz_4m8P9zUuwDjg_mUZA1Vqa';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || '';
 
 const supabaseHeaders = {
   apikey: SUPABASE_KEY,
