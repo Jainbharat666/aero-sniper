@@ -33,6 +33,20 @@ export const config = {
     streamWsUrl: 'wss://stream.openseabeta.com/socket',
     restApiBase: 'https://api.opensea.io/api/v2',
 
+    addApiKey(key) {
+      if (key && !pool.includes(key)) {
+        pool.push(key);
+      }
+    },
+
+    removeApiKey(key) {
+      const idx = pool.indexOf(key);
+      if (idx > 0) {
+        pool.splice(idx, 1);
+        keyCooldownMap.delete(key);
+      }
+    },
+
     /**
      * 🏪 CENTRAL API SHOP: 24/7 Continuous Carousel across all 6 OpenSea API Keys.
      * Every module draws from this round-robin pool.

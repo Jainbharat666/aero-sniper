@@ -3072,12 +3072,13 @@ app.get('/api/collection/traits', async (req, res) => {
 });
 
 // ─── OPENSEA 6-KEY POOL MANAGEMENT ─────────────────────────────────────────
-app.get('/api/opensea/keys', userAuthMiddleware, (req, res) => {
+app.get('/api/opensea/keys', (req, res) => {
   const keys = config.opensea.apiKeys;
   const list = keys.map((k, i) => {
     const stat = openseaKeyStats[k] || { label: `Key #${i + 1}`, role: 'extra', count: 0, lastPingMs: 100, status: '200 OK' };
     return {
-      key: `Key #${i + 1}`,
+      key: k,
+      rawKey: k,
       masked: `${k.slice(0, 6)}••••••••••••${k.slice(-4)}`,
       label: stat.label,
       role: stat.role,
@@ -3096,6 +3097,67 @@ app.get('/api/opensea/keys', userAuthMiddleware, (req, res) => {
     totalRequests,
     strategy: '6-Key Role-Specialized Laser Grid',
     keys: list
+  });
+});
+
+app.post('/api/opensea/add-key', (req, res) => {
+  const { apiKey, label } = req.body || {};
+  const key = (apiKey || '').trim();
+  if (!key || key.length < 10) {
+    return res.status(400).json({ success: false, error: 'Valid OpenSea API Key is required (minimum 10 characters)' });
+  }
+  if (config.opensea.apiKeys.includes(key)) {
+    return res.status(400).json({ success: false, error: 'This OpenSea API Key is already in the active pool' });
+  }
+
+  if (typeof config.opensea.addApiKey === 'function') {
+    config.opensea.addApiKey(key);
+  } else {
+    config.opensea.apiKeys.push(key);
+  }
+
+  const keyIndex = config.opensea.apiKeys.length;
+  openseaKeyStats[key] = {
+    label: label && label.trim() ? label.trim() : `Key #${keyIndex} (Custom)`,
+    role: 'extra',
+    count: 0,
+    lastPingMs: 100,
+    status: 'Ready'
+  };
+
+  return res.json({
+    success: true,
+    message: 'API Key successfully added to active laser pool',
+    totalKeys: config.opensea.apiKeys.length
+  });
+});
+
+app.post('/api/opensea/delete-key', (req, res) => {
+  const { apiKey } = req.body || {};
+  const key = (apiKey || '').trim();
+  if (!key) {
+    return res.status(400).json({ success: false, error: 'API key is required' });
+  }
+
+  const idx = config.opensea.apiKeys.indexOf(key);
+  if (idx === -1) {
+    return res.status(404).json({ success: false, error: 'Key not found in pool' });
+  }
+  if (idx === 0) {
+    return res.status(400).json({ success: false, error: 'Primary 24/7 WebSocket Stream Key (Key #1) cannot be removed' });
+  }
+
+  if (typeof config.opensea.removeApiKey === 'function') {
+    config.opensea.removeApiKey(key);
+  } else {
+    config.opensea.apiKeys.splice(idx, 1);
+  }
+  delete openseaKeyStats[key];
+
+  return res.json({
+    success: true,
+    message: 'Key successfully removed from pool',
+    totalKeys: config.opensea.apiKeys.length
   });
 });
 
