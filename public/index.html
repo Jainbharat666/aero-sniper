@@ -8671,6 +8671,7 @@
 
     let streamEventSource = null;
     const loggedStreamTokensSet = new Set(); // 🛡️ Ensure each token is logged to console ONLY ONCE per session
+    const clientBoughtTokens = new Set(); // 🛡️ Atomic token deduplication set (prevents duplicate buys across backend & client)
 
     // 🛑 UNIVERSAL RULEBOOK: Master Client Circuit Breaker Lock
     function handleClientCircuitBreakerHit(executed, limit) {
@@ -8717,6 +8718,7 @@
             
             const item = liveListingsStore.find(i => String(i.tokenId) === String(payload.tokenId));
             if (item) item.sniped = true;
+            clientBoughtTokens.add(String(payload.tokenId));
             
             const existingRow = document.querySelector(`tr[data-token="${payload.tokenId}"]`);
             if (existingRow) {
@@ -8914,8 +8916,10 @@
               logConsole(`⚡ [STREAM] ${payload.name || '#' + tokIdStr} listed at ${payload.priceFormatted} (Rank #${payload.rarityRank || 'N/A'})`);
             }
 
-            // 🛡️ Zero-Hop Backend Engine autonomously evaluates and executes snipes in RAM (<10ms).
-            // Frontend displays real-time stream listings without duplicate mempool collisions.
+            // 🛡️ If armed and not already sniped by zero-hop backend, evaluate trigger
+            if (isArmed && !payload.sniped && !clientBoughtTokens.has(tokIdStr)) {
+              checkSniperTriggers([payload]);
+            }
           }
         } catch(e) {}
       };
@@ -8942,6 +8946,9 @@
                 }
               });
               renderRealListings(liveListingsStore);
+              if (isArmed) {
+                checkSniperTriggers(data.listings);
+              }
             }
           }
         } catch(e) {}
@@ -8976,11 +8983,174 @@
     }
 
     function checkSniperTriggers(listings) {
-      // 🛡️ ZERO-HOP BACKEND DELEGATION:
-      // When armed, the backend Zero-Hop Engine (StreamListener + multi-RPC blast)
-      // autonomously evaluates all 4 trigger rules in RAM at 0ms latency.
-      // Frontend client auto-dispatch is disabled to prevent duplicate mempool collisions.
-      return;
+      if (!isArmed || !currentScannedProject || !Array.isArray(listings)) return;
+      if (activeMaxSnipesLimit > 0 && snipesExecutedCount >= activeMaxSnipesLimit) return;
+
+      const maxFloorEth = parseFloat(document.getElementById('param-floor-eth')?.value) || 0;
+      const maxRareRank = parseInt(document.getElementById('param-rare-rank')?.value, 10) || 1200;
+      const maxRareEth = parseFloat(document.getElementById('param-rare-eth')?.value) || 0;
+      const targetTokenIdsRaw = document.getElementById('param-token-ids')?.value || '';
+
+      listings.forEach(item => {
+        if (!item || !item.price || item.sniped) return;
+        const tokId = String(item.tokenId);
+        if (clientBoughtTokens.has(tokId)) return;
+
+        const itemHash = item.orderHash;
+        if (itemHash && typeof clientDeadOrdersSet !== 'undefined' && clientDeadOrdersSet.has(itemHash)) return;
+
+        let triggered = false;
+        let reason = '';
+
+        // 🎯 PRIORITY 1: TARGET TOKEN ID TRAP
+        const targetTokenSet = new Set(
+          String(targetTokenIdsRaw)
+            .split(/[\s,]+/)
+            .map(s => s.replace(/[^0-9]/g, ''))
+            .filter(Boolean)
+        );
+        const isTokenTrapActive = (typeof activeRuleStates !== 'undefined')
+          ? (activeRuleStates.tokenId || targetTokenSet.size > 0)
+          : targetTokenSet.size > 0;
+        const cleanId = String(item.tokenId || '').trim().replace(/[^0-9]/g, '');
+        const tokenMaxEth = parseFloat(document.getElementById('param-token-max-eth')?.value) || 0;
+        const effectiveTokenCap = tokenMaxEth > 0 ? tokenMaxEth : (maxFloorEth > 0 ? maxFloorEth : Infinity);
+
+        if (isTokenTrapActive && cleanId && targetTokenSet.has(cleanId)) {
+          if (item.price <= effectiveTokenCap) {
+            triggered = true;
+            reason = `🎯 Target Token #${cleanId}: ${item.price} ETH <= Cap ${effectiveTokenCap === Infinity ? 'Market' : effectiveTokenCap + ' ETH'}`;
+          }
+        }
+
+        // 👑 PRIORITY 2: RARE TRAIT HUNTER
+        const isTraitActive = (typeof activeRuleStates !== 'undefined') ? activeRuleStates.trait : false;
+        if (!triggered && isTraitActive && selectedTraitFilters && selectedTraitFilters.length > 0) {
+          const traitMaxEth = parseFloat(document.getElementById('param-trait-max-eth')?.value) || 0;
+          const effectiveTraitCap = traitMaxEth > 0 ? traitMaxEth : (maxFloorEth > 0 ? maxFloorEth : Infinity);
+          if (item.price <= effectiveTraitCap) {
+            const itemTraits = item.traits || [];
+            const matchesTrait = selectedTraitFilters.some(f => {
+              return itemTraits.some(t => {
+                const typeMatch = !f.traitType || String(t.trait_type || t.traitType || '').toLowerCase() === f.traitType.toLowerCase();
+                const valMatch = !f.traitValue || String(t.value || '').toLowerCase() === f.traitValue.toLowerCase();
+                return typeMatch && valMatch;
+              });
+            });
+            if (matchesTrait) {
+              triggered = true;
+              reason = `👑 Rare Trait Match at ${item.price} ETH <= Cap ${effectiveTraitCap === Infinity ? 'Market' : effectiveTraitCap + ' ETH'}`;
+            }
+          }
+        }
+
+        // ⚡ PRIORITY 3: FLOOR UNDERPRICE TRAP
+        const isFloorActive = (typeof activeRuleStates !== 'undefined') ? activeRuleStates.floor : (activeTriggerMode === 'floor' || activeTriggerMode === 'both');
+        if (!triggered && isFloorActive && maxFloorEth > 0) {
+          if (item.price <= maxFloorEth) {
+            triggered = true;
+            reason = `Floor Fat-Finger: ${item.price} ETH <= Target ${maxFloorEth} ETH`;
+          }
+        }
+
+        // 💎 PRIORITY 4: TOP RARITY RANK SNIPE
+        const isRarityActive = (typeof activeRuleStates !== 'undefined') ? activeRuleStates.rarity : (activeTriggerMode === 'rarity' || activeTriggerMode === 'both');
+        const effectiveRareCap = maxRareEth > 0 ? maxRareEth : (maxFloorEth > 0 ? maxFloorEth : 0);
+        if (!triggered && isRarityActive && effectiveRareCap > 0) {
+          if (item.rarityRank && item.rarityRank <= maxRareRank && item.price <= effectiveRareCap) {
+            triggered = true;
+            reason = `Top Rarity #${item.rarityRank} at ${item.price} ETH <= Target ${effectiveRareCap} ETH`;
+          }
+        }
+
+        if (triggered && !item.sniped) {
+          item.sniped = true;
+          clientBoughtTokens.add(tokId);
+          playBeep(980, 'sine', 0.2);
+          
+          const activeWorkers = walletFleet.filter((w, i) => i !== masterWalletIndex && w.selected !== false);
+          const buyer = activeWorkers[0] || walletFleet.find((w, i) => i !== masterWalletIndex) || walletFleet[0];
+
+          if (!buyer) {
+            logConsole(`⚠ [SNIPER PAUSED] Trigger matched [${reason}], but no worker wallets are loaded!`);
+            showToast('No worker wallet found!', true);
+            return;
+          }
+
+          // 0ms Zero-Latency In-Memory Balance Guard
+          const reqEth = parseFloat(item.price) || 0;
+          if ((buyer.balanceEth || 0) < reqEth) {
+            logConsole(`❌ [INSUFFICIENT FUNDS] Worker [${buyer.name}] cached balance (${(buyer.balanceEth || 0).toFixed(6)} ETH) < Required ${reqEth} ETH. Snipe paused!`);
+            showToast(`Worker balance too low: ${(buyer.balanceEth || 0).toFixed(6)} ETH`, true);
+            return;
+          }
+
+          logConsole(`🎯 🚨 TRIGGER MATCHED! [${reason}]`);
+          logConsole(`⚡ [ZERO-LATENCY TURBO] Worker [${buyer.name}] broadcasting Seaport fulfillment for #${item.tokenId}...`);
+
+          fetch('/api/snipe/buy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              buyerPrivateKey: buyer.privateKey,
+              protocolData: item.protocolData,
+              orderHash: item.orderHash,
+              priceEth: item.price,
+              tokenId: item.tokenId
+            })
+          }).then(async (res) => {
+            const data = await res.json();
+            if (data.success) {
+              if (data.alreadyProcessing) {
+                // Zero-hop backend engine already processed this token in RAM
+                return;
+              }
+              snipesExecutedCount++;
+              logConsole(`🎉 BUY MINED ON-CHAIN: Token #${item.tokenId} confirmed in Block #${data.blockNumber} (TxHash: ${data.txHash.slice(0, 14)}...)!`);
+              showToast(`NFT #${item.tokenId} bought successfully by ${buyer.name}!`);
+              triggerSnipeCheer(item.tokenId, item.price, buyer.name, data.txHash);
+              refreshAllBalances();
+
+              const isLimitHit = (activeMaxSnipesLimit > 0 && snipesExecutedCount >= activeMaxSnipesLimit) || data.circuitBreakerHit;
+              if (isLimitHit) {
+                handleClientCircuitBreakerHit(data.executedCount || snipesExecutedCount, data.maxLimit || activeMaxSnipesLimit);
+              }
+            } else {
+              // Dead order detection
+              if (data.isDeadOrder || /not valid|not found|cancelled|expired/i.test(data.error || '')) {
+                item.sniped = true;
+                item.isDeadOrder = true;
+                if (itemHash && typeof clientDeadOrdersSet !== 'undefined') clientDeadOrdersSet.add(itemHash);
+                const row = document.querySelector(`tr[data-token="${item.tokenId}"]`);
+                if (row) {
+                  row.style.opacity = '0.4';
+                  const rowBtn = row.querySelector('button');
+                  if (rowBtn) {
+                    rowBtn.disabled = true;
+                    rowBtn.innerText = 'INACTIVE';
+                    rowBtn.className = 'px-3 py-1 text-[10px] font-bold rounded-lg bg-slate-700 text-slate-400 cursor-not-allowed';
+                  }
+                }
+                logConsole(`ℹ [ORDER INACTIVE] #${item.tokenId} is no longer valid on OpenSea. Skipping.`);
+              } else {
+                // If backend already broadcasted and RPC returned already known/nonce used, ignore gracefully
+                if (/already known|nonce too low/i.test(data.error || '')) {
+                  return;
+                }
+                item.sniped = false;
+                clientBoughtTokens.delete(tokId);
+                logConsole(`❌ ON-CHAIN BUY FAILED: ${data.error || 'Transaction reverted'}`);
+                showToast(data.error || 'Snipe failed on-chain', true);
+              }
+            }
+          }).catch((err) => {
+            item.sniped = false;
+            clientBoughtTokens.delete(tokId);
+            logConsole(`❌ ON-CHAIN SNIPE ERROR: ${err.message}`);
+            showToast(`Snipe error: ${err.message}`, true);
+          });
+        }
+      });
     }
 
     async function executeManualBuy(tokenId, price) {

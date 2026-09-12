@@ -246,16 +246,22 @@ export class RarityEngine {
       return results;
     }
 
-    const keys = config.opensea.apiKeys;
+    // Limit to top 10 missing floor tokens per batch to strictly stay within OpenSea rate limits
+    const cappedMissing = missingIds.slice(0, 10);
+    const keys = config.opensea.getCandidateKeys();
     let keyIdx = 0;
+    let hitRateLimit = false;
 
     const worker = async (tokenId) => {
+      if (hitRateLimit) return;
       const assignedKey = keys[(keyIdx++) % keys.length];
+      if (config.opensea.isKeyCooledDown(assignedKey)) return;
+
       const url = `${config.opensea.restApiBase}/chain/${targetChain}/contract/${targetContract}/nfts/${tokenId}`;
       try {
         const res = await this.client.get(url, {
           headers: { 'X-API-KEY': assignedKey, 'Accept': 'application/json' },
-          timeout: 4000
+          timeout: 3500
         });
         const nft = res.data?.nft;
         if (nft) {
@@ -275,19 +281,25 @@ export class RarityEngine {
           };
           this.tokenRarityMap.set(String(tokenId), tokenInfo);
           results[String(tokenId)] = tokenInfo;
+          config.opensea.clearKeyCooldown(assignedKey);
           return;
         }
       } catch (err) {
-        // Fallback to fetchTokenRarity which cascades across remaining keys
-        const fb = await this.fetchTokenRarity(tokenId, targetChain, targetContract);
-        if (fb) results[String(tokenId)] = fb;
+        if (err.response?.status === 429) {
+          hitRateLimit = true;
+          config.opensea.markKeyCooldown(assignedKey, 4000);
+        }
       }
     };
 
-    // Parallel chunks across 6 keys
-    for (let i = 0; i < missingIds.length; i += concurrency) {
-      const chunk = missingIds.slice(i, i + concurrency);
+    // Staggered chunks to respect OpenSea 2 req/sec threshold
+    for (let i = 0; i < cappedMissing.length; i += 3) {
+      if (hitRateLimit) break;
+      const chunk = cappedMissing.slice(i, i + 3);
       await Promise.allSettled(chunk.map(id => worker(id)));
+      if (i + 3 < cappedMissing.length) {
+        await new Promise(r => setTimeout(r, 60));
+      }
     }
 
     this.scheduleSave();

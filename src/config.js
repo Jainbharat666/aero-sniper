@@ -112,7 +112,7 @@ export const config = {
     /**
      * Get candidate keys rotated in a round-robin circle with healthy (non-cooldown) keys first
      */
-    getCandidateKeys(preferredKey = null, excludeStream = true) {
+    getCandidateKeys(preferredKey = null, excludeStream = false) {
       const now = Date.now();
       const activePool = excludeStream && pool.length > 1 ? pool.slice(1) : pool;
       

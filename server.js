@@ -1182,28 +1182,36 @@ async function fetchLiveTelemetry() {
 setInterval(fetchLiveTelemetry, 2500);
 fetchLiveTelemetry();
 
+// ⚡ IN-MEMORY CACHES (Prevents redundant OpenSea queries & 429 rate limit triggers)
+const collectionMetadataCache = new Map(); // slug -> { colData, tRes, directStats, expiresAt }
+const liveListingsCache = new Map(); // slug -> { listings, expiresAt }
+
 // ─── HIGH-SPEED MULTI-KEY REST FETCHER WITH FAILOVER & 429 BACKOFF ───────────
-async function fetchOpenSeaWithFallback(pathStr, preferredKeyIndex = null) {
+async function fetchOpenSeaWithFallback(pathStr, preferredKeyIndex = null, forceBypassCache = false) {
   const allKeys = config.opensea.apiKeys;
   const preferredKey = preferredKeyIndex !== null && allKeys[preferredKeyIndex] ? allKeys[preferredKeyIndex] : null;
 
-  // Use Central API Shop: candidate keys with healthy non-cooldown keys sorted first
-  const candidateKeys = config.opensea.getCandidateKeys(preferredKey);
+  // Use Central API Shop: candidate keys with healthy non-cooldown keys sorted first (all 6 keys)
+  const candidateKeys = config.opensea.getCandidateKeys(preferredKey, false);
 
-  const sep = pathStr.includes('?') ? '&' : '?';
-  const url = `${config.opensea.restApiBase}${pathStr}${sep}_t=${Date.now()}`;
+  const url = forceBypassCache
+    ? `${config.opensea.restApiBase}${pathStr}${pathStr.includes('?') ? '&' : '?'}_t=${Date.now()}`
+    : `${config.opensea.restApiBase}${pathStr}`;
 
   let lastErr = null;
   for (const key of candidateKeys) {
     const t0 = Date.now();
     try {
+      const headers = {
+        'X-API-KEY': key,
+        'Accept': 'application/json'
+      };
+      if (forceBypassCache) {
+        headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+      }
       const res = await apiClient.get(url, {
-        headers: {
-          'X-API-KEY': key,
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate'
-        },
-        timeout: 5000
+        headers,
+        timeout: 4500
       });
       const latency = Date.now() - t0;
       trackKeyUse(key, latency, '200 OK');
@@ -2746,11 +2754,21 @@ app.post('/api/scan', async (req, res) => {
   let slug = resolveClosestCollectionSlug(input.toLowerCase());
 
   try {
-    // ⚡ 1. RESOLVE COLLECTION METADATA (Key #1 priority + smart contract fallback + backoff retry)
+    // ⚡ 1. RESOLVE COLLECTION METADATA (RAM Cache ➔ Key #1 priority ➔ Contract fallback ➔ Backoff retry)
     let colData = null;
-    try {
-      colData = await fetchOpenSeaWithFallback(`/collections/${slug}`);
-    } catch (e) {}
+    let tRes = null;
+
+    const cachedMeta = collectionMetadataCache.get(slug);
+    if (cachedMeta && cachedMeta.expiresAt > Date.now()) {
+      colData = cachedMeta.colData;
+      tRes = cachedMeta.tRes;
+    }
+
+    if (!colData) {
+      try {
+        colData = await fetchOpenSeaWithFallback(`/collections/${slug}`);
+      } catch (e) {}
+    }
 
     // Fallback if slug was a contract address or 0x address
     if (!colData && slug.startsWith('0x')) {
@@ -2763,12 +2781,18 @@ app.post('/api/scan', async (req, res) => {
       } catch(e) {}
     }
 
-    // Failsafe Retry: If colData is still null (e.g. momentary 429 burst), wait 150ms and try once more
+    // Failsafe Retry: If colData is still null (e.g. momentary 429 burst), wait 200ms and try once more
     if (!colData) {
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise(r => setTimeout(r, 200));
       try {
         colData = await fetchOpenSeaWithFallback(`/collections/${slug}`);
       } catch(e) {}
+    }
+
+    // Use cached metadata if network failed due to 429 rate limit
+    if (!colData && cachedMeta) {
+      colData = cachedMeta.colData;
+      tRes = cachedMeta.tRes;
     }
 
     if (!colData) {
@@ -2776,11 +2800,15 @@ app.post('/api/scan', async (req, res) => {
     }
 
     // ⚡ 2. FETCH TRAITS, INITIAL LISTINGS & DIRECT STATS IN PARALLEL (Distributed across rotating counter)
-    const [tRes, page1Res, directStats] = await Promise.all([
-      fetchOpenSeaWithFallback(`/traits/${slug}`).catch(() => null),
+    const [tResFresh, page1Res, directStats] = await Promise.all([
+      tRes ? Promise.resolve(tRes) : fetchOpenSeaWithFallback(`/traits/${slug}`).catch(() => null),
       fetchOpenSeaWithFallback(`/listings/collection/${slug}/all?limit=50`).catch(() => null),
       fetchOpenSeaAuthoritativeStats(slug).catch(() => null)
     ]);
+    if (!tRes && tResFresh) tRes = tResFresh;
+
+    // Save to RAM cache (120s TTL)
+    collectionMetadataCache.set(slug, { colData, tRes, expiresAt: Date.now() + 120000 });
 
     // Derive real floor and listed count from page1Res listings if directStats HTML scrape was blocked
     let apiFloorEth = null;
@@ -2996,64 +3024,115 @@ app.post('/api/tokens/rarity-batch', async (req, res) => {
   }
 });
 
-// Live Listings Poller Fallback
+// Live Listings Poller (Real-Time Seaport Order Book + 2s Rate-Shield)
 app.get('/api/listings/live', async (req, res) => {
   const slug = (req.query.slug || '').trim().toLowerCase();
   if (!slug) return res.json({ success: true, listings: [] });
 
+  // ⚡ 2-Second Cache Shield: Prevents 1.5s frontend poller from burning OpenSea rate limits
+  const cachedLive = liveListingsCache.get(slug);
+  if (cachedLive && cachedLive.expiresAt > Date.now()) {
+    return res.json({ success: true, listings: cachedLive.listings, fromCache: true });
+  }
+
   try {
-    const evData = await fetchOpenSeaWithFallback(`/events/collection/${slug}?event_type=listing&limit=15`);
     let listings = [];
-    if (evData && Array.isArray(evData.asset_events)) {
-      listings = evData.asset_events.map(ev => {
-        const asset = ev.asset || {};
-        const tokenId = asset.identifier || asset.token_id || String(ev.event_id || '0');
-        let priceEth = 0;
-        if (ev.payment?.quantity) {
-          priceEth = parseFloat(ev.payment.quantity) / (10 ** (ev.payment.decimals || 18));
-        } else if (ev.protocol_data?.parameters?.consideration?.[0]?.startAmount) {
-          priceEth = Number(BigInt(ev.protocol_data.parameters.consideration[0].startAmount)) / 1e18;
-        }
-        const eventTime = ev.event_timestamp ? (typeof ev.event_timestamp === 'number' ? (ev.event_timestamp > 1e11 ? ev.event_timestamp : ev.event_timestamp * 1000) : new Date(ev.event_timestamp).getTime()) : getNow();
-        return {
-          tokenId,
-          name: asset.name || `#${tokenId}`,
-          image: asset.image_url || asset.display_image_url || '',
-          imageUrl: asset.image_url || asset.display_image_url || '',
-          price: priceEth,
-          priceFormatted: formatEthPrecise(priceEth),
-          priceUsd: parseFloat((priceEth * cachedEthPrice).toFixed(2)),
-          rarityRank: rarityEngine.getRaritySync(tokenId),
-          seller: ev.maker ? `${ev.maker.slice(0, 6)}...${ev.maker.slice(-4)}` : '',
-          sellerFull: ev.maker || '',
-          orderHash: ev.order_hash || '',
-          ageSeconds: Math.max(0, Math.round((getNow() - eventTime) / 1000)),
-          eventTimestamp: eventTime,
-          protocolData: ev.protocol_data || null,
-          contractAddress: asset.asset_contract?.address || (activeCollectionStats?.contractAddress || ''),
-          chain: 'robinhood',
-          slug: slug,
-          sniped: false
-        };
-      }).filter(item => item.price > 0 && item.tokenId && item.tokenId !== '0');
 
-      // 🛡️ DUAL-PATH REDUNDANCY: If sniper is armed, ONLY evaluate FRESH live listings!
-      // NEVER auto-snipe historical listings that took place before sniper was armed or older than 30s!
-      if (activeSniperEngine.isArmed) {
-        const minArmedTime = activeSniperEngine.armedTimestamp ? (activeSniperEngine.armedTimestamp - 5000) : getNow();
-        for (const item of listings) {
-          const hasHash = Boolean(item.orderHash && item.orderHash.length > 10);
-          const hasParams = Boolean(item.protocolData?.parameters && item.protocolData?.signature);
-          if (!hasHash && !hasParams) continue; // Skip incomplete OpenSea events until orderHash is indexed
+    // ⚡ PATH 1 (PRIMARY): Real-Time Seaport 1.6 Order Book (<1-2s listing pickup)
+    try {
+      const listData = await fetchOpenSeaWithFallback(`/listings/collection/${slug}/all?limit=25`);
+      if (listData && Array.isArray(listData.listings) && listData.listings.length > 0) {
+        listings = listData.listings.map(item => {
+          const tokenId = item.asset?.identifier || String(item.order_hash || '0');
+          const valBig = BigInt(item.price?.current?.value || '0');
+          const decimals = item.price?.current?.decimals || 18;
+          const priceEth = Number(valBig) / Number(10n ** BigInt(decimals));
+          const createdAt = item.order_created_at ? (item.order_created_at * 1000) : getNow();
 
-          const isAfterArm = item.eventTimestamp >= minArmedTime;
-          const isFresh = item.ageSeconds <= 30;
-          if (isAfterArm && isFresh) {
-            const tokStr = String(item.tokenId);
-            const isDead = item.orderHash && activeSniperEngine.invalidOrderHashes && activeSniperEngine.invalidOrderHashes.has(item.orderHash);
-            if (!activeSniperEngine.snipedTokenIds.has(tokStr) && !isDead) {
-              evaluateAndSnipe(item, slug);
+          return {
+            tokenId,
+            name: `#${tokenId}`,
+            image: '',
+            imageUrl: '',
+            price: priceEth,
+            priceFormatted: formatEthPrecise(priceEth),
+            priceUsd: parseFloat((priceEth * cachedEthPrice).toFixed(2)),
+            rarityRank: rarityEngine.getRaritySync(tokenId),
+            seller: item.protocol_data?.parameters?.offerer ? `${item.protocol_data.parameters.offerer.slice(0, 6)}...${item.protocol_data.parameters.offerer.slice(-4)}` : '',
+            sellerFull: item.protocol_data?.parameters?.offerer || '',
+            orderHash: item.order_hash || '',
+            ageSeconds: Math.max(0, Math.round((getNow() - createdAt) / 1000)),
+            eventTimestamp: createdAt,
+            protocolData: item.protocol_data || null,
+            contractAddress: item.asset?.contract || (activeCollectionStats?.contractAddress || ''),
+            chain: item.chain || 'robinhood',
+            slug: slug,
+            sniped: activeSniperEngine.snipedTokenIds.has(String(tokenId))
+          };
+        }).filter(item => item.price > 0 && item.tokenId && item.tokenId !== '0');
+      }
+    } catch (e) {}
+
+    // ⚡ PATH 2 (FALLBACK): Historical Events query if order book returned empty
+    if (listings.length === 0) {
+      try {
+        const evData = await fetchOpenSeaWithFallback(`/events/collection/${slug}?event_type=listing&limit=15`);
+        if (evData && Array.isArray(evData.asset_events)) {
+          listings = evData.asset_events.map(ev => {
+            const asset = ev.asset || {};
+            const tokenId = asset.identifier || asset.token_id || String(ev.event_id || '0');
+            let priceEth = 0;
+            if (ev.payment?.quantity) {
+              priceEth = parseFloat(ev.payment.quantity) / (10 ** (ev.payment.decimals || 18));
+            } else if (ev.protocol_data?.parameters?.consideration?.[0]?.startAmount) {
+              priceEth = Number(BigInt(ev.protocol_data.parameters.consideration[0].startAmount)) / 1e18;
             }
+            const eventTime = ev.event_timestamp ? (typeof ev.event_timestamp === 'number' ? (ev.event_timestamp > 1e11 ? ev.event_timestamp : ev.event_timestamp * 1000) : new Date(ev.event_timestamp).getTime()) : getNow();
+            return {
+              tokenId,
+              name: asset.name || `#${tokenId}`,
+              image: asset.image_url || asset.display_image_url || '',
+              imageUrl: asset.image_url || asset.display_image_url || '',
+              price: priceEth,
+              priceFormatted: formatEthPrecise(priceEth),
+              priceUsd: parseFloat((priceEth * cachedEthPrice).toFixed(2)),
+              rarityRank: rarityEngine.getRaritySync(tokenId),
+              seller: ev.maker ? `${ev.maker.slice(0, 6)}...${ev.maker.slice(-4)}` : '',
+              sellerFull: ev.maker || '',
+              orderHash: ev.order_hash || '',
+              ageSeconds: Math.max(0, Math.round((getNow() - eventTime) / 1000)),
+              eventTimestamp: eventTime,
+              protocolData: ev.protocol_data || null,
+              contractAddress: asset.asset_contract?.address || (activeCollectionStats?.contractAddress || ''),
+              chain: 'robinhood',
+              slug: slug,
+              sniped: activeSniperEngine.snipedTokenIds.has(String(tokenId))
+            };
+          }).filter(item => item.price > 0 && item.tokenId && item.tokenId !== '0');
+        }
+      } catch (e) {}
+    }
+
+    // Cache valid listings for 2 seconds
+    if (listings.length > 0) {
+      liveListingsCache.set(slug, { listings, expiresAt: Date.now() + 2000 });
+    }
+
+    // 🛡️ DUAL-PATH REDUNDANCY: If sniper is armed, ONLY evaluate FRESH live listings!
+    if (activeSniperEngine.isArmed) {
+      const minArmedTime = activeSniperEngine.armedTimestamp ? (activeSniperEngine.armedTimestamp - 5000) : getNow();
+      for (const item of listings) {
+        const hasHash = Boolean(item.orderHash && item.orderHash.length > 10);
+        const hasParams = Boolean(item.protocolData?.parameters && item.protocolData?.signature);
+        if (!hasHash && !hasParams) continue;
+
+        const isAfterArm = item.eventTimestamp >= minArmedTime;
+        const isFresh = item.ageSeconds <= 45;
+        if (isAfterArm && isFresh) {
+          const tokStr = String(item.tokenId);
+          const isDead = item.orderHash && activeSniperEngine.invalidOrderHashes && activeSniperEngine.invalidOrderHashes.has(item.orderHash);
+          if (!activeSniperEngine.snipedTokenIds.has(tokStr) && !isDead) {
+            evaluateAndSnipe(item, slug);
           }
         }
       }
