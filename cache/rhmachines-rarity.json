@@ -1,0 +1,1672 @@
+{
+  "1": {
+    "tokenId": "1",
+    "name": "RH Machine #1",
+    "rank": 6052,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Inverse Zebra"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "GME"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Wave"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Straw Hat"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0xbc09de3ba702e83e04efa0d313c9b07a692b5f89/736236b077bd39fdf410ca3d4b119b/9c736236b077bd39fdf410ca3d4b119b.webp",
+    "isExactOpenRarity": true
+  },
+  "100": {
+    "tokenId": "100",
+    "name": "RH Machine #100",
+    "rank": 9714,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Toxic Green"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "NVDA"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Happy"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Blaze"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/4fa1aa0d81ccd5216ed01b74c288c1/bd4fa1aa0d81ccd5216ed01b74c288c1.webp",
+    "isExactOpenRarity": true
+  },
+  "957": {
+    "tokenId": "957",
+    "name": "RH Machine #957",
+    "rank": 7474,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Cotton Candy"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "AMZN"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Red Dots"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Blaze"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/e81c0be7b6f140750adc795f780956/13e81c0be7b6f140750adc795f780956.webp",
+    "isExactOpenRarity": true
+  },
+  "1093": {
+    "tokenId": "1093",
+    "name": "NTRPY #1093",
+    "rank": 274,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Hash",
+        "display_type": null,
+        "max_value": null,
+        "value": "0x138485afe515a2d778a22470b9ab76a638847e395f23b69817e4ee60cf3dc5f4"
+      },
+      {
+        "trait_type": "Mark",
+        "display_type": null,
+        "max_value": null,
+        "value": "KETOS"
+      },
+      {
+        "trait_type": "Decay",
+        "display_type": null,
+        "max_value": null,
+        "value": "Yes"
+      },
+      {
+        "trait_type": "Ground",
+        "display_type": null,
+        "max_value": null,
+        "value": "Void"
+      },
+      {
+        "trait_type": "Palette",
+        "display_type": null,
+        "max_value": null,
+        "value": "CRT"
+      },
+      {
+        "trait_type": "Symmetry",
+        "display_type": null,
+        "max_value": null,
+        "value": "Broken"
+      },
+      {
+        "trait_type": "Glyph Set",
+        "display_type": null,
+        "max_value": null,
+        "value": "SPARSE"
+      },
+      {
+        "trait_type": "Prismatic",
+        "display_type": null,
+        "max_value": null,
+        "value": "No"
+      },
+      {
+        "trait_type": "Resolution",
+        "display_type": null,
+        "max_value": null,
+        "value": "FINE"
+      },
+      {
+        "trait_type": "Spectral Bands",
+        "display_type": null,
+        "max_value": null,
+        "value": "7"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0xcef76c507ea8a466ec39b322f4799c437cad1eaf/c139ed8c1753547107700d7149a0c5/27c139ed8c1753547107700d7149a0c5.png",
+    "isExactOpenRarity": true
+  },
+  "1521": {
+    "tokenId": "1521",
+    "name": "RH Machine #1521",
+    "rank": 8926,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Royal Purple"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "AAPL"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Double Red"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Confused"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/d29cafa427cdaffb6bee12544016e5/91d29cafa427cdaffb6bee12544016e5.webp",
+    "isExactOpenRarity": true
+  },
+  "2590": {
+    "tokenId": "2590",
+    "name": "RH Machine #2590",
+    "rank": 9888,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Toxic Green"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "NVDA"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Low Bar"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Alert"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/f81c84f0d000ff1ce353d700b96990/23f81c84f0d000ff1ce353d700b96990.webp",
+    "isExactOpenRarity": true
+  },
+  "2735": {
+    "tokenId": "2735",
+    "name": "RH Machine #2735",
+    "rank": 6048,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Bubblegum"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "RDDT"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "404"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Black Spikes"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/0e4b89326e8b118bada752e5bb0717/ff0e4b89326e8b118bada752e5bb0717.webp",
+    "isExactOpenRarity": true
+  },
+  "3295": {
+    "tokenId": "3295",
+    "name": "RH Machine #3295",
+    "rank": 8269,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Toxic Stripe"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "NVDA"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "UwU"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Confused"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/984d7db7735d19851f9852b91a3f8c/54984d7db7735d19851f9852b91a3f8c.webp",
+    "isExactOpenRarity": true
+  },
+  "3498": {
+    "tokenId": "3498",
+    "name": "RH Machine #3498",
+    "rank": 8717,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Toxic Stripe"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "NVDA"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "UwU"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Green Mohawk"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/c7ac4c2d206b7bcd8e8ae44a09cf2e/c7c7ac4c2d206b7bcd8e8ae44a09cf2e.webp",
+    "isExactOpenRarity": true
+  },
+  "3773": {
+    "tokenId": "3773",
+    "name": "RH Machine #3773",
+    "rank": 6276,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Zebra"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "GME"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Smug"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Bad Day"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/e7f036fe65fb92256fd0163d63fb21/2ce7f036fe65fb92256fd0163d63fb21.webp",
+    "isExactOpenRarity": true
+  },
+  "3897": {
+    "tokenId": "3897",
+    "name": "RH Machine #3897",
+    "rank": 8183,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Crimson Squiggle"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "AMD"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Suspicious"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Blaze"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/3e93e353e255008a88ab55e3b12424/103e93e353e255008a88ab55e3b12424.webp",
+    "isExactOpenRarity": true
+  },
+  "4104": {
+    "tokenId": "4104",
+    "name": "RH Machine #4104",
+    "rank": 9670,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Toxic Green"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "NVDA"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Content"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Bad Day"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/2ac1633c169bef28c3c366f131e10b/912ac1633c169bef28c3c366f131e10b.webp",
+    "isExactOpenRarity": true
+  },
+  "4274": {
+    "tokenId": "4274",
+    "name": "RH Machine #4274",
+    "rank": 7975,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Cobalt Stripe"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "GOOGL"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Standby"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Devil Horns"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/6259fcb5b4a7a5b104eb86a798e691/476259fcb5b4a7a5b104eb86a798e691.webp",
+    "isExactOpenRarity": true
+  },
+  "4323": {
+    "tokenId": "4323",
+    "name": "RH Machine #4323",
+    "rank": 9707,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Toxic Green"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "NVDA"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Smug"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Ivory Horns"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/fd58d2477e2c7d525e32bd728ff400/1cfd58d2477e2c7d525e32bd728ff400.webp",
+    "isExactOpenRarity": true
+  },
+  "5404": {
+    "tokenId": "5404",
+    "name": "RH Machine #5404",
+    "rank": 8866,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Lavender Squiggle"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "AAPL"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "UwU"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Ivory Horns"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/1c0b5f1b85aa6ec93056be4ee83df7/891c0b5f1b85aa6ec93056be4ee83df7.webp",
+    "isExactOpenRarity": true
+  },
+  "5871": {
+    "tokenId": "5871",
+    "name": "RH Machine #5871",
+    "rank": 6878,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Bubblegum"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "RDDT"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Rekt"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Straw Hat"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/7e384ef77f2b300e3b3b3415b85bc1/b37e384ef77f2b300e3b3b3415b85bc1.webp",
+    "isExactOpenRarity": true
+  },
+  "5886": {
+    "tokenId": "5886",
+    "name": "RH Machine #5886",
+    "rank": 7129,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Bubblegum"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "RDDT"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Red Grin"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Bad Day"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/4d60507965b6f34900e9615c58399a/264d60507965b6f34900e9615c58399a.webp",
+    "isExactOpenRarity": true
+  },
+  "6275": {
+    "tokenId": "6275",
+    "name": "RH Machine #6275",
+    "rank": 6415,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Zebra"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "GME"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "UwU"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Alert"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/f6a3a83abfbb7d2d50cb92a77f7b26/3cf6a3a83abfbb7d2d50cb92a77f7b26.webp",
+    "isExactOpenRarity": true
+  },
+  "6625": {
+    "tokenId": "6625",
+    "name": "RH Machine #6625",
+    "rank": 6246,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Zebra"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "GME"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Flatline"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Bad Day"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/e3df25991bed83bd67b4c8111ec9ae/1ce3df25991bed83bd67b4c8111ec9ae.webp",
+    "isExactOpenRarity": true
+  },
+  "7066": {
+    "tokenId": "7066",
+    "name": "RH Machine #7066",
+    "rank": 7713,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Magenta Squiggle"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "AMZN"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Wave"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Devil Horns"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/cdd63c27a24b6babdd026a3b1e27b1/a0cdd63c27a24b6babdd026a3b1e27b1.webp",
+    "isExactOpenRarity": true
+  },
+  "7175": {
+    "tokenId": "7175",
+    "name": "RH Machine #7175",
+    "rank": 5779,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Zebra"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "GME"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Rekt"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Straw Hat"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/f560ad309ab89f15204f6f6fc065ee/f5f560ad309ab89f15204f6f6fc065ee.webp",
+    "isExactOpenRarity": true
+  },
+  "7766": {
+    "tokenId": "7766",
+    "name": "RH Machine #7766",
+    "rank": 5666,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Charcoal"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "TSLA"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Awakened"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Ivory Horns"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/74a116f948bc12fe91ff6d22a9974d/5f74a116f948bc12fe91ff6d22a9974d.webp",
+    "isExactOpenRarity": true
+  },
+  "7932": {
+    "tokenId": "7932",
+    "name": "RH Machine #7932",
+    "rank": 9143,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Crimson"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "AMD"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Static"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Straw Hat"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/fa90663a6cbf42d644440bc4991c6f/41fa90663a6cbf42d644440bc4991c6f.webp",
+    "isExactOpenRarity": true
+  },
+  "8059": {
+    "tokenId": "8059",
+    "name": "RH Machine #8059",
+    "rank": 6607,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Charcoal"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "TSLA"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Low Power"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Black Spikes"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/8b015ba0f0a590f36815e2c12f5e7e/c08b015ba0f0a590f36815e2c12f5e7e.webp",
+    "isExactOpenRarity": true
+  },
+  "9710": {
+    "tokenId": "9710",
+    "name": "RH Machine #9710",
+    "rank": 6594,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Cobalt Stripe"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "GOOGL"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Low Power"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Confused"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/c5b9571e5238b79d2fc8c2b0b88691/05c5b9571e5238b79d2fc8c2b0b88691.webp",
+    "isExactOpenRarity": true
+  },
+  "9781": {
+    "tokenId": "9781",
+    "name": "RH Machine #9781",
+    "rank": 8485,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Body",
+        "display_type": null,
+        "max_value": null,
+        "value": "Cotton Candy"
+      },
+      {
+        "trait_type": "Desk",
+        "display_type": null,
+        "max_value": null,
+        "value": "AMZN"
+      },
+      {
+        "trait_type": "Eyes",
+        "display_type": null,
+        "max_value": null,
+        "value": "Wave"
+      },
+      {
+        "trait_type": "Status",
+        "display_type": null,
+        "max_value": null,
+        "value": "Active"
+      },
+      {
+        "trait_type": "Headwear",
+        "display_type": null,
+        "max_value": null,
+        "value": "Halo"
+      },
+      {
+        "trait_type": "Background",
+        "display_type": null,
+        "max_value": null,
+        "value": "Acid Lime"
+      },
+      {
+        "trait_type": "Ink Burned",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "4250"
+      },
+      {
+        "trait_type": "Weight (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "1"
+      },
+      {
+        "trait_type": "Fusion Boost (x)",
+        "display_type": "NUMBER",
+        "max_value": null,
+        "value": "0"
+      }
+    ],
+    "image": "https://i2c.seadn.io/robinhood/0x8c71d170fbd94bcba93bb08fc2cfd0e8620cd9ce/0e1b401d60f44c0769b930c95053c1/3d0e1b401d60f44c0769b930c95053c1.webp",
+    "isExactOpenRarity": true
+  }
+}

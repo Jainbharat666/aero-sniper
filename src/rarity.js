@@ -15,13 +15,15 @@ export class RarityEngine {
     this.contractAddress = '';
     this.chain = 'robinhood';
     const isVercel = Boolean(process.env.VERCEL);
-    this.cacheDir = isVercel ? path.join('/tmp', 'cache') : path.resolve(process.cwd(), 'cache');
+    this.bundleCacheDir = path.resolve(process.cwd(), 'cache');
+    this.writeCacheDir = isVercel ? path.join('/tmp', 'cache') : this.bundleCacheDir;
+    this.cacheDir = this.writeCacheDir;
     this.isDirty = false;
     this.saveTimeout = null;
 
     try {
-      if (!fs.existsSync(this.cacheDir)) {
-        fs.mkdirSync(this.cacheDir, { recursive: true });
+      if (!fs.existsSync(this.writeCacheDir)) {
+        fs.mkdirSync(this.writeCacheDir, { recursive: true });
       }
     } catch (e) {}
 
@@ -40,7 +42,12 @@ export class RarityEngine {
   }
 
   getCachePath(slug) {
-    return path.join(this.cacheDir, `${(slug || 'default').toLowerCase()}-rarity.json`);
+    const filename = `${(slug || 'default').toLowerCase()}-rarity.json`;
+    const writePath = path.join(this.writeCacheDir, filename);
+    if (fs.existsSync(writePath)) return writePath;
+    const bundlePath = path.join(this.bundleCacheDir, filename);
+    if (fs.existsSync(bundlePath)) return bundlePath;
+    return writePath;
   }
 
   /**
@@ -74,59 +81,80 @@ export class RarityEngine {
     console.log(chalk.cyan(`
 🔍 [RARITY ENGINE V2] Loading collection: `) + chalk.yellow(this.collectionSlug));
 
-    try {
-      const apiKey = config.opensea.rarityKey || config.opensea.getNextRestKey();
-      const colRes = await this.client.get(
-        `${config.opensea.restApiBase}/collections/${this.collectionSlug}`,
-        { headers: { 'X-API-KEY': apiKey, 'Accept': 'application/json' } }
-      );
-      const colData = colRes.data;
-      this.collectionName = colData.name || this.collectionSlug;
-      this.totalSupply = colData.total_supply || 10000;
+    const keysToTry = config.opensea.getCandidateKeys(null, true);
+    for (const apiKey of keysToTry) {
+      try {
+        const colRes = await this.client.get(
+          `${config.opensea.restApiBase}/collections/${this.collectionSlug}`,
+          { headers: { 'X-API-KEY': apiKey, 'Accept': 'application/json' }, timeout: 4000 }
+        );
+        const colData = colRes.data;
+        this.collectionName = colData.name || this.collectionSlug;
+        this.totalSupply = colData.total_supply || 10000;
 
-      const primaryContract = colData.contracts?.[0];
-      this.contractAddress = primaryContract?.address || '';
-      if (primaryContract?.chain) {
-        this.chain = primaryContract.chain.toLowerCase();
+        const primaryContract = colData.contracts?.[0];
+        this.contractAddress = primaryContract?.address || '';
+        if (primaryContract?.chain) {
+          this.chain = primaryContract.chain.toLowerCase();
+        }
+
+        console.log(chalk.green(`✔ [RARITY ENGINE V2] Active: `) + chalk.bold(this.collectionName));
+        console.log(chalk.gray(`  Chain: ${this.chain.toUpperCase()} | Contract: ${this.contractAddress} | Supply: ${this.totalSupply}`));
+
+        // Load cached rarity ranks from disk
+        this.loadFromDiskCache();
+
+        return {
+          name: this.collectionName,
+          slug: this.collectionSlug,
+          totalSupply: this.totalSupply,
+          contractAddress: this.contractAddress,
+          chain: this.chain,
+          cachedRanksCount: this.tokenRarityMap.size
+        };
+      } catch (err) {
+        if (err.response?.status === 429) {
+          config.opensea.markKeyCooldown(apiKey, 2500);
+          continue;
+        }
+        break; // If not 429 (e.g. 404), break immediately
       }
-
-      console.log(chalk.green(`✔ [RARITY ENGINE V2] Active: `) + chalk.bold(this.collectionName));
-      console.log(chalk.gray(`  Chain: ${this.chain.toUpperCase()} | Contract: ${this.contractAddress} | Supply: ${this.totalSupply}`));
-
-      // Load cached rarity ranks from disk
-      this.loadFromDiskCache();
-
-      return {
-        name: this.collectionName,
-        slug: this.collectionSlug,
-        totalSupply: this.totalSupply,
-        contractAddress: this.contractAddress,
-        chain: this.chain,
-        cachedRanksCount: this.tokenRarityMap.size
-      };
-    } catch (err) {
-      console.error(chalk.red(`✖ Failed to load collection metadata: `) + (err.response?.data?.detail || err.message));
-      this.loadFromDiskCache();
-      return null;
     }
+
+    // Fallback: still try loading from disk cache
+    this.loadFromDiskCache();
+    return null;
   }
 
   loadFromDiskCache() {
-    const cacheFile = this.getCachePath(this.collectionSlug);
-    if (fs.existsSync(cacheFile)) {
-      try {
-        const raw = fs.readFileSync(cacheFile, 'utf8');
-        const data = JSON.parse(raw);
-        for (const [id, item] of Object.entries(data)) {
-          this.tokenRarityMap.set(String(id), item);
-        }
-        console.log(chalk.green(`✔ [RARITY ENGINE V2] Loaded ${this.tokenRarityMap.size} cached token ranks from disk.`));
-        return true;
-      } catch (e) {
-        return false;
+    const candidateFiles = [];
+    if (this.collectionSlug) {
+      candidateFiles.push(path.join(this.bundleCacheDir, `${this.collectionSlug.toLowerCase()}-rarity.json`));
+      candidateFiles.push(path.join(this.writeCacheDir, `${this.collectionSlug.toLowerCase()}-rarity.json`));
+    }
+    if (this.contractAddress) {
+      candidateFiles.push(path.join(this.bundleCacheDir, `${this.contractAddress.toLowerCase()}-rarity.json`));
+      candidateFiles.push(path.join(this.writeCacheDir, `${this.contractAddress.toLowerCase()}-rarity.json`));
+    }
+
+    let loadedCount = 0;
+    const checked = new Set();
+    for (const cacheFile of candidateFiles) {
+      if (!cacheFile || checked.has(cacheFile)) continue;
+      checked.add(cacheFile);
+      if (fs.existsSync(cacheFile)) {
+        try {
+          const raw = fs.readFileSync(cacheFile, 'utf8');
+          const data = JSON.parse(raw);
+          for (const [id, item] of Object.entries(data)) {
+            this.tokenRarityMap.set(String(id), item);
+            loadedCount++;
+          }
+          console.log(chalk.green(`✔ [RARITY ENGINE V2] Loaded cached token ranks from disk: ${path.basename(cacheFile)} (${Object.keys(data).length} tokens)`));
+        } catch (e) {}
       }
     }
-    return false;
+    return loadedCount > 0;
   }
 
   /**
@@ -141,7 +169,7 @@ export class RarityEngine {
       if (!this.isDirty || !this.collectionSlug) return;
       this.isDirty = false;
       try {
-        const cacheFile = this.getCachePath(this.collectionSlug);
+        const cacheFile = path.join(this.writeCacheDir, `${this.collectionSlug.toLowerCase()}-rarity.json`);
         const obj = {};
         for (const [id, item] of this.tokenRarityMap.entries()) {
           obj[id] = item;
@@ -173,7 +201,8 @@ export class RarityEngine {
     for (const apiKey of keysToTry) {
       try {
         const res = await this.client.get(url, {
-          headers: { 'X-API-KEY': apiKey, 'Accept': 'application/json' }
+          headers: { 'X-API-KEY': apiKey, 'Accept': 'application/json' },
+          timeout: 4000
         });
         const nft = res.data?.nft;
         if (!nft) continue;
@@ -192,6 +221,7 @@ export class RarityEngine {
           traits,
           image,
           isExactOpenRarity: (rank !== null),
+          checked: true
         };
 
         this.tokenRarityMap.set(idStr, tokenInfo);
@@ -200,13 +230,13 @@ export class RarityEngine {
         return tokenInfo;
       } catch (err) {
         if (err.response?.status === 429) {
-          config.opensea.markKeyCooldown(apiKey, 3000);
+          config.opensea.markKeyCooldown(apiKey, 2500);
         }
         continue;
       }
     }
 
-    // Fallback if OpenSea has no record or all keys rate-limited
+    // Fallback if OpenSea has no record or all keys rate-limited (mark checked to prevent retry storm)
     const fallbackInfo = {
       tokenId: idStr,
       name: `#${idStr}`,
@@ -215,15 +245,17 @@ export class RarityEngine {
       traits: [],
       image: '',
       isExactOpenRarity: false,
+      checked: true
     };
+    this.tokenRarityMap.set(idStr, fallbackInfo);
     return fallbackInfo;
   }
 
   /**
    * HIGH-SPEED BATCH RARITY RESOLVER (6-Key Parallel Laser Grid)
-   * Resolves up to 30 floor token rarities in parallel across all 6 keys in <300ms!
+   * Resolves floor token rarities smoothly across all 6 keys without aborting or exceeding rate limits.
    */
-  async batchFetchRarities(tokenIds, chain = this.chain, contract = this.contractAddress, concurrency = 6) {
+  async batchFetchRarities(tokenIds, chain = this.chain, contract = this.contractAddress) {
     if (!Array.isArray(tokenIds) || tokenIds.length === 0) return {};
     const targetChain = (chain || this.chain || 'robinhood').toLowerCase();
     const targetContract = contract || this.contractAddress;
@@ -235,7 +267,7 @@ export class RarityEngine {
     for (const id of tokenIds) {
       const idStr = String(id);
       const cached = this.tokenRarityMap.get(idStr);
-      if (cached && cached.rank !== null) {
+      if (cached) {
         results[idStr] = cached;
       } else {
         missingIds.push(idStr);
@@ -246,59 +278,95 @@ export class RarityEngine {
       return results;
     }
 
-    // Limit to top 10 missing floor tokens per batch to strictly stay within OpenSea rate limits
-    const cappedMissing = missingIds.slice(0, 10);
-    const keys = config.opensea.getCandidateKeys();
+    // Limit to top 15 missing floor tokens per batch to strictly stay within OpenSea rate limits
+    const cappedMissing = missingIds.slice(0, 15);
+    const keys = config.opensea.apiKeys;
     let keyIdx = 0;
-    let hitRateLimit = false;
 
     const worker = async (tokenId) => {
-      if (hitRateLimit) return;
-      const assignedKey = keys[(keyIdx++) % keys.length];
-      if (config.opensea.isKeyCooledDown(assignedKey)) return;
+      const idStr = String(tokenId);
+      const candidateKeys = config.opensea.getCandidateKeys(null, true);
+      const keysToTry = candidateKeys.length > 0 ? candidateKeys : keys;
 
-      const url = `${config.opensea.restApiBase}/chain/${targetChain}/contract/${targetContract}/nfts/${tokenId}`;
-      try {
-        const res = await this.client.get(url, {
-          headers: { 'X-API-KEY': assignedKey, 'Accept': 'application/json' },
-          timeout: 3500
-        });
-        const nft = res.data?.nft;
-        if (nft) {
-          const rank = nft?.rarity?.rank != null ? Number(nft.rarity.rank) : null;
-          const name = nft?.name || `#${tokenId}`;
-          const traits = nft?.traits || [];
-          const image = nft?.display_image_url || nft?.image_url || '';
+      for (let attempt = 0; attempt < Math.min(keysToTry.length, 3); attempt++) {
+        const assignedKey = keysToTry[(keyIdx++) % keysToTry.length];
+        if (config.opensea.isKeyCooledDown(assignedKey)) continue;
 
-          const tokenInfo = {
-            tokenId: String(tokenId),
-            name,
-            rank,
-            score: nft?.rarity?.score || 0,
-            traits,
-            image,
-            isExactOpenRarity: (rank !== null),
-          };
-          this.tokenRarityMap.set(String(tokenId), tokenInfo);
-          results[String(tokenId)] = tokenInfo;
-          config.opensea.clearKeyCooldown(assignedKey);
-          return;
+        const url = `${config.opensea.restApiBase}/chain/${targetChain}/contract/${targetContract}/nfts/${idStr}`;
+        try {
+          const res = await this.client.get(url, {
+            headers: { 'X-API-KEY': assignedKey, 'Accept': 'application/json' },
+            timeout: 3500
+          });
+          const nft = res.data?.nft;
+          if (nft) {
+            const rank = nft?.rarity?.rank != null ? Number(nft.rarity.rank) : null;
+            const name = nft?.name || `#${idStr}`;
+            const traits = nft?.traits || [];
+            const image = nft?.display_image_url || nft?.image_url || '';
+
+            const tokenInfo = {
+              tokenId: idStr,
+              name,
+              rank,
+              score: nft?.rarity?.score || 0,
+              traits,
+              image,
+              isExactOpenRarity: (rank !== null),
+              checked: true
+            };
+            this.tokenRarityMap.set(idStr, tokenInfo);
+            results[idStr] = tokenInfo;
+            config.opensea.clearKeyCooldown(assignedKey);
+            return;
+          }
+        } catch (err) {
+          if (err.response?.status === 429) {
+            // Mark ONLY this specific key in 2.5s cooldown, and let the loop try the next key
+            config.opensea.markKeyCooldown(assignedKey, 2500);
+            continue;
+          }
+          if (err.response?.status === 404) {
+            const notFoundInfo = {
+              tokenId: idStr,
+              name: `#${idStr}`,
+              rank: null,
+              score: 0,
+              traits: [],
+              image: '',
+              isExactOpenRarity: false,
+              checked: true
+            };
+            this.tokenRarityMap.set(idStr, notFoundInfo);
+            results[idStr] = notFoundInfo;
+            return;
+          }
         }
-      } catch (err) {
-        if (err.response?.status === 429) {
-          hitRateLimit = true;
-          config.opensea.markKeyCooldown(assignedKey, 4000);
-        }
+      }
+
+      // If all attempts failed, cache fallback to avoid continuous re-querying
+      if (!this.tokenRarityMap.has(idStr)) {
+        const fallbackInfo = {
+          tokenId: idStr,
+          name: `#${idStr}`,
+          rank: null,
+          score: 0,
+          traits: [],
+          image: '',
+          isExactOpenRarity: false,
+          checked: true
+        };
+        this.tokenRarityMap.set(idStr, fallbackInfo);
+        results[idStr] = fallbackInfo;
       }
     };
 
-    // Staggered chunks to respect OpenSea 2 req/sec threshold
+    // Staggered micro-chunks: 3 concurrent requests spaced by 75ms
     for (let i = 0; i < cappedMissing.length; i += 3) {
-      if (hitRateLimit) break;
       const chunk = cappedMissing.slice(i, i + 3);
       await Promise.allSettled(chunk.map(id => worker(id)));
       if (i + 3 < cappedMissing.length) {
-        await new Promise(r => setTimeout(r, 60));
+        await new Promise(r => setTimeout(r, 75));
       }
     }
 
