@@ -96,20 +96,39 @@ export const config = {
     },
 
     /**
-     * Get candidate keys sorted so healthy (non-cooldown) keys come first
+     * Get candidate keys rotated in a round-robin circle with healthy (non-cooldown) keys first
      */
-    getCandidateKeys(preferredKey = null) {
+    getCandidateKeys(preferredKey = null, excludeStream = true) {
       const now = Date.now();
-      const list = preferredKey ? [preferredKey] : [];
-      for (const k of pool) {
-        if (!list.includes(k)) list.push(k);
+      const activePool = excludeStream && pool.length > 1 ? pool.slice(1) : pool;
+      
+      let startIdx;
+      if (preferredKey && activePool.includes(preferredKey)) {
+        startIdx = activePool.indexOf(preferredKey);
+      } else {
+        startIdx = globalKeyIndex % activePool.length;
+        globalKeyIndex++; // Rotate counter atomically for next caller
       }
-      list.sort((a, b) => {
+
+      // Rotate pool circularly starting from startIdx
+      const rotated = [];
+      for (let i = 0; i < activePool.length; i++) {
+        rotated.push(activePool[(startIdx + i) % activePool.length]);
+      }
+
+      // Healthy non-cooldown keys first, preserving the rotated circle order
+      rotated.sort((a, b) => {
         const aCool = (keyCooldownMap.get(a) || 0) > now ? 1 : 0;
         const bCool = (keyCooldownMap.get(b) || 0) > now ? 1 : 0;
         return aCool - bCool;
       });
-      return list;
+
+      // If excludeStream was true but all active keys are in cooldown, include stream key as emergency backup
+      if (excludeStream && pool.length > 1 && rotated.every(k => (keyCooldownMap.get(k) || 0) > now)) {
+        rotated.push(pool[0]);
+      }
+
+      return rotated;
     },
 
     // Get any key by index

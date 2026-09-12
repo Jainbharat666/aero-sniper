@@ -2735,16 +2735,16 @@ app.post('/api/scan', async (req, res) => {
     // ⚡ 1. RESOLVE COLLECTION METADATA (Key #1 priority + smart contract fallback + backoff retry)
     let colData = null;
     try {
-      colData = await fetchOpenSeaWithFallback(`/collections/${slug}`, 0);
+      colData = await fetchOpenSeaWithFallback(`/collections/${slug}`);
     } catch (e) {}
 
     // Fallback if slug was a contract address or 0x address
     if (!colData && slug.startsWith('0x')) {
       try {
-        const cRes = await fetchOpenSeaWithFallback(`/chain/robinhood/contract/${slug}`, 0);
+        const cRes = await fetchOpenSeaWithFallback(`/chain/robinhood/contract/${slug}`);
         if (cRes?.collection) {
           slug = cRes.collection;
-          colData = await fetchOpenSeaWithFallback(`/collections/${slug}`, 0);
+          colData = await fetchOpenSeaWithFallback(`/collections/${slug}`);
         }
       } catch(e) {}
     }
@@ -2753,7 +2753,7 @@ app.post('/api/scan', async (req, res) => {
     if (!colData) {
       await new Promise(r => setTimeout(r, 150));
       try {
-        colData = await fetchOpenSeaWithFallback(`/collections/${slug}`, 0);
+        colData = await fetchOpenSeaWithFallback(`/collections/${slug}`);
       } catch(e) {}
     }
 
@@ -2761,10 +2761,10 @@ app.post('/api/scan', async (req, res) => {
       return res.status(404).json({ success: false, error: `Collection "${input}" not found on OpenSea. Please verify the slug/contract.` });
     }
 
-    // ⚡ 2. FETCH TRAITS, INITIAL LISTINGS & DIRECT STATS IN PARALLEL
+    // ⚡ 2. FETCH TRAITS, INITIAL LISTINGS & DIRECT STATS IN PARALLEL (Distributed across rotating counter)
     const [tRes, page1Res, directStats] = await Promise.all([
-      fetchOpenSeaWithFallback(`/traits/${slug}`, 2).catch(() => null),
-      fetchOpenSeaWithFallback(`/listings/collection/${slug}/all?limit=50`, 3).catch(() => null),
+      fetchOpenSeaWithFallback(`/traits/${slug}`).catch(() => null),
+      fetchOpenSeaWithFallback(`/listings/collection/${slug}/all?limit=50`).catch(() => null),
       fetchOpenSeaAuthoritativeStats(slug).catch(() => null)
     ]);
 
@@ -2988,7 +2988,7 @@ app.get('/api/listings/live', async (req, res) => {
   if (!slug) return res.json({ success: true, listings: [] });
 
   try {
-    const evData = await fetchOpenSeaWithFallback(`/events/collection/${slug}?event_type=listing&limit=15`, 3);
+    const evData = await fetchOpenSeaWithFallback(`/events/collection/${slug}?event_type=listing&limit=15`);
     let listings = [];
     if (evData && Array.isArray(evData.asset_events)) {
       listings = evData.asset_events.map(ev => {
@@ -3056,7 +3056,7 @@ app.get('/api/collection/traits', async (req, res) => {
   if (!slug) return res.status(400).json({ success: false, error: 'Slug required' });
 
   try {
-    const data = await fetchOpenSeaWithFallback(`/traits/${slug}`, 2);
+    const data = await fetchOpenSeaWithFallback(`/traits/${slug}`);
     if (data && data.counts) {
       return res.json({
         success: true,

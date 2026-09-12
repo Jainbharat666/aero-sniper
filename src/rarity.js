@@ -167,9 +167,8 @@ export class RarityEngine {
 
     const url = `${config.opensea.restApiBase}/chain/${targetChain}/contract/${targetContract}/nfts/${idStr}`;
 
-    // Primary: Key #3 (Rarity Key). Fallbacks: remaining REST keys
-    const primaryKey = config.opensea.rarityKey;
-    const keysToTry = [primaryKey, ...config.opensea.apiKeys.slice(1).filter(k => k !== primaryKey)];
+    // Use Central API Shop rotating counter across healthy REST keys
+    const keysToTry = config.opensea.getCandidateKeys(null, true);
 
     for (const apiKey of keysToTry) {
       try {
@@ -178,6 +177,7 @@ export class RarityEngine {
         });
         const nft = res.data?.nft;
         if (!nft) continue;
+        config.opensea.clearKeyCooldown(apiKey);
 
         const rank = nft?.rarity?.rank || null;
         const name = nft?.name || `#${idStr}`;
@@ -199,7 +199,9 @@ export class RarityEngine {
 
         return tokenInfo;
       } catch (err) {
-        // If 429 or timeout, try next key in pool
+        if (err.response?.status === 429) {
+          config.opensea.markKeyCooldown(apiKey, 3000);
+        }
         continue;
       }
     }
