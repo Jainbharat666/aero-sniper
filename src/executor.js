@@ -250,8 +250,15 @@ export class SeaportExecutor {
     });
 
     // First accepted wins resolution
-    const fastestWinner = await Promise.any(blastPromises);
-    return fastestWinner;
+    try {
+      const fastestWinner = await Promise.any(blastPromises);
+      return fastestWinner;
+    } catch (aggErr) {
+      const details = Array.isArray(aggErr.errors) 
+        ? aggErr.errors.map(e => e.message || String(e)).join(' | ') 
+        : (aggErr.message || 'All RPCs rejected');
+      throw new Error(details);
+    }
   }
 
   /**

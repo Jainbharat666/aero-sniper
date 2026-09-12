@@ -8914,10 +8914,8 @@
               logConsole(`⚡ [STREAM] ${payload.name || '#' + tokIdStr} listed at ${payload.priceFormatted} (Rank #${payload.rarityRank || 'N/A'})`);
             }
 
-            // 🚀 CLIENT-SIDE FAIL-SAFE TRIGGER CHECK (Active alongside backend engine)
-            if (isArmed && !payload.sniped) {
-              checkSniperTriggers([payload]);
-            }
+            // 🛡️ Zero-Hop Backend Engine autonomously evaluates and executes snipes in RAM (<10ms).
+            // Frontend displays real-time stream listings without duplicate mempool collisions.
           }
         } catch(e) {}
       };
@@ -8944,10 +8942,6 @@
                 }
               });
               renderRealListings(liveListingsStore);
-
-              if (isArmed) {
-                checkSniperTriggers(data.listings);
-              }
             }
           }
         } catch(e) {}
@@ -8982,182 +8976,11 @@
     }
 
     function checkSniperTriggers(listings) {
-      if (!isArmed) return;
-
-      const maxFloorEth = parseFloat(document.getElementById('param-floor-eth')?.value) || 0;
-      const maxRareRank = parseInt(document.getElementById('param-rare-rank')?.value, 10) || 1200;
-      const maxRareEth = parseFloat(document.getElementById('param-rare-eth')?.value) || 0;
-
-      const minArmTime = clientArmedTimestamp ? (clientArmedTimestamp - 5000) : Date.now();
-
-      listings.forEach(item => {
-        if (!item || item.sniped) return;
-        const itemHash = item.orderHash || item.protocolData?.orderHash;
-        if (itemHash && clientDeadOrdersSet.has(itemHash)) return;
-
-        // 🛡️ CRITICAL GUARD: Must have orderHash or protocolData before evaluating!
-        const hasOrderHash = Boolean(itemHash && itemHash.length > 10);
-        const hasProtocolParams = Boolean(item.protocolData?.parameters && item.protocolData?.signature);
-        if (!hasOrderHash && !hasProtocolParams) {
-          return; // Skip items without orderHash / Seaport signature
-        }
-
-        // 🛡️ CRITICAL GUARD: Only auto-snipe fresh listings that occurred AFTER the sniper was armed
-        const itemTs = item.eventTimestamp || Date.now();
-        const isAfterArm = itemTs >= minArmTime;
-        const isFresh = (item.ageSeconds || 0) <= 30;
-        if (!isAfterArm || !isFresh) {
-          return; // Skip historical listings loaded during initial scan!
-        }
-
-        let triggered = false;
-        let reason = '';
-
-        // 🎯 PRIORITY 1: TARGET SPECIFIC TOKEN ID TRAP
-        const targetTokenIdsRaw = document.getElementById('param-token-ids')?.value || '';
-        const targetTokenSet = new Set(
-          String(targetTokenIdsRaw)
-            .split(/[\s,]+/)
-            .map(s => s.replace(/[^0-9]/g, ''))
-            .filter(Boolean)
-        );
-        const isTokenTrapActive = (typeof activeRuleStates !== 'undefined')
-          ? (activeRuleStates.tokenId || targetTokenSet.size > 0)
-          : targetTokenSet.size > 0;
-        const cleanId = String(item.tokenId || '').trim().replace(/[^0-9]/g, '');
-        const tokenMaxEth = parseFloat(document.getElementById('param-token-max-eth')?.value) || 0;
-        const effectiveTokenCap = tokenMaxEth > 0 ? tokenMaxEth : (maxFloorEth > 0 ? maxFloorEth : Infinity);
-
-        if (isTokenTrapActive && cleanId && targetTokenSet.has(cleanId)) {
-          if (item.price <= effectiveTokenCap) {
-            triggered = true;
-            reason = `🎯 Target Token #${cleanId}: ${item.price} ETH <= Cap ${effectiveTokenCap === Infinity ? 'Market' : effectiveTokenCap + ' ETH'}`;
-          }
-        }
-
-        // 👑 PRIORITY 2: RARE TRAIT HUNTER
-        const isTraitActive = (typeof activeRuleStates !== 'undefined') ? activeRuleStates.trait : false;
-        if (!triggered && isTraitActive && selectedTraitFilters && selectedTraitFilters.length > 0) {
-          const traitMaxEth = parseFloat(document.getElementById('param-trait-max-eth')?.value) || 0;
-          const effectiveTraitCap = traitMaxEth > 0 ? traitMaxEth : (maxFloorEth > 0 ? maxFloorEth : Infinity);
-          if (item.price <= effectiveTraitCap) {
-            const itemTraits = item.traits || [];
-            const matchesTrait = selectedTraitFilters.some(f => {
-              return itemTraits.some(t => {
-                const typeMatch = !f.traitType || String(t.trait_type || t.traitType || '').toLowerCase() === f.traitType.toLowerCase();
-                const valMatch = !f.traitValue || String(t.value || '').toLowerCase() === f.traitValue.toLowerCase();
-                return typeMatch && valMatch;
-              });
-            });
-            if (matchesTrait) {
-              triggered = true;
-              reason = `👑 Rare Trait Match at ${item.price} ETH <= Cap ${effectiveTraitCap === Infinity ? 'Market' : effectiveTraitCap + ' ETH'}`;
-            }
-          }
-        }
-
-        // ⚡ PRIORITY 3: FLOOR UNDERPRICE TRAP
-        const isFloorActive = (typeof activeRuleStates !== 'undefined') ? activeRuleStates.floor : (activeTriggerMode === 'floor' || activeTriggerMode === 'both');
-        if (!triggered && isFloorActive && maxFloorEth > 0) {
-          if (item.price <= maxFloorEth) {
-            triggered = true;
-            reason = `Floor Fat-Finger: ${item.price} ETH <= Target ${maxFloorEth} ETH`;
-          }
-        }
-
-        // 💎 PRIORITY 4: TOP RARITY RANK SNIPE
-        const isRarityActive = (typeof activeRuleStates !== 'undefined') ? activeRuleStates.rarity : (activeTriggerMode === 'rarity' || activeTriggerMode === 'both');
-        const effectiveRareCap = maxRareEth > 0 ? maxRareEth : (maxFloorEth > 0 ? maxFloorEth : 0);
-        if (!triggered && isRarityActive && effectiveRareCap > 0) {
-          if (item.rarityRank && item.rarityRank <= maxRareRank && item.price <= effectiveRareCap) {
-            triggered = true;
-            reason = `Top Rarity #${item.rarityRank} at ${item.price} ETH <= Target ${effectiveRareCap} ETH`;
-          }
-        }
-
-        if (triggered && !item.sniped) {
-          playBeep(980, 'sine', 0.2);
-          
-          const activeWorkers = walletFleet.filter((w, i) => i !== masterWalletIndex && w.selected !== false);
-          const buyer = activeWorkers[0] || walletFleet.find((w, i) => i !== masterWalletIndex) || walletFleet[0];
-
-          if (!buyer) {
-            logConsole(`⚠ [SNIPER PAUSED] Trigger matched [${reason}], but no worker wallets are loaded!`);
-            showToast('No worker wallet found!', true);
-            return;
-          }
-
-          // 0ms Zero-Latency In-Memory Balance Guard
-          const reqEth = parseFloat(item.price) || 0;
-          if ((buyer.balanceEth || 0) < reqEth) {
-            logConsole(`❌ [INSUFFICIENT FUNDS] Worker [${buyer.name}] cached balance (${(buyer.balanceEth || 0).toFixed(6)} ETH) < Required ${reqEth} ETH. Snipe paused!`);
-            showToast(`Worker balance too low: ${(buyer.balanceEth || 0).toFixed(6)} ETH`, true);
-            return;
-          }
-
-          // 0ms Instant Dispatch to Execution Engine
-          item.sniped = true;
-          logConsole(`🎯 🚨 TRIGGER MATCHED! [${reason}]`);
-          logConsole(`⚡ [ZERO-LATENCY TURBO] Worker [${buyer.name}] broadcasting Seaport fulfillment for #${item.tokenId}...`);
-
-          fetch('/api/snipe/buy', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              buyerPrivateKey: buyer.privateKey,
-              protocolData: item.protocolData,
-              orderHash: item.orderHash,
-              priceEth: item.price,
-              tokenId: item.tokenId
-            })
-          }).then(async (res) => {
-            const data = await res.json();
-            if (data.success) {
-              if (data.alreadyProcessing) {
-                // Zero-hop backend engine is already processing this token in RAM
-                return;
-              }
-              snipesExecutedCount++;
-              logConsole(`🎉 BUY MINED ON-CHAIN: Token #${item.tokenId} confirmed in Block #${data.blockNumber} (TxHash: ${data.txHash.slice(0, 14)}...)!`);
-              showToast(`NFT #${item.tokenId} bought successfully by ${buyer.name}!`);
-              triggerSnipeCheer(item.tokenId, item.price, buyer.name, data.txHash);
-              refreshAllBalances();
-
-              // 🛑 UNIVERSAL RULEBOOK: Immediate Dual Circuit Breaker Lock
-              const isLimitHit = (activeMaxSnipesLimit > 0 && snipesExecutedCount >= activeMaxSnipesLimit) || data.circuitBreakerHit;
-              if (isLimitHit) {
-                handleClientCircuitBreakerHit(data.executedCount || snipesExecutedCount, data.maxLimit || activeMaxSnipesLimit);
-              }
-            } else {
-              // 🛡️ DEAD ORDER BLACKLIST: If order was cancelled/invalid on OpenSea, never retry it!
-              if (data.isDeadOrder || /not valid|not found|cancelled|expired/i.test(data.error || '')) {
-                item.sniped = true;
-                item.isDeadOrder = true;
-                if (itemHash) clientDeadOrdersSet.add(itemHash);
-                const row = document.querySelector(`tr[data-token="${item.tokenId}"]`);
-                if (row) {
-                  row.style.opacity = '0.4';
-                  const rowBtn = row.querySelector('button');
-                  if (rowBtn) {
-                    rowBtn.disabled = true;
-                    rowBtn.innerText = 'INACTIVE';
-                    rowBtn.className = 'px-3 py-1 text-[10px] font-bold rounded-lg bg-slate-700 text-slate-400 cursor-not-allowed';
-                  }
-                }
-                logConsole(`ℹ [ORDER INACTIVE] #${item.tokenId} is no longer valid on OpenSea. Skipping.`);
-              } else {
-                item.sniped = false;
-                logConsole(`❌ ON-CHAIN BUY FAILED: ${data.error || 'Transaction reverted'}`);
-                showToast(data.error || 'Snipe failed on-chain', true);
-              }
-            }
-          }).catch((err) => {
-            item.sniped = false;
-            logConsole(`❌ ON-CHAIN SNIPE ERROR: ${err.message}`);
-            showToast(`Snipe error: ${err.message}`, true);
-          });
-        }
-      });
+      // 🛡️ ZERO-HOP BACKEND DELEGATION:
+      // When armed, the backend Zero-Hop Engine (StreamListener + multi-RPC blast)
+      // autonomously evaluates all 4 trigger rules in RAM at 0ms latency.
+      // Frontend client auto-dispatch is disabled to prevent duplicate mempool collisions.
+      return;
     }
 
     async function executeManualBuy(tokenId, price) {
