@@ -1563,35 +1563,45 @@ app.post('/api/auth/redeem-topup', async (req, res) => {
   }
 });
 
-// ─── 6. CLOUD USER CONFIG & WALLET VAULT PERSISTENCE ────────────────────────
-app.get('/api/user-config', async (req, res) => {
+// ─── 6. CLOUD USER CONFIG & WALLET VAULT PERSISTENCE (AUTHENTICATED) ───────
+app.get('/api/user-config', userAuthMiddleware, async (req, res) => {
   try {
-    const { userId } = req.query;
-    if (!userId) return res.json({ success: true, config: null });
-    const config = await dbGetUserConfig(userId);
+    const targetUserId = req.query.userId || req.authenticatedUser.id;
+    const isOwnerOrAdmin = req.authenticatedUser.role === 'admin' || req.authenticatedUser.email?.toLowerCase() === OWNER_EMAIL;
+    if (!isOwnerOrAdmin && req.authenticatedUser.id !== targetUserId) {
+      return res.status(403).json({ success: false, error: 'Unauthorized. You can only access your own cloud vault.' });
+    }
+    const config = await dbGetUserConfig(targetUserId);
     return res.json({ success: true, config });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
   }
 });
 
-app.post('/api/user-config', async (req, res) => {
+app.post('/api/user-config', userAuthMiddleware, async (req, res) => {
   try {
+    const targetUserId = req.body.userId || req.authenticatedUser.id;
+    const isOwnerOrAdmin = req.authenticatedUser.role === 'admin' || req.authenticatedUser.email?.toLowerCase() === OWNER_EMAIL;
+    if (!isOwnerOrAdmin && req.authenticatedUser.id !== targetUserId) {
+      return res.status(403).json({ success: false, error: 'Unauthorized. You can only save to your own cloud vault.' });
+    }
     const { userId, config, ...rest } = req.body;
-    if (!userId) return res.status(400).json({ success: false, error: 'userId is required' });
     const payloadToSave = config || rest;
-    const saved = await dbSaveUserConfig(userId, payloadToSave);
+    const saved = await dbSaveUserConfig(targetUserId, payloadToSave);
     return res.json({ success: true, message: 'Cloud Vault config saved successfully.', config: saved });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
   }
 });
 
-app.delete('/api/user-config', async (req, res) => {
+app.delete('/api/user-config', userAuthMiddleware, async (req, res) => {
   try {
-    const { userId } = req.query;
-    if (!userId) return res.json({ success: true });
-    await dbDeleteUserConfig(userId);
+    const targetUserId = req.query.userId || req.body?.userId || req.authenticatedUser.id;
+    const isOwnerOrAdmin = req.authenticatedUser.role === 'admin' || req.authenticatedUser.email?.toLowerCase() === OWNER_EMAIL;
+    if (!isOwnerOrAdmin && req.authenticatedUser.id !== targetUserId) {
+      return res.status(403).json({ success: false, error: 'Unauthorized. You can only delete your own cloud vault.' });
+    }
+    await dbDeleteUserConfig(targetUserId);
     return res.json({ success: true, message: 'Cloud Vault data wiped from server.' });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
