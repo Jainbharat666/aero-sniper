@@ -542,6 +542,11 @@
       background: transparent !important;
       border: none !important;
       color: #e2e8f0 !important;
+      overflow-y: auto !important;
+      scroll-behavior: smooth;
+    }
+    #wallet-console-logs {
+      max-height: 520px !important;
     }
     #console-logs div, #wallet-console-logs div {
       color: #e2e8f0 !important;
@@ -3322,7 +3327,7 @@
       <div class="xl:col-span-3 lg:col-span-12 space-y-4 flex flex-col">
         
         <!-- CARD: LIVE EXECUTION TERMINAL (UNIBODY) -->
-        <div class="console-unibody-card rounded-3xl p-4 text-xs font-mono-code space-y-2.5 flex-1 flex flex-col overflow-hidden">
+        <div class="console-unibody-card rounded-3xl p-4 text-xs font-mono-code space-y-2.5 flex-1 flex flex-col overflow-hidden max-h-[640px]">
           
           <div class="flex items-center justify-between border-b console-header-border pb-2.5 shrink-0 select-none">
             <div class="flex items-center gap-2.5">
@@ -3363,7 +3368,7 @@
           </div>
 
           <!-- Terminal Logs Stream (Direct Seamless Stream - ZERO NESTED BOXES) -->
-          <div id="wallet-console-logs" class="flex-1 overflow-y-auto space-y-1.5 text-xs leading-relaxed font-mono-code pr-1 min-h-[460px] select-text">
+          <div id="wallet-console-logs" class="flex-1 overflow-y-auto space-y-1.5 text-xs leading-relaxed font-mono-code pr-1 min-h-[380px] max-h-[520px] select-text">
             <div><span class="text-slate-500 font-bold">[INIT]</span> <span class="text-amber-400 font-bold">⚡ Fleet Live Execution Terminal Active.</span> Connected to Robinhood Mainnet RPC.</div>
             <div><span class="text-slate-500 font-bold">[READY]</span> Master Treasury Vault &amp; Worker Fleet synchronized.</div>
           </div>
@@ -9523,12 +9528,18 @@
       const c1 = document.getElementById('console-logs');
       if (c1) {
         c1.insertAdjacentHTML('beforeend', html);
+        while (c1.children.length > 300) {
+          c1.removeChild(c1.firstElementChild);
+        }
         c1.scrollTop = c1.scrollHeight;
       }
 
       const c2 = document.getElementById('wallet-console-logs');
       if (c2) {
         c2.insertAdjacentHTML('beforeend', html);
+        while (c2.children.length > 300) {
+          c2.removeChild(c2.firstElementChild);
+        }
         c2.scrollTop = c2.scrollHeight;
       }
     }
