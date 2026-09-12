@@ -18,6 +18,19 @@ export class SeaportExecutor {
     this.startGasTicker();
   }
 
+  /**
+   * ⚡ DYNAMIC RPC FLEET INTEGRATION:
+   * Dynamically loads user's top-priority private RPCs from Cloud Fleet DB.
+   */
+  setRpcFleet(rpcUrls) {
+    if (!Array.isArray(rpcUrls) || rpcUrls.length === 0) return;
+    const cleanUrls = rpcUrls.filter(u => typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://')));
+    if (cleanUrls.length === 0) return;
+    this.rpcs = cleanUrls;
+    this.providers = this.rpcs.map(url => new ethers.JsonRpcProvider(url, undefined, { staticNetwork: true }));
+    console.log(`[EXECUTOR] ⚡ Dynamic RPC Fleet Updated: ${this.rpcs.length} active nodes armed.`);
+  }
+
   startGasTicker() {
     const update = async () => {
       try {
@@ -34,7 +47,7 @@ export class SeaportExecutor {
   /**
    * Encodes the Seaport v1.6 transaction data from OpenSea protocol_data
    */
-  buildSeaportTransaction(protocolData, buyerAddress, gasSpeed = 'turbo', customGas = null) {
+  buildSeaportTransaction(protocolData, buyerAddress, gasSpeed = 'turbo', customGas = null, explicitNonce = null) {
     const p = protocolData?.parameters;
     const signature = protocolData?.signature;
     if (!p || !signature) {
@@ -150,7 +163,7 @@ export class SeaportExecutor {
       gasLimit = 260000n;
     }
 
-    return {
+    const txObj = {
       to: this.seaportAddress,
       data: calldata,
       value: totalEthWei,
@@ -158,6 +171,10 @@ export class SeaportExecutor {
       gasPrice: gasPrice,
       type: 0 // Legacy Type 0 for Robinhood / Orbit L2 instant inclusion
     };
+    if (explicitNonce !== null && explicitNonce !== undefined) {
+      txObj.nonce = Number(explicitNonce);
+    }
+    return txObj;
   }
 
   // 🛡️ AUDIT FIX LOW-1: Dynamic gas estimation with safe fallback
@@ -320,7 +337,7 @@ export class SeaportExecutor {
           value: BigInt(txData.value || '0'),
           gasLimit: 260000n,
           gasPrice: (this.cachedBaseFee * 175n) / 100n,
-          nonce: baseNonce + 1, // N+1 to avoid collision with Path A
+          nonce: baseNonce, // Same nonce: whichever confirms first wins; losing path is cleanly dropped by mempool (0 ETH wasted)
           type: 0, chainId: 4663
         };
         const signedRaw = await signer.signTransaction(txObj);

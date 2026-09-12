@@ -1,7 +1,8 @@
 import { OpenSeaStreamClient } from '@opensea/stream-js';
 import { WebSocket } from 'ws';
 import chalk from 'chalk';
-import { config, formatEthPrecise } from './config.js';
+import { config, formatEthPrecise, getLiveEthPrice } from './config.js';
+import { getNow } from './timeSync.js';
 
 export class StreamListener {
   constructor(apiKey = config.opensea.streamKey) {
@@ -222,7 +223,7 @@ export class StreamListener {
   }
 
   parseListingEvent(event) {
-    const receivedAt = Date.now();
+    const receivedAt = getNow();
     try {
       const p = event.payload;
       if (!p || !p.item) return null;
@@ -237,9 +238,8 @@ export class StreamListener {
       const divisor = 10n ** BigInt(decimals);
       const priceEth = Number(basePriceBig) / Number(divisor);
       const symbol = p.payment_token?.symbol || 'ETH';
-      const usdPrice = p.payment_token?.usd_price
-        ? (priceEth * Number(p.payment_token.usd_price)).toFixed(2)
-        : (priceEth * 2500).toFixed(2);
+      const livePrice = getLiveEthPrice() || Number(p.payment_token?.usd_price) || 0;
+      const usdPrice = livePrice > 0 ? (priceEth * livePrice).toFixed(2) : null;
 
       // 🛡️ AUDIT FIX LOW-4: formatEthPrecise imported from config.js (single source of truth)
 
@@ -258,7 +258,7 @@ export class StreamListener {
         orderHash: p.order_hash || '',
         protocolAddress: p.protocol_address || '',
         protocolData: p.protocol_data || null,
-        eventTimestamp: p.event_timestamp || new Date().toISOString(),
+        eventTimestamp: p.event_timestamp || new Date(getNow()).toISOString(),
         receivedAt: receivedAt,
         rawEvent: event,
       };

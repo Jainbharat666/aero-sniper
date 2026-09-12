@@ -191,3 +191,15 @@ export function formatEthPrecise(num) {
   if (n < 0.01) return `${n.toFixed(5)} ETH`;
   return `${n.toFixed(4)} ETH`;
 }
+
+// 🛡️ Shared Live ETH/USD Price Accessor (Eliminates hardcoded $2500 fallback)
+let _currentLiveEthPrice = 0;
+export function setLiveEthPrice(p) {
+  const num = parseFloat(p);
+  if (!isNaN(num) && num > 0) {
+    _currentLiveEthPrice = num;
+  }
+}
+export function getLiveEthPrice() {
+  return _currentLiveEthPrice;
+}
