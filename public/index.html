@@ -5150,16 +5150,19 @@
     }
 
     function formatAgeTime(timestampMs) {
-      if (!timestampMs) return '1s ago';
+      if (!timestampMs) return 'Just now';
       const now = Date.now();
-      const diffSec = Math.max(1, Math.floor((now - timestampMs) / 1000));
+      const diffSec = Math.max(0, Math.floor((now - timestampMs) / 1000));
+      if (diffSec < 5) return 'Just now';
       if (diffSec < 60) return `${diffSec}s ago`;
       const m = Math.floor(diffSec / 60);
       const s = diffSec % 60;
       if (m < 60) return `${m}m ${s}s ago`;
       const h = Math.floor(m / 60);
       const remM = m % 60;
-      return `${h}h ${remM}m ago`;
+      if (h < 24) return `${h}h ${remM}m ago`;
+      const days = Math.floor(h / 24);
+      return `${days}d ago`;
     }
 
     let toastTimeout = null;
@@ -8689,7 +8692,274 @@
       fetch('/api/snipe/disarm', { method: 'POST' }).catch(() => {});
     }
 
+    let directPhoenixWs = null;
+    let directPhoenixHbInterval = null;
+    let directPhoenixReconnectTimer = null;
+    let activePhoenixSlug = null;
+
+    function handleIncomingDelisting(tokenId) {
+      if (!tokenId) return;
+      const tokStr = String(tokenId);
+      const delIdx = liveListingsStore.findIndex(i => String(i.tokenId) === tokStr);
+      if (delIdx !== -1) {
+        const wasFloor = (liveListingsStore[delIdx].price === currentFloorEth);
+        liveListingsStore.splice(delIdx, 1);
+        const tr = document.querySelector(`tr[data-token="${tokStr}"]`);
+        if (tr) tr.remove();
+
+        if (wasFloor && liveListingsStore.length > 0) {
+          const newFloor = Math.min(...liveListingsStore.map(l => l.price));
+          if (newFloor > 0) {
+            currentFloorEth = newFloor;
+            document.getElementById('proj-floor-eth').innerText = formatEthPrecise(currentFloorEth);
+            document.getElementById('proj-floor-usd').innerText = `~$${(currentFloorEth * currentLiveEthPrice).toFixed(2)} USD`;
+            updateLiveRadar();
+            updateBentoValues();
+          }
+        }
+      }
+    }
+
+    function handleIncomingListingItem(payload) {
+      if (!payload || !payload.tokenId) return;
+      if (payload.price <= currentFloorEth || (payload.rarityRank && payload.rarityRank <= 1200)) {
+        playBeep(920, 'sine', 0.05);
+      }
+
+      // Live sync of Floor Price if new listing is cheaper
+      if (payload.price > 0 && (payload.price < currentFloorEth || currentFloorEth === 0)) {
+        currentFloorEth = payload.price;
+        document.getElementById('proj-floor-eth').innerText = formatEthPrecise(currentFloorEth);
+        document.getElementById('proj-floor-usd').innerText = `~$${(currentFloorEth * currentLiveEthPrice).toFixed(2)} USD`;
+        updateLiveRadar();
+        updateBentoValues();
+      }
+
+      // Live sync of Contract Auto-Detector total listed count
+      if (currentScannedProject && (!payload.slug || payload.slug === currentScannedProject.slug)) {
+        if (payload.liveListedCount !== undefined && payload.liveListedCount !== null) {
+          currentScannedProject.listedCount = payload.liveListedCount;
+        } else {
+          currentScannedProject.listedCount = (currentScannedProject.listedCount || 0) + 1;
+        }
+        document.getElementById('proj-listed').innerText = `${currentScannedProject.listedCount} Listed`;
+        if (currentScannedProject.totalSupply > 0) {
+          const pct = ((currentScannedProject.listedCount / currentScannedProject.totalSupply) * 100).toFixed(1);
+          document.getElementById('proj-listed-sub').innerText = `${pct}% of Supply`;
+        }
+      }
+
+      const existingIdx = liveListingsStore.findIndex(i => String(i.tokenId) === String(payload.tokenId));
+      let isPriceChangeOrNew = true;
+      if (existingIdx !== -1) {
+        const oldItem = liveListingsStore[existingIdx];
+        if (Math.abs(oldItem.price - payload.price) < 0.0000001) {
+          isPriceChangeOrNew = false;
+          Object.assign(oldItem, payload);
+        } else {
+          liveListingsStore.splice(existingIdx, 1);
+          liveListingsStore.unshift(payload);
+        }
+      } else {
+        liveListingsStore.unshift(payload);
+      }
+
+      // Cap array to 500 items
+      if (liveListingsStore.length > 500) {
+        liveListingsStore.length = 500;
+      }
+
+      let underfloorCount = 0;
+      let rareCount = 0;
+      let snipedCount = 0;
+      liveListingsStore.forEach(i => {
+        if (i.price <= currentFloorEth) underfloorCount++;
+        if (i.rarityRank && i.rarityRank <= 1200) rareCount++;
+        if (i.sniped) snipedCount++;
+      });
+      document.getElementById('count-all').innerText = liveListingsStore.length;
+      document.getElementById('count-underfloor').innerText = underfloorCount;
+      document.getElementById('count-rare').innerText = rareCount;
+      document.getElementById('count-sniped').innerText = snipedCount;
+
+      const tbody = document.getElementById('listings-tbody');
+      const passesFilter = (activeStreamFilter === 'all') ||
+        (activeStreamFilter === 'underfloor' && payload.price <= currentFloorEth) ||
+        (activeStreamFilter === 'rare' && payload.rarityRank && payload.rarityRank <= 1200) ||
+        (activeStreamFilter === 'sniped' && payload.sniped);
+
+      // Prepend or re-render row
+      if (isPriceChangeOrNew) {
+        if (tbody && activeStreamSort === 'latest' && passesFilter && !streamSearchQuery) {
+          const placeholder = document.getElementById('empty-stream-placeholder');
+          if (placeholder) placeholder.remove();
+
+          const existingRow = tbody.querySelector(`tr[data-token="${payload.tokenId}"]`);
+          if (existingRow) existingRow.remove();
+
+          const tr = createListingRowElement(payload, true);
+          tbody.insertBefore(tr, tbody.firstChild);
+
+          if (tbody.children.length > 150) {
+            tbody.removeChild(tbody.lastChild);
+          }
+        } else {
+          renderRealListings(liveListingsStore);
+        }
+      }
+
+      const tokIdStr = String(payload.tokenId);
+      if (!loggedStreamTokensSet.has(tokIdStr)) {
+        loggedStreamTokensSet.add(tokIdStr);
+        logConsole(`⚡ [STREAM] ${payload.name || '#' + tokIdStr} listed at ${payload.priceFormatted} (Rank #${payload.rarityRank || 'N/A'})`);
+      }
+
+      // Evaluate trigger if armed
+      if (isArmed && !payload.sniped && !clientBoughtTokens.has(tokIdStr)) {
+        checkSniperTriggers([payload]);
+      }
+    }
+
+    async function connectDirectOpenSeaStream(slug) {
+      if (!slug) return;
+      activePhoenixSlug = slug.toLowerCase();
+
+      if (directPhoenixWs) {
+        try { directPhoenixWs.close(); } catch(e) {}
+        directPhoenixWs = null;
+      }
+      if (directPhoenixHbInterval) {
+        clearInterval(directPhoenixHbInterval);
+        directPhoenixHbInterval = null;
+      }
+      if (directPhoenixReconnectTimer) {
+        clearTimeout(directPhoenixReconnectTimer);
+        directPhoenixReconnectTimer = null;
+      }
+
+      let streamApiKey = currentScannedProject?.streamKey;
+      if (!streamApiKey) {
+        try {
+          const cfgRes = await fetch('/api/stream/ws-config');
+          if (cfgRes.ok) {
+            const cfgData = await cfgRes.json();
+            if (cfgData.success && cfgData.streamKey) {
+              streamApiKey = cfgData.streamKey;
+            }
+          }
+        } catch(e) {}
+      }
+      if (!streamApiKey) {
+        streamApiKey = '840e6b17791d415db3c98657fbc71979';
+      }
+
+      try {
+        const wsUrl = `wss://stream-api.opensea.io/socket/websocket?token=${streamApiKey}&vsn=2.0.0`;
+        const ws = new WebSocket(wsUrl);
+        directPhoenixWs = ws;
+
+        ws.onopen = () => {
+          const joinMsg = JSON.stringify(["1", "1", `collection:${activePhoenixSlug}`, "phx_join", {}]);
+          ws.send(joinMsg);
+
+          const pill = document.getElementById('stream-status-pill');
+          if (pill) {
+            pill.innerText = '⚡ Direct OpenSea Stream (0ms)';
+            pill.className = 'text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-full font-mono-code';
+          }
+
+          directPhoenixHbInterval = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify([null, String(Date.now()), "phoenix", "heartbeat", {}]));
+            }
+          }, 20000);
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const raw = JSON.parse(event.data);
+            if (!Array.isArray(raw)) return;
+            const [joinRef, ref, topic, eventName, payload] = raw;
+
+            if (eventName === 'phx_reply' && payload?.status === 'ok') {
+              logConsole(`⚡ [DIRECT WS ACTIVE] Connected to OpenSea Laser Grid for "${activePhoenixSlug}" (0ms Direct Push)`);
+              return;
+            }
+
+            if (eventName === 'item_listed') {
+              const p = payload?.payload || payload;
+              if (p && p.item) {
+                const nftIdParts = (p.item.nft_id || '').split('/');
+                const chain = (nftIdParts[0] || p.chain || 'robinhood').toLowerCase();
+                const contractAddress = (nftIdParts[1] || '').toLowerCase();
+                const tokenId = nftIdParts[2] || p.item.metadata?.identifier || '';
+                if (tokenId) {
+                  const decimals = p.payment_token?.decimals || 18;
+                  const basePriceBig = BigInt(p.base_price || '0');
+                  const divisor = 10n ** BigInt(decimals);
+                  const priceEth = Number(basePriceBig) / Number(divisor);
+                  if (priceEth > 0) {
+                    const eventTime = p.event_timestamp ? new Date(p.event_timestamp).getTime() : Date.now();
+                    const incomingItem = {
+                      tokenId: String(tokenId),
+                      name: p.item.metadata?.name || `#${tokenId}`,
+                      image: p.item.metadata?.image_url || '',
+                      imageUrl: p.item.metadata?.image_url || '',
+                      price: priceEth,
+                      priceFormatted: formatEthPrecise(priceEth),
+                      priceUsd: parseFloat((priceEth * currentLiveEthPrice).toFixed(2)),
+                      rarityRank: null,
+                      seller: p.maker?.address ? `${p.maker.address.slice(0, 6)}...${p.maker.address.slice(-4)}` : '',
+                      sellerFull: p.maker?.address || '',
+                      orderHash: p.order_hash || '',
+                      ageSeconds: 0,
+                      eventTimestamp: eventTime,
+                      protocolData: p.protocol_data || null,
+                      contractAddress: contractAddress || currentScannedProject?.contractAddress || '',
+                      chain: chain,
+                      slug: (p.collection?.slug || activePhoenixSlug).toLowerCase(),
+                      sniped: false
+                    };
+
+                    const cached = liveListingsStore.find(i => String(i.tokenId) === String(tokenId));
+                    if (cached && cached.rarityRank) incomingItem.rarityRank = cached.rarityRank;
+
+                    handleIncomingListingItem(incomingItem);
+                  }
+                }
+              }
+            } else if (eventName === 'item_cancelled' || eventName === 'item_sold') {
+              const p = payload?.payload || payload;
+              const nftIdParts = (p?.item?.nft_id || '').split('/');
+              const tokenId = nftIdParts[2] || '';
+              if (tokenId) {
+                handleIncomingDelisting(tokenId);
+              }
+            }
+          } catch(err) {}
+        };
+
+        ws.onerror = (err) => {
+          console.warn('[DIRECT WS] WebSocket error:', err);
+        };
+
+        ws.onclose = () => {
+          if (directPhoenixHbInterval) clearInterval(directPhoenixHbInterval);
+          if (currentScannedProject && currentScannedProject.slug === activePhoenixSlug) {
+            directPhoenixReconnectTimer = setTimeout(() => {
+              connectDirectOpenSeaStream(activePhoenixSlug);
+            }, 2000);
+          }
+        };
+      } catch(err) {
+        console.warn('[DIRECT WS] Failed to connect:', err);
+      }
+    }
+
     function startRealTimeWebSocketStream(slug) {
+      // Connect direct browser-to-OpenSea Phoenix WebSocket
+      connectDirectOpenSeaStream(slug);
+
       if (streamEventSource) {
         streamEventSource.close();
         streamEventSource = null;
@@ -8697,9 +8967,6 @@
 
       const streamUrl = `/api/stream/events?slug=${encodeURIComponent(slug)}`;
       streamEventSource = new EventSource(streamUrl);
-
-      document.getElementById('stream-status-pill').innerText = '⚡ WebSocket Live Stream';
-      document.getElementById('stream-status-pill').className = 'text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-full font-mono-code';
 
       streamEventSource.onmessage = (event) => {
         try {
@@ -8737,7 +9004,6 @@
               triggerSnipeCheer(payload.tokenId, payload.price, payload.buyerName || 'PaperTrader', payload.txHash);
             }
           } else if (payload.type === 'delisting') {
-            // Live Delisting (Cancelled or Sold Item)
             if (currentScannedProject && (!payload.slug || payload.slug === currentScannedProject.slug)) {
               if (payload.liveListedCount !== undefined && payload.liveListedCount !== null) {
                 currentScannedProject.listedCount = payload.liveListedCount;
@@ -8750,27 +9016,7 @@
                 document.getElementById('proj-listed-sub').innerText = `${pct}% of Supply`;
               }
             }
-
-            // Remove from live order book
-            const delIdx = liveListingsStore.findIndex(i => String(i.tokenId) === String(payload.tokenId));
-            if (delIdx !== -1) {
-              const wasFloor = (liveListingsStore[delIdx].price === currentFloorEth);
-              liveListingsStore.splice(delIdx, 1);
-              const tr = document.querySelector(`tr[data-token="${payload.tokenId}"]`);
-              if (tr) tr.remove();
-
-              // If delisted item was the floor, dynamically update floor from remaining items
-              if (wasFloor && liveListingsStore.length > 0) {
-                const newFloor = Math.min(...liveListingsStore.map(l => l.price));
-                if (newFloor > 0) {
-                  currentFloorEth = newFloor;
-                  document.getElementById('proj-floor-eth').innerText = formatEthPrecise(currentFloorEth);
-                  document.getElementById('proj-floor-usd').innerText = `~$${(currentFloorEth * currentLiveEthPrice).toFixed(2)} USD`;
-                  updateLiveRadar();
-                  updateBentoValues();
-                }
-              }
-            }
+            handleIncomingDelisting(payload.tokenId);
           } else if (payload.type === 'stats_sync' || payload.type === 'count_sync') {
             if (currentScannedProject && (!payload.slug || payload.slug === currentScannedProject.slug)) {
               if (payload.liveListedCount !== undefined && payload.liveListedCount !== null) {
@@ -8798,7 +9044,6 @@
             triggerSnipeCheer(payload.tokenId, payload.price, payload.buyerName, payload.txHash);
             refreshAllBalances();
           } else if (payload.type === 'zero_hop_snipe_failed') {
-            // 🛡️ AUDIT FIX L-5: Display failed tx notifications in UI
             playBeep(320, 'sawtooth', 0.2);
             logConsole(`❌ [SNIPE TX FAILED] Token #${payload.tokenId} — ${payload.error || 'Reverted on-chain'} (Tx: ${payload.txHash ? payload.txHash.slice(0, 14) + '...' : 'N/A'})`);
             showToast(`❌ Snipe failed for #${payload.tokenId}: ${payload.error || 'Transaction reverted'}`, true);
@@ -8821,105 +9066,7 @@
               }
             }
           } else if (payload.type === 'listing' && payload.tokenId) {
-            if (payload.price <= currentFloorEth || (payload.rarityRank && payload.rarityRank <= 1200)) {
-              playBeep(920, 'sine', 0.05);
-            }
-
-            // Live sync of Floor Price if new listing is cheaper
-            if (payload.price > 0 && (payload.price < currentFloorEth || currentFloorEth === 0)) {
-              currentFloorEth = payload.price;
-              document.getElementById('proj-floor-eth').innerText = formatEthPrecise(currentFloorEth);
-              document.getElementById('proj-floor-usd').innerText = `~$${(currentFloorEth * currentLiveEthPrice).toFixed(2)} USD`;
-              updateLiveRadar();
-              updateBentoValues();
-            }
-
-            // Live sync of Contract Auto-Detector total listed count
-            if (currentScannedProject && (!payload.slug || payload.slug === currentScannedProject.slug)) {
-              if (payload.liveListedCount !== undefined && payload.liveListedCount !== null) {
-                currentScannedProject.listedCount = payload.liveListedCount;
-              } else {
-                currentScannedProject.listedCount = (currentScannedProject.listedCount || 0) + 1;
-              }
-              document.getElementById('proj-listed').innerText = `${currentScannedProject.listedCount} Listed`;
-              if (currentScannedProject.totalSupply > 0) {
-                const pct = ((currentScannedProject.listedCount / currentScannedProject.totalSupply) * 100).toFixed(1);
-                document.getElementById('proj-listed-sub').innerText = `${pct}% of Supply`;
-              }
-            }
-
-            const existingIdx = liveListingsStore.findIndex(i => String(i.tokenId) === String(payload.tokenId));
-            let isPriceChangeOrNew = true;
-            if (existingIdx !== -1) {
-              const oldItem = liveListingsStore[existingIdx];
-              // If exact same token is listed at exact same price (bot order renewal), update in place without re-shuffling
-              if (Math.abs(oldItem.price - payload.price) < 0.0000001) {
-                isPriceChangeOrNew = false;
-                Object.assign(oldItem, payload);
-              } else {
-                liveListingsStore.splice(existingIdx, 1);
-                liveListingsStore.unshift(payload);
-              }
-            } else {
-              liveListingsStore.unshift(payload);
-            }
-
-            // 🛡️ AUDIT FIX L-6: Cap array to prevent unbounded memory growth
-            if (liveListingsStore.length > 500) {
-              liveListingsStore.length = 500;
-            }
-
-            let underfloorCount = 0;
-            let rareCount = 0;
-            let snipedCount = 0;
-            liveListingsStore.forEach(i => {
-              if (i.price <= currentFloorEth) underfloorCount++;
-              if (i.rarityRank && i.rarityRank <= 1200) rareCount++;
-              if (i.sniped) snipedCount++;
-            });
-            document.getElementById('count-all').innerText = liveListingsStore.length;
-            document.getElementById('count-underfloor').innerText = underfloorCount;
-            document.getElementById('count-rare').innerText = rareCount;
-            document.getElementById('count-sniped').innerText = snipedCount;
-
-            const tbody = document.getElementById('listings-tbody');
-            const passesFilter = (activeStreamFilter === 'all') ||
-              (activeStreamFilter === 'underfloor' && payload.price <= currentFloorEth) ||
-              (activeStreamFilter === 'rare' && payload.rarityRank && payload.rarityRank <= 1200) ||
-              (activeStreamFilter === 'sniped' && payload.sniped);
-
-            // Only re-render or prepend row if it's a new listing or price changed
-            if (isPriceChangeOrNew) {
-              if (tbody && activeStreamSort === 'latest' && passesFilter && !streamSearchQuery) {
-                const placeholder = document.getElementById('empty-stream-placeholder');
-                if (placeholder) placeholder.remove();
-
-                const existingRow = tbody.querySelector(`tr[data-token="${payload.tokenId}"]`);
-                if (existingRow) existingRow.remove();
-
-                const tr = createListingRowElement(payload, true);
-                tbody.insertBefore(tr, tbody.firstChild);
-
-                if (tbody.children.length > 150) {
-                  tbody.removeChild(tbody.lastChild);
-                }
-              } else {
-                renderRealListings(liveListingsStore);
-              }
-            }
-
-            // 🛡️ Console Log Fix: Log each unique NFT ONLY ONCE per session (no repetitive bot listing spam!)
-            // Table price still updates continuously in real-time
-            const tokIdStr = String(payload.tokenId);
-            if (!loggedStreamTokensSet.has(tokIdStr)) {
-              loggedStreamTokensSet.add(tokIdStr);
-              logConsole(`⚡ [STREAM] ${payload.name || '#' + tokIdStr} listed at ${payload.priceFormatted} (Rank #${payload.rarityRank || 'N/A'})`);
-            }
-
-            // 🛡️ If armed and not already sniped by zero-hop backend, evaluate trigger
-            if (isArmed && !payload.sniped && !clientBoughtTokens.has(tokIdStr)) {
-              checkSniperTriggers([payload]);
-            }
+            handleIncomingListingItem(payload);
           }
         } catch(e) {}
       };
@@ -8998,6 +9145,12 @@
 
         const itemHash = item.orderHash;
         if (itemHash && typeof clientDeadOrdersSet !== 'undefined' && clientDeadOrdersSet.has(itemHash)) return;
+
+        // 🛡️ STRICT HISTORICAL FILTER: Do NOT auto-snipe old listings that existed before sniper was armed!
+        const itemTime = item.eventTimestamp ? Number(item.eventTimestamp) : 0;
+        if (clientArmedTimestamp > 0 && itemTime > 0 && itemTime < (clientArmedTimestamp - 3000)) {
+          return;
+        }
 
         let triggered = false;
         let reason = '';

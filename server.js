@@ -599,6 +599,7 @@ async function fetchSeaportFulfillmentWithShop(orderHash, chain, buyerAddress, t
 
       if (status === 429) {
         config.opensea.markKeyCooldown(apiKey, 3000);
+        await new Promise(r => setTimeout(r, 80));
         continue;
       }
     }
@@ -2041,6 +2042,15 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
+// WebSocket Stream Configuration for Direct Browser-to-OpenSea Phoenix Connection
+app.get('/api/stream/ws-config', (req, res) => {
+  res.json({
+    success: true,
+    streamKey: config.opensea.streamKey,
+    wsUrl: 'wss://stream-api.opensea.io/socket/websocket'
+  });
+});
+
 // SSE Stream for Real-Time UI Broadcasts
 app.get('/api/stream/events', (req, res) => {
   const slug = (req.query.slug || '').trim().toLowerCase();
@@ -2987,6 +2997,7 @@ app.post('/api/scan', async (req, res) => {
       description: colData?.description || 'Verified OpenSea Mainnet NFT Collection',
       image: colData?.image_url || '',
       traits: collectionTraits,
+      streamKey: config.opensea.streamKey,
       realListings
     });
   } catch (error) {
@@ -3040,7 +3051,7 @@ app.get('/api/listings/live', async (req, res) => {
 
     // ⚡ PATH 1 (PRIMARY): Real-Time Seaport 1.6 Order Book (<1-2s listing pickup)
     try {
-      const listData = await fetchOpenSeaWithFallback(`/listings/collection/${slug}/all?limit=25`);
+      const listData = await fetchOpenSeaWithFallback(`/listings/collection/${slug}/all?limit=25&order_by=created_date&order_direction=desc`);
       if (listData && Array.isArray(listData.listings) && listData.listings.length > 0) {
         listings = listData.listings.map(item => {
           const tokenId = item.asset?.identifier || String(item.order_hash || '0');
