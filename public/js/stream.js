@@ -636,6 +636,7 @@
                 updateLiveRadar();
                 updateBentoValues();
               }
+            }
           } else if (payload.type === 'sniper_disarmed') {
             if (window.forceDisarmSniperUI) window.forceDisarmSniperUI();
             if (payload.reason === 'subscription_expired') {
