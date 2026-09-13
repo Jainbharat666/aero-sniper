@@ -417,8 +417,9 @@
           }
 
           liveListingsStore = data.realListings || [];
-          // 🛡️ Pre-seed window.rarityRegistry with verified ranks from scan
-          window.rarityRegistry = window.rarityRegistry || new Map();
+          // 🛡️ PER-COLLECTION REGISTRY RESET: Reset client rarity cache on fresh collection scan
+          window.rarityRegistry = new Map();
+          if (window.requestedRarityTokensSet) window.requestedRarityTokensSet.clear();
           if (Array.isArray(liveListingsStore)) {
             liveListingsStore.forEach(item => {
               if (item.tokenId && item.rarityRank && Number(item.rarityRank) > 0) {

@@ -129,6 +129,14 @@ export class RarityEngine {
   loadFromDiskCache(slug = this.collectionSlug, contract = this.contractAddress) {
     const targetSlug = (slug || this.collectionSlug || '').toLowerCase();
     const targetContract = (contract || this.contractAddress || '').toLowerCase();
+
+    // 🛡️ PER-COLLECTION ISOLATION: Wipe in-memory token map when switching collections
+    if (this.currentCollectionSlug && targetSlug && this.currentCollectionSlug !== targetSlug) {
+      this.tokenRarityMap.clear();
+    }
+    if (targetSlug) this.currentCollectionSlug = targetSlug;
+    if (targetContract) this.currentContractAddress = targetContract;
+
     const candidateFiles = [];
     if (targetSlug) {
       candidateFiles.push(path.join(this.bundleCacheDir, `${targetSlug}-rarity.json`));
@@ -275,18 +283,20 @@ export class RarityEngine {
    */
   async batchFetchRarities(tokenIds, chain = this.chain, contract = this.contractAddress, slug = this.collectionSlug) {
     if (!Array.isArray(tokenIds) || tokenIds.length === 0) return {};
-    if (slug && (!this.collectionSlug || this.collectionSlug !== slug.toLowerCase())) {
-      this.collectionSlug = slug.toLowerCase();
-      this.loadFromDiskCache();
+    const targetSlug = (slug || this.collectionSlug || '').toLowerCase();
+    const targetContract = (contract || this.contractAddress || '').toLowerCase();
+    if (targetSlug && (!this.collectionSlug || this.collectionSlug !== targetSlug)) {
+      this.collectionSlug = targetSlug;
+      this.tokenRarityMap.clear();
+      this.loadFromDiskCache(targetSlug, targetContract);
     }
-    if (contract && (!this.contractAddress || this.contractAddress.toLowerCase() !== contract.toLowerCase())) {
-      this.contractAddress = contract.toLowerCase();
+    if (targetContract && (!this.contractAddress || this.contractAddress.toLowerCase() !== targetContract)) {
+      this.contractAddress = targetContract;
     }
     if (this.tokenRarityMap.size === 0) {
-      this.loadFromDiskCache();
+      this.loadFromDiskCache(targetSlug, targetContract);
     }
     const targetChain = (chain || this.chain || 'robinhood').toLowerCase();
-    const targetContract = contract || this.contractAddress;
     if (!targetContract) return {};
 
     const results = {};
