@@ -377,43 +377,59 @@ export async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = per
           ? activeSniperEngine.traitFilter.maxEth
           : (activeSniperEngine.maxFloorEth > 0 ? activeSniperEngine.maxFloorEth : Infinity));
     if (parsed.price <= maxEth) {
-      let itemTraits = parsed.traits || parsed.rawEvent?.payload?.item?.metadata?.traits || parsed.rawEvent?.payload?.item?.traits || [];
-      if (!itemTraits || itemTraits.length === 0) {
-        const cachedInfo = rarityEngine.getTokenInfoSync(parsed.tokenId);
-        if (cachedInfo?.traits && cachedInfo.traits.length > 0) {
-          itemTraits = cachedInfo.traits;
-        } else {
-          // If not in RAM, fetch token rarity/traits with Key #3 keepalive agent
-          const streamContract = parsed.contractAddress || rarityEngine.contractAddress;
-          const streamChain = parsed.chain || rarityEngine.chain || 'robinhood';
-          const resolved = await rarityEngine.fetchTokenRarity(parsed.tokenId, streamChain, streamContract);
-          if (resolved?.traits) itemTraits = resolved.traits;
-        }
-      }
-
       const filters = (activeSniperEngine.traitFilters && activeSniperEngine.traitFilters.length > 0)
         ? activeSniperEngine.traitFilters
         : (activeSniperEngine.traitFilter ? [activeSniperEngine.traitFilter] : []);
 
       let matchedFilterName = '';
-      const match = filters.some(f => {
-        const targetType = (f.traitType || '').trim().toLowerCase();
-        const targetVal = (f.traitValue || '').trim().toLowerCase();
-        const found = itemTraits.some(t => {
-          const tType = String(t.trait_type || t.traitType || t.type || '').trim().toLowerCase();
-          const tVal = String(t.value !== undefined ? t.value : (t.val !== undefined ? t.val : '')).trim().toLowerCase();
-          return (!targetType || tType === targetType) && (!targetVal || tVal === targetVal);
-        });
-        if (found) {
+
+      // ⚡ FAST PATH 1: 0.0ms INSTANT RAM TRAIT INDEX MATCH
+      const instantRamMatch = filters.some(f => {
+        if (rarityEngine.hasTraitSync(parsed.tokenId, f.traitType, f.traitValue)) {
           matchedFilterName = `${f.traitType || 'Any'}: ${f.traitValue}`;
           return true;
         }
         return false;
       });
 
-      if (match) {
+      if (instantRamMatch) {
         triggered = true;
-        reason = `👑 Trait Match [${matchedFilterName}]: ${parsed.price} ETH <= Cap ${maxEth === Infinity ? 'Market' : maxEth + ' ETH'}`;
+        reason = `👑 Trait Match [${matchedFilterName}]: ${parsed.price} ETH <= Cap ${maxEth === Infinity ? 'Market' : maxEth + ' ETH'} (⚡ 0ms RAM Index)`;
+      } else {
+        // FAST PATH 2: Check traits from parsed event or cached token info
+        let itemTraits = parsed.traits || parsed.rawEvent?.payload?.item?.metadata?.traits || parsed.rawEvent?.payload?.item?.traits || [];
+        if (!itemTraits || itemTraits.length === 0) {
+          const cachedInfo = rarityEngine.getTokenInfoSync(parsed.tokenId);
+          if (cachedInfo?.traits && cachedInfo.traits.length > 0) {
+            itemTraits = cachedInfo.traits;
+          } else {
+            // If not in RAM, fetch token rarity/traits with Key #3 keepalive agent
+            const streamContract = parsed.contractAddress || rarityEngine.contractAddress;
+            const streamChain = parsed.chain || rarityEngine.chain || 'robinhood';
+            const resolved = await rarityEngine.fetchTokenRarity(parsed.tokenId, streamChain, streamContract);
+            if (resolved?.traits) itemTraits = resolved.traits;
+          }
+        }
+
+        const match = filters.some(f => {
+          const targetType = (f.traitType || '').trim().toLowerCase();
+          const targetVal = (f.traitValue || '').trim().toLowerCase();
+          const found = itemTraits.some(t => {
+            const tType = String(t.trait_type || t.traitType || t.type || '').trim().toLowerCase();
+            const tVal = String(t.value !== undefined ? t.value : (t.val !== undefined ? t.val : '')).trim().toLowerCase();
+            return (!targetType || tType === targetType) && (!targetVal || tVal === targetVal);
+          });
+          if (found) {
+            matchedFilterName = `${f.traitType || 'Any'}: ${f.traitValue}`;
+            return true;
+          }
+          return false;
+        });
+
+        if (match) {
+          triggered = true;
+          reason = `👑 Trait Match [${matchedFilterName}]: ${parsed.price} ETH <= Cap ${maxEth === Infinity ? 'Market' : maxEth + ' ETH'}`;
+        }
       }
     }
   }

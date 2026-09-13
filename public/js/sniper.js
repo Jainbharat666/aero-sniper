@@ -2,6 +2,8 @@
    🎯 AERO-SNIPER V2: MASTER SNIPER ENGINE & TRIGGER RULES
    ══════════════════════════════════════════════════════════════ */
 
+    if (typeof window.clientTraitsMap === 'undefined') window.clientTraitsMap = new Map();
+
     function setGas(preset) {
       activeGasPreset = preset;
       persistState();
@@ -363,9 +365,16 @@
           const effectiveTraitCap = traitMaxEth > 0 ? traitMaxEth : (maxFloorEth > 0 ? maxFloorEth : Infinity);
           if (item.price <= effectiveTraitCap) {
             let itemTraits = item.traits || [];
-            if ((!itemTraits || itemTraits.length === 0) && typeof liveListingsStore !== 'undefined') {
-              const cached = liveListingsStore.find(i => String(i.tokenId) === String(cleanId));
-              if (cached?.traits?.length > 0) itemTraits = cached.traits;
+            if (!itemTraits || itemTraits.length === 0) {
+              if (typeof liveListingsStore !== 'undefined') {
+                const cached = liveListingsStore.find(i => String(i.tokenId) === String(cleanId));
+                if (cached?.traits?.length > 0) itemTraits = cached.traits;
+              }
+              if ((!itemTraits || itemTraits.length === 0) && window.clientTraitsMap && window.clientTraitsMap.has(String(cleanId))) {
+                itemTraits = window.clientTraitsMap.get(String(cleanId));
+              }
+            } else {
+              if (window.clientTraitsMap) window.clientTraitsMap.set(String(cleanId), itemTraits);
             }
             const matchesTrait = selectedTraitFilters.some(f => {
               const targetType = (f.traitType || '').trim().toLowerCase();

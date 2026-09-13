@@ -9,6 +9,7 @@ import { config } from './config.js';
 export class RarityEngine {
   constructor() {
     this.tokenRarityMap = new Map(); // tokenId -> { tokenId, rank, score, traits, name, image, isExactOpenRarity }
+    this.traitIndexMap = new Map(); // "trait_type:value" -> Set of tokenIds
     this.totalSupply = 0;
     this.collectionName = '';
     this.collectionSlug = '';
@@ -73,6 +74,51 @@ export class RarityEngine {
   }
 
   /**
+   * ⚡ 0ms INVERTED TRAIT INDEXER
+   * Indexes each trait attribute into RAM for sub-millisecond instant matching
+   */
+  indexTokenTraits(tokenId, traits) {
+    if (!tokenId || !traits || !Array.isArray(traits)) return;
+    const idStr = String(tokenId);
+    for (const t of traits) {
+      const tType = String(t.trait_type || t.traitType || t.type || '').trim().toLowerCase();
+      const tVal = String(t.value !== undefined ? t.value : (t.val !== undefined ? t.val : '')).trim().toLowerCase();
+      if (tType && tVal) {
+        const key = `${tType}:${tVal}`;
+        if (!this.traitIndexMap.has(key)) {
+          this.traitIndexMap.set(key, new Set());
+        }
+        this.traitIndexMap.get(key).add(idStr);
+      }
+    }
+  }
+
+  /**
+   * ⚡ 0.0ms INSTANT TRAIT LOOKUP
+   * Checks if tokenId possesses traitType and traitValue in RAM
+   */
+  hasTraitSync(tokenId, traitType, traitValue) {
+    if (!tokenId) return false;
+    const idStr = String(tokenId);
+    const tType = (traitType || '').trim().toLowerCase();
+    const tVal = (traitValue || '').trim().toLowerCase();
+    const key = `${tType}:${tVal}`;
+    const set = this.traitIndexMap.get(key);
+    if (set && set.has(idStr)) return true;
+
+    // Fallback: check token info traits directly
+    const info = this.getTokenInfoSync(idStr);
+    if (info?.traits?.length > 0) {
+      return info.traits.some(t => {
+        const itemType = String(t.trait_type || t.traitType || t.type || '').trim().toLowerCase();
+        const itemVal = String(t.value !== undefined ? t.value : (t.val !== undefined ? t.val : '')).trim().toLowerCase();
+        return (!tType || itemType === tType) && (!tVal || itemVal === tVal);
+      });
+    }
+    return false;
+  }
+
+  /**
    * Load collection overview and contract info using Key #3 with fallback to pool
    */
   async loadCollection(collectionSlug, chain = 'robinhood') {
@@ -133,6 +179,7 @@ export class RarityEngine {
     // 🛡️ PER-COLLECTION ISOLATION: Wipe in-memory token map when switching collections
     if (this.currentCollectionSlug && targetSlug && this.currentCollectionSlug !== targetSlug) {
       this.tokenRarityMap.clear();
+      this.traitIndexMap.clear();
     }
     if (targetSlug) this.currentCollectionSlug = targetSlug;
     if (targetContract) this.currentContractAddress = targetContract;
@@ -157,13 +204,16 @@ export class RarityEngine {
           const raw = fs.readFileSync(cacheFile, 'utf8');
           const data = JSON.parse(raw);
           for (const [id, item] of Object.entries(data)) {
-            if (!item || item.rank == null || item.rank <= 0) continue;
+            if (!item) continue;
             const existing = this.tokenRarityMap.get(String(id));
             if (existing && existing.image && !item.image) {
               item.image = existing.image;
             }
             this.tokenRarityMap.set(String(id), item);
-            loadedCount++;
+            if (item.traits && Array.isArray(item.traits) && item.traits.length > 0) {
+              this.indexTokenTraits(id, item.traits);
+            }
+            if (item.rank != null && item.rank > 0) loadedCount++;
           }
           console.log(chalk.green(`✔ [RARITY ENGINE V2] Loaded cached token ranks from disk: ${path.basename(cacheFile)} (${loadedCount} validated ranks)`));
         } catch (e) {}
@@ -245,8 +295,11 @@ export class RarityEngine {
           checked: true
         };
 
-        if (rank != null && rank > 0) {
+        if ((rank != null && rank > 0) || (tokenInfo.traits && tokenInfo.traits.length > 0)) {
           this.tokenRarityMap.set(idStr, tokenInfo);
+          if (tokenInfo.traits && tokenInfo.traits.length > 0) {
+            this.indexTokenTraits(idStr, tokenInfo.traits);
+          }
           this.scheduleSave();
         }
 
@@ -257,6 +310,30 @@ export class RarityEngine {
         }
         continue;
       }
+    }
+
+    // Fast metadata fallback for Robinwoodies if OpenSea keys are rate limited
+    if (targetContract.toLowerCase() === '0xa50aeb4eea9eea1a7111091af3f7dd392f8be8b5') {
+      try {
+        const metaRes = await this.client.get(`https://www.scatter.art/api/instareveal/mpqygv7uxqcw1urlz6ief4xg/${idStr}`, { timeout: 1500 });
+        if (metaRes.data?.attributes) {
+          const rawAttrs = metaRes.data.attributes;
+          const tokenInfo = {
+            tokenId: idStr,
+            name: metaRes.data.name || `#${idStr}`,
+            rank: existingCached?.rank || null,
+            score: existingCached?.score || 0,
+            traits: rawAttrs,
+            image: metaRes.data.image || '',
+            isExactOpenRarity: Boolean(existingCached?.rank != null && existingCached.rank > 0),
+            checked: true
+          };
+          this.tokenRarityMap.set(idStr, tokenInfo);
+          this.indexTokenTraits(idStr, tokenInfo.traits);
+          this.scheduleSave();
+          return tokenInfo;
+        }
+      } catch(e) {}
     }
 
     // Fallback: If token was already known in memory or disk cache, NEVER wipe its rank!
@@ -354,8 +431,11 @@ export class RarityEngine {
               isExactOpenRarity: (rank !== null && rank > 0),
               checked: true
             };
-            if (rank != null && rank > 0) {
+            if ((rank != null && rank > 0) || (tokenInfo.traits && tokenInfo.traits.length > 0)) {
               this.tokenRarityMap.set(idStr, tokenInfo);
+              if (tokenInfo.traits && tokenInfo.traits.length > 0) {
+                this.indexTokenTraits(idStr, tokenInfo.traits);
+              }
               this.scheduleSave();
             }
             results[idStr] = tokenInfo;

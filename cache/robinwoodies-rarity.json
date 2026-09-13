@@ -12195,6 +12195,32 @@
     "isExactOpenRarity": true,
     "checked": true
   },
+  "9970": {
+    "tokenId": "9970",
+    "name": "Woodie #9970",
+    "rank": null,
+    "score": 0,
+    "traits": [
+      {
+        "trait_type": "Hat Style",
+        "value": "Bluebird"
+      },
+      {
+        "trait_type": "Clothing",
+        "value": "Taffy Warm Coat"
+      },
+      {
+        "trait_type": "Wood Type",
+        "value": "Cedar"
+      },
+      {
+        "trait_type": "Origin",
+        "value": "Wondermist"
+      }
+    ],
+    "image": "",
+    "isExactOpenRarity": false
+  },
   "9973": {
     "tokenId": "9973",
     "name": "Woodie #9973",
