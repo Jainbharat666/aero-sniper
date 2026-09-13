@@ -109,12 +109,8 @@ export async function dbRecordUserSnipe(userIdOrEmail, count = 1) {
       const updatedTotal = (user.total_snipes || 0) + count;
       const updates = {
         total_snipes: updatedTotal,
-        snipes_used: (user.snipes_used || 0) + count,
         last_active_at: new Date().toISOString()
       };
-      if (user.snipes_remaining !== null && user.snipes_remaining !== undefined && user.snipes_remaining > 0) {
-        updates.snipes_remaining = Math.max(0, user.snipes_remaining - count);
-      }
       await dbUpdateUser(user.id, updates);
       console.log(`🎯 [SNIPER DB] Snipe recorded for ${user.email}! New Total: ${updatedTotal}`);
       return updatedTotal;
