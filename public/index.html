@@ -2339,6 +2339,81 @@
     </div>
   </div>
 
+  <!-- ================= 5A-6. ⏱️ PROFESSIONAL IN-APP ADMIN TIME ADJUSTMENT MODAL ================= -->
+  <div id="admin-time-modal" class="fixed inset-0 z-[100000] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden font-mono-code text-xs">
+    <div class="bg-white border border-slate-200 rounded-3xl shadow-2xl max-w-md w-full flex flex-col p-6 space-y-4 animate-in fade-in zoom-in duration-200 text-slate-900">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-base text-indigo-600 font-black shadow-sm">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-slate-900">Adjust VIP Subscription</h3>
+            <p id="admin-time-target-email" class="text-[11px] text-indigo-600 font-bold font-mono-code truncate max-w-[240px]">user@example.com</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeAdminTimeModal()" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 flex items-center justify-center text-xs font-bold transition-colors cursor-pointer">
+          ✕
+        </button>
+      </div>
+
+      <!-- Quick Preset Actions -->
+      <div>
+        <label class="text-[10px] font-black uppercase text-slate-500 mb-1.5 block">⚡ One-Click Presets</label>
+        <div class="grid grid-cols-3 gap-1.5">
+          <button type="button" onclick="adminApplyTimePreset(0, 0, 10)" class="py-2 px-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-black border border-purple-200 transition-all text-center cursor-pointer">+10 Mins (Test)</button>
+          <button type="button" onclick="adminApplyTimePreset(0, 1, 0)" class="py-2 px-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-700 font-black border border-cyan-200 transition-all text-center cursor-pointer">+1 Hour</button>
+          <button type="button" onclick="adminApplyTimePreset(0, 6, 0)" class="py-2 px-2 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-700 font-black border border-cyan-200 transition-all text-center cursor-pointer">+6 Hours</button>
+          <button type="button" onclick="adminApplyTimePreset(1, 0, 0)" class="py-2 px-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black border border-indigo-200 transition-all text-center cursor-pointer">+1 Day (+24h)</button>
+          <button type="button" onclick="adminApplyTimePreset(7, 0, 0)" class="py-2 px-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black border border-indigo-200 transition-all text-center cursor-pointer">+7 Days</button>
+          <button type="button" onclick="adminApplyTimePreset(30, 0, 0)" class="py-2 px-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black border border-indigo-200 transition-all text-center cursor-pointer">+30 Days</button>
+        </div>
+      </div>
+
+      <!-- Custom Adjuster -->
+      <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-3">
+        <label class="text-[10px] font-black uppercase text-slate-500 block">⏱️ Custom Adjust (Add or Subtract)</label>
+        
+        <!-- Action Mode: Add or Subtract -->
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" id="admin-time-mode-add" onclick="setAdminTimeMode('add')" class="py-1.5 rounded-xl bg-emerald-600 text-white font-black text-xs shadow-sm text-center cursor-pointer">
+            + Add Time
+          </button>
+          <button type="button" id="admin-time-mode-sub" onclick="setAdminTimeMode('sub')" class="py-1.5 rounded-xl bg-slate-200 text-slate-700 hover:bg-slate-300 font-black text-xs transition-all text-center cursor-pointer">
+            - Subtract Time
+          </button>
+        </div>
+
+        <!-- Input row -->
+        <div class="flex items-center gap-2">
+          <input type="number" id="admin-time-custom-val" min="1" value="1" class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-mono-code font-bold text-sm focus:outline-none focus:border-indigo-500" placeholder="1" />
+          <select id="admin-time-custom-unit" class="bg-white border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-mono-code font-bold text-xs focus:outline-none focus:border-indigo-500">
+            <option value="minutes">Minutes</option>
+            <option value="hours" selected>Hours</option>
+            <option value="days">Days</option>
+          </select>
+        </div>
+
+        <button type="button" onclick="adminApplyCustomTimeInput()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-black text-xs shadow-md shadow-indigo-500/20 transition-all cursor-pointer">
+          Apply Adjustment
+        </button>
+      </div>
+
+      <!-- Lifetime / Revoke Actions -->
+      <div class="flex items-center gap-2 pt-1 border-t border-slate-100">
+        <button type="button" onclick="adminApplyLifetimeAccess()" class="flex-1 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-black text-xs transition-all cursor-pointer">
+          👑 Grant Lifetime
+        </button>
+        <button type="button" onclick="adminExpireNow()" class="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-black text-xs transition-all cursor-pointer">
+          Expire Now
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ================= 5B. ON-CHAIN SNIPE CHEER CELEBRATION BANNER ================= -->
   <div id="snipe-celebration-banner" class="fixed inset-x-0 top-6 z-50 flex justify-center pointer-events-none transition-all duration-500 transform -translate-y-36 opacity-0">
     <div class="bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 text-white px-7 py-3.5 rounded-3xl shadow-2xl border-2 border-emerald-300 flex items-center gap-4 pointer-events-auto">

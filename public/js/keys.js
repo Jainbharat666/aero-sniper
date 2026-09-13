@@ -210,7 +210,6 @@
     }
 
     async function deleteOpenSeaKey(key) {
-      if (!confirm(`Are you sure you want to remove this OpenSea API Key from the active pool?\n\nKey: ${key}`)) return;
       try {
         const headers = { 'Content-Type': 'application/json' };
         if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;

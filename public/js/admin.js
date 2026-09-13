@@ -220,7 +220,7 @@
                   <button onclick="adminAdjustTime('${u.id}', { days: 1 })" title="Add +1 Day (+24 Hours)" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-black border border-indigo-200 shadow-sm transition-colors cursor-pointer">+1d</button>
                   <button onclick="adminAdjustTime('${u.id}', { hours: 1 })" title="Add +1 Hour" class="px-2 py-1 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 rounded-lg text-[10px] font-black border border-cyan-200 shadow-sm transition-colors cursor-pointer">+1h</button>
                   <button onclick="adminAdjustTime('${u.id}', { minutes: 10 })" title="Add +10 Minutes (Test/Trial)" class="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-[10px] font-black border border-purple-200 shadow-sm transition-colors cursor-pointer">+10m</button>
-                  <button onclick="adminPromptCustomTime('${u.id}', '${u.email}')" title="Custom Add/Subtract (e.g. +30m, -1h, -1d)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-black border border-slate-300 shadow-sm transition-colors cursor-pointer">⏱️ +/-</button>
+                  <button onclick="openAdminTimeModal('${u.id}', '${u.email}')" title="Adjust VIP Subscription (Presets, Hours, Days, Lifetime)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-black border border-slate-300 shadow-sm transition-colors cursor-pointer">⏱️ +/-</button>
                   <button onclick="adminToggleBan('${u.id}')" title="${isBanned ? 'Unban' : 'Suspend'}" class="px-2 py-1 ${isBanned ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200'} rounded-lg text-[10px] font-black border shadow-sm transition-colors cursor-pointer">
                     ${isBanned ? 'Unban' : 'Suspend'}
                   </button>
@@ -352,25 +352,107 @@
       } catch(e) { showToast(e.message, true); }
     }
 
-    async function adminPromptCustomTime(userId, email) {
-      const input = prompt(`Adjust time for ${email}:\nEnter minutes (m), hours (h), or days (d).\nExamples:\n+10m (Add 10 mins)\n+1h (Add 1 hour)\n+7d (Add 7 days)\n-1h (Subtract 1 hour)\n-1d (Subtract 1 day)\n\nEnter value:`, '+1h');
-      if (!input) return;
-      const clean = input.trim().toLowerCase();
-      let minutes = 0, hours = 0, days = 0;
-      if (clean.endsWith('m')) {
-        minutes = parseInt(clean.replace('m', '')) || 0;
-      } else if (clean.endsWith('h')) {
-        hours = parseInt(clean.replace('h', '')) || 0;
-      } else if (clean.endsWith('d')) {
-        days = parseInt(clean.replace('d', '')) || 0;
+    let adminTargetUser = null;
+    let adminTimeMode = 'add';
+
+    function openAdminTimeModal(userId, email) {
+      adminTargetUser = { id: userId, email: email };
+      const emailEl = document.getElementById('admin-time-target-email');
+      if (emailEl) emailEl.textContent = email;
+      setAdminTimeMode('add');
+      const valInput = document.getElementById('admin-time-custom-val');
+      if (valInput) valInput.value = 1;
+      const modal = document.getElementById('admin-time-modal');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeAdminTimeModal() {
+      const modal = document.getElementById('admin-time-modal');
+      if (modal) modal.classList.add('hidden');
+      adminTargetUser = null;
+    }
+
+    function setAdminTimeMode(mode) {
+      adminTimeMode = mode;
+      const btnAdd = document.getElementById('admin-time-mode-add');
+      const btnSub = document.getElementById('admin-time-mode-sub');
+      if (mode === 'add') {
+        if (btnAdd) btnAdd.className = 'py-1.5 rounded-xl bg-emerald-600 text-white font-black text-xs shadow-sm text-center cursor-pointer';
+        if (btnSub) btnSub.className = 'py-1.5 rounded-xl bg-slate-200 text-slate-700 hover:bg-slate-300 font-black text-xs transition-all text-center cursor-pointer';
       } else {
-        days = parseInt(clean) || 0;
+        if (btnAdd) btnAdd.className = 'py-1.5 rounded-xl bg-slate-200 text-slate-700 hover:bg-slate-300 font-black text-xs transition-all text-center cursor-pointer';
+        if (btnSub) btnSub.className = 'py-1.5 rounded-xl bg-rose-600 text-white font-black text-xs shadow-sm text-center cursor-pointer';
       }
-      if (minutes === 0 && hours === 0 && days === 0) {
-        showToast('Invalid format. Use +10m, +1h, +7d, -1h etc.', true);
+    }
+
+    async function adminApplyTimePreset(days, hours, minutes) {
+      if (!adminTargetUser?.id) return;
+      await adminAdjustTime(adminTargetUser.id, { days, hours, minutes });
+      closeAdminTimeModal();
+    }
+
+    async function adminApplyCustomTimeInput() {
+      if (!adminTargetUser?.id) return;
+      const valInput = document.getElementById('admin-time-custom-val');
+      const unitInput = document.getElementById('admin-time-custom-unit');
+      const val = parseInt(valInput?.value, 10) || 0;
+      if (val <= 0) {
+        showToast('Please enter a positive number', true);
         return;
       }
-      adminAdjustTime(userId, { minutes, hours, days });
+      const unit = unitInput?.value || 'hours';
+      const factor = adminTimeMode === 'sub' ? -1 : 1;
+      let days = 0, hours = 0, minutes = 0;
+      if (unit === 'minutes') minutes = val * factor;
+      else if (unit === 'hours') hours = val * factor;
+      else if (unit === 'days') days = val * factor;
+
+      await adminAdjustTime(adminTargetUser.id, { days, hours, minutes });
+      closeAdminTimeModal();
+    }
+
+    async function adminApplyLifetimeAccess() {
+      if (!adminTargetUser?.id) return;
+      try {
+        const res = await fetch('/api/users/extend-validity', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({ userId: adminTargetUser.id, set_lifetime: true })
+        });
+        const d = await res.json();
+        if (d.success) {
+          showToast(`User granted Lifetime VIP Access!`);
+          refreshAdminData();
+          closeAdminTimeModal();
+        } else {
+          showToast(d.error || 'Failed to grant lifetime', true);
+        }
+      } catch(e) { showToast(e.message, true); }
+    }
+
+    async function adminExpireNow() {
+      if (!adminTargetUser?.id) return;
+      try {
+        const res = await fetch('/api/users/extend-validity', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({ userId: adminTargetUser.id, valid_until: new Date(Date.now() - 1000).toISOString() })
+        });
+        const d = await res.json();
+        if (d.success) {
+          showToast(`User subscription expired immediately.`);
+          refreshAdminData();
+          closeAdminTimeModal();
+        } else {
+          showToast(d.error || 'Failed to expire user', true);
+        }
+      } catch(e) { showToast(e.message, true); }
     }
 
     async function adminToggleBan(userId) {
