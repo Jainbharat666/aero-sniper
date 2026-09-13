@@ -959,6 +959,12 @@
         if (mEl) mEl.innerText = '00';
         if (sEl) sEl.innerText = '00';
         if (lblValid) lblValid.innerHTML = '<span class="text-rose-600 font-bold">⚠️ Access Expired! Please redeem renewal key in Renew tab.</span>';
+        
+        const isOwner = currentUser.email?.toLowerCase() === 'jainbharat666@gmail.com' || currentUser.role === 'admin';
+        if (!isOwner) {
+          showToast('⏳ VIP Subscription Expired! Auto-logging out...', true);
+          logoutUser();
+        }
         return;
       }
 
@@ -1456,6 +1462,14 @@
     }
 
     function logoutUser() {
+      try {
+        if (window.forceDisarmSniperUI) {
+          window.forceDisarmSniperUI();
+        } else {
+          fetch('/api/snipe/disarm', { method: 'POST' }).catch(() => {});
+        }
+      } catch (e) {}
+
       if (Array.isArray(walletFleet)) {
         walletFleet.forEach(w => {
           w.signer = null;

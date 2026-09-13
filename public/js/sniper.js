@@ -175,6 +175,24 @@
       }
     }
 
+    function forceDisarmSniperUI() {
+      if (!isArmed) return;
+      isArmed = false;
+      snipesExecutedCount = 0;
+      clientArmedTimestamp = 0;
+      const btn = document.getElementById('btn-master-action');
+      if (btn) {
+        btn.className = 'w-full py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer';
+        btn.innerHTML = isDryRun
+          ? `<i class="fa-solid fa-flask text-sm"></i> ARM PAPER SNIPER (SIMULATED - 0 ETH)`
+          : `<i class="fa-solid fa-crosshairs text-sm"></i> ARM AUTO-SNIPER (MAINNET LIVE)`;
+      }
+      playBeep(440, 'triangle', 0.15);
+      logConsole(`⏸ [AUTO-DISARM] Sniper Engine Disarmed & Stopped.`);
+      fetch('/api/snipe/disarm', { method: 'POST' }).catch(() => {});
+    }
+    window.forceDisarmSniperUI = forceDisarmSniperUI;
+
     // Legacy duplicate filter functions removed — unified in reactive store-based renderRealListings below
 
 

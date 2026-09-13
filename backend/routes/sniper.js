@@ -281,12 +281,52 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
   }
 }
 
+/**
+ * 🛡️ UNIVERSAL VIP SUBSCRIPTION GUARD & AUTO-DISARM WATCHDOG
+ * If the user's validity expires while sniper is armed in memory:
+ * Instantly auto-disarms, purges private keys from RAM, clears nonces, and notifies clients.
+ */
+export function checkAndEnforceUserValidity() {
+  if (!activeSniperEngine.isArmed) return true;
+  if (!activeSniperEngine.authenticatedUserId) return true;
+  if (activeSniperEngine.userEmail && activeSniperEngine.userEmail.toLowerCase() === OWNER_EMAIL.toLowerCase()) return true;
+
+  if (activeSniperEngine.userValidUntil) {
+    const exp = new Date(activeSniperEngine.userValidUntil).getTime();
+    if (Date.now() >= exp) {
+      console.log(`⏳ [SNIPER AUTO-DISARM] User VIP subscription expired (${activeSniperEngine.userValidUntil}). Auto-disarming sniper...`);
+      activeSniperEngine.isArmed = false;
+      activeSniperEngine.walletSigner = null;
+      activeSniperEngine.buyerPrivateKey = '';
+      if (activeSniperEngine.workerPool && activeSniperEngine.workerPool.length > 0) {
+        activeSniperEngine.workerPool.forEach(w => { delete w.privateKey; w.signer = null; });
+      }
+      walletNonceMap.clear();
+      broadcastSnipeLog(`⏳ [AUTO-DISARMED] VIP subscription expired! Background sniper engine stopped.`);
+      broadcastToClients({
+        type: 'sniper_disarmed',
+        reason: 'subscription_expired'
+      });
+      return false;
+    }
+  }
+  return true;
+}
+
+// 🛡️ Continuous 5-Second Background Watchdog
+setInterval(() => {
+  try {
+    checkAndEnforceUserValidity();
+  } catch (e) {}
+}, 5000);
+
 // ⚡ MICROSECOND ZERO-HOP SNIPER TRIGGER EVALUATOR (ALL 4 RULES ENFORCED)
 export async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = performance.now()) {
   if (!parsed || !parsed.tokenId) return;
   const itemSlug = (parsed.slug || incomingSlug || '').toLowerCase();
 
   if (!activeSniperEngine.isArmed) return;
+  if (!checkAndEnforceUserValidity()) return;
   if (activeSniperEngine.slug !== '*' && activeSniperEngine.slug !== itemSlug) return;
 
   // 🛡️ Circuit Breaker guard
@@ -438,16 +478,17 @@ router.post('/snipe/arm', async (req, res) => {
     userId
   } = req.body;
 
+  let armedDbUser = null;
   // License & Subscription Verification Guard
   if (userId) {
     try {
-      const dbUser = await dbGetUserById(userId);
-      if (dbUser) {
-        if (dbUser.is_banned) {
+      armedDbUser = await dbGetUserById(userId);
+      if (armedDbUser) {
+        if (armedDbUser.is_banned) {
           return res.status(403).json({ success: false, error: '🚫 Account suspended by Administrator.' });
         }
-        if (dbUser.valid_until && new Date(dbUser.valid_until) < new Date() && dbUser.email !== OWNER_EMAIL) {
-          return res.status(403).json({ success: false, error: `⏳ VIP Validity expired on ${new Date(dbUser.valid_until).toLocaleDateString()}. Please renew.` });
+        if (armedDbUser.valid_until && new Date(armedDbUser.valid_until) < new Date() && armedDbUser.email !== OWNER_EMAIL) {
+          return res.status(403).json({ success: false, error: `⏳ VIP Validity expired on ${new Date(armedDbUser.valid_until).toLocaleDateString()}. Please renew.` });
         }
       }
     } catch (e) {}
@@ -543,6 +584,8 @@ router.post('/snipe/arm', async (req, res) => {
       tokenId: !!ruleStates?.tokenId || (tokenSet.size > 0)
     };
     activeSniperEngine.authenticatedUserId = userId || null;
+    activeSniperEngine.userValidUntil = armedDbUser ? armedDbUser.valid_until : null;
+    activeSniperEngine.userEmail = armedDbUser ? armedDbUser.email : '';
 
     console.log(`🎯 ⚡ [SNIPER ARMED - 8-FEATURE PRO ENGINE]`);
     console.log(`   Target Slug: "${activeSniperEngine.slug}" | Mode: ${activeSniperEngine.dryRun ? '🧪 PAPER SNIPE (SIMULATED)' : '⚡ LIVE MAINNET'}`);

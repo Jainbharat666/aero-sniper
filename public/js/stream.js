@@ -636,6 +636,10 @@
                 updateLiveRadar();
                 updateBentoValues();
               }
+          } else if (payload.type === 'sniper_disarmed') {
+            if (window.forceDisarmSniperUI) window.forceDisarmSniperUI();
+            if (payload.reason === 'subscription_expired') {
+              showToast('⏳ VIP Subscription Expired! Sniper disarmed.', true);
             }
           } else if (payload.type === 'circuit_breaker_paused') {
             handleClientCircuitBreakerHit(payload.executed, payload.limit);
