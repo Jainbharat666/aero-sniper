@@ -106,11 +106,12 @@ echo GitHub:    https://github.com/Jainbharat666/aero-sniper
 echo Live Site: https://aero-sniper.vercel.app
 echo.
 echo INCLUDED IN THIS COMPLETE 30+ MB SNAPSHOT:
+echo - backend/ (Complete Modular Routes: auth, admin, scan, sniper, rarity, rpc, keys, stream, wallet, db, state)
 echo - node_modules (Complete installed dependencies - zero npm install needed)
 echo - cache (Full OpenRarity, trait and collection metadata cache)
-echo - server.js (6-Key Laser Grid, Seaport 1.6 Execution Engine)
-echo - public/index.html (Tailwind CSS, Zero-Scroll Trading Dashboard)
-echo - src/ (stream.js, rarity.js, executor.js, config.js)
+echo - server.js (6-Key Laser Grid, Seaport 1.6 Execution Engine, Modular Express Core)
+echo - public/ (Modular JS & CSS, Tailwind, Zero-Scroll Trading Dashboard)
+echo - src/ (stream.js, rarity.js, executor.js, config.js, timeSync.js)
 echo - api/ (Vercel Serverless Function Endpoints)
 echo - .env, package.json, package-lock.json
 echo - START_SNIPER.bat, push_to_github.bat, restore.bat
