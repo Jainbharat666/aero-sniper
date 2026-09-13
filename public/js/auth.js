@@ -734,6 +734,9 @@
         openAuthModal('login');
         return;
       }
+      // 🔄 Sync latest stats from cloud
+      if (typeof checkAuthHeartbeat === 'function') checkAuthHeartbeat();
+
       const isOwnerAdmin = currentUser.role === 'admin' || currentUser.email === 'jainbharat666@gmail.com';
       
       const elEmail = document.getElementById('prof-modal-email');
@@ -1439,13 +1442,43 @@
         }
         const data = await res.json();
         if (!data.valid) {
-          showToast(data.message || 'Session invalidated: Logged in from another device or expired!', true);
-          logoutUser();
+          if (data.reason === 'EXPIRED_SNIPES') {
+            if (currentUser) {
+              currentUser.total_snipes = currentUser.max_snipes_allowed;
+              currentUser.snipes_used = currentUser.max_snipes_allowed;
+              currentUser.snipes_remaining = 0;
+              localStorage.setItem('sniper_user', JSON.stringify(currentUser));
+              renderAuthHeaderUI();
+            }
+            if (typeof isArmed !== 'undefined' && isArmed) {
+              isArmed = false;
+              const btn = document.getElementById('btn-master-action');
+              if (btn) {
+                btn.className = 'w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-black text-xs shadow-lg flex items-center justify-center gap-2 transition-all';
+                btn.innerHTML = `<i class="fa-solid fa-lock"></i> 🛑 VIP QUOTA EXHAUSTED (DISARMED)`;
+              }
+            }
+            showToast(data.message || '⚠️ Your Snipe Quota has been exhausted! Please renew in profile.', true);
+          } else {
+            showToast(data.message || 'Session invalidated: Logged in from another device or expired!', true);
+            logoutUser();
+          }
+        } else {
+          // 🔄 LIVE QUOTA SYNCHRONIZATION INTO LOCAL CLIENT MEMORY
+          if (currentUser) {
+            currentUser.total_snipes = data.total_snipes;
+            currentUser.snipes_used = data.snipes_used;
+            currentUser.snipes_remaining = data.snipes_remaining;
+            currentUser.max_snipes_allowed = data.max_snipes_allowed;
+            if (data.valid_until) currentUser.valid_until = data.valid_until;
+            localStorage.setItem('sniper_user', JSON.stringify(currentUser));
+            renderAuthHeaderUI();
+          }
         }
       } catch(e) {
         // Network offline or server starting up: keep session intact
       }
     }
-    setInterval(checkAuthHeartbeat, 25000);
+    setInterval(checkAuthHeartbeat, 15000);
 
     // --- 7. MASTER OWNER ADMIN CONSOLE (4 TABS) ---

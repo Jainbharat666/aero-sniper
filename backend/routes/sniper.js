@@ -634,7 +634,33 @@ router.post('/snipe/disarm', (req, res) => {
 
 // POST /api/snipe/buy
 router.post('/snipe/buy', async (req, res) => {
-  const { buyerPrivateKey, protocolData, orderHash, tokenId, gasSpeed, workerIndex } = req.body;
+  const { buyerPrivateKey, protocolData, orderHash, tokenId, gasSpeed, workerIndex, userId } = req.body;
+
+  const effectiveUserId = userId || activeSniperEngine.authenticatedUserId;
+
+  // 🛡️ USER QUOTA HARD-LOCK AUDIT (Zero-bypass VIP Enforcement)
+  if (effectiveUserId) {
+    try {
+      const u = await dbGetUserById(effectiveUserId);
+      if (u && u.email !== OWNER_EMAIL) {
+        if (u.is_banned) {
+          return res.status(403).json({ success: false, error: '🚫 Account suspended by Administrator.' });
+        }
+        if (u.valid_until && new Date(u.valid_until) < new Date()) {
+          return res.status(403).json({ success: false, error: `⏳ VIP Validity expired on ${new Date(u.valid_until).toLocaleDateString()}. Please renew.` });
+        }
+        if (u.max_snipes_allowed > 0 && (u.total_snipes || 0) >= u.max_snipes_allowed) {
+          activeSniperEngine.isArmed = false;
+          broadcastSnipeLog(`🛑 [QUOTA EXHAUSTED] Allocated limit of ${u.max_snipes_allowed} snipes reached. Engine auto-disarmed.`);
+          broadcastToClients({
+            type: 'quota_exhausted_disarm',
+            message: `You have completed all ${u.max_snipes_allowed} allocated snipes. Sniper engine has been locked. Please renew in profile.`
+          });
+          return res.status(403).json({ success: false, error: `🎯 Snipes Quota reached (${u.total_snipes}/${u.max_snipes_allowed}). Please extend quota.` });
+        }
+      }
+    } catch (e) {}
+  }
 
   let signer = null;
   let buyerAddress = '';
@@ -680,6 +706,40 @@ router.post('/snipe/buy', async (req, res) => {
       if (tokIdStr && activeSniperEngine.pendingSnipes) activeSniperEngine.pendingSnipes.delete(tokIdStr);
       if (tokenId) activeSniperEngine.snipedTokenIds.add(String(tokenId));
       activeSniperEngine.snipesExecutedCount++;
+
+      // 🎯 RECORD ON-CHAIN SNIPE IN CLOUD ACCOUNT & BROADCAST QUOTA SYNC
+      if (effectiveUserId) {
+        dbRecordUserSnipe(effectiveUserId, 1).then(async () => {
+          try {
+            const u = await dbGetUserById(effectiveUserId);
+            if (u) {
+              const hbMax = u.max_snipes_allowed !== undefined ? parseInt(u.max_snipes_allowed) : 0;
+              const hbUsed = u.total_snipes !== undefined ? u.total_snipes : (u.snipes_used || 0);
+              const hbRem = hbMax > 0 ? Math.max(0, hbMax - hbUsed) : null;
+
+              broadcastToClients({
+                type: 'user_quota_updated',
+                userId: u.id,
+                email: u.email,
+                total_snipes: hbUsed,
+                snipes_used: hbUsed,
+                snipes_remaining: hbRem,
+                max_snipes_allowed: hbMax
+              });
+
+              if (u.email !== OWNER_EMAIL && hbMax > 0 && hbUsed >= hbMax) {
+                activeSniperEngine.isArmed = false;
+                console.log(`🛑 [QUOTA HARD-LOCK] User ${u.email} reached limit of ${hbMax} snipes. Disarming engine.`);
+                broadcastSnipeLog(`🛑 [QUOTA EXHAUSTED] Allocated limit of ${hbMax} snipes reached. Engine auto-disarmed.`);
+                broadcastToClients({
+                  type: 'quota_exhausted_disarm',
+                  message: `You have completed all ${hbMax} allocated snipes. Sniper engine has been locked. Please renew in profile.`
+                });
+              }
+            }
+          } catch (e) {}
+        }).catch(() => {});
+      }
 
       const isCircuitBreakerHit = activeSniperEngine.maxSnipesLimit > 0 && activeSniperEngine.snipesExecutedCount >= activeSniperEngine.maxSnipesLimit;
       if (isCircuitBreakerHit) {

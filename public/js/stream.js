@@ -639,6 +639,26 @@
             }
           } else if (payload.type === 'circuit_breaker_paused') {
             handleClientCircuitBreakerHit(payload.executed, payload.limit);
+          } else if (payload.type === 'quota_exhausted_disarm') {
+            if (typeof isArmed !== 'undefined' && isArmed) {
+              isArmed = false;
+              const btn = document.getElementById('btn-master-action');
+              if (btn) {
+                btn.className = 'w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-black text-xs shadow-lg flex items-center justify-center gap-2 transition-all';
+                btn.innerHTML = `<i class="fa-solid fa-lock"></i> 🛑 VIP QUOTA EXHAUSTED (DISARMED)`;
+              }
+            }
+            showToast(payload.message || '⚠️ Snipe Quota limit reached! Engine auto-disarmed.', true);
+            if (typeof openUserProfileModal === 'function') openUserProfileModal('renew');
+          } else if (payload.type === 'user_quota_updated') {
+            if (typeof currentUser !== 'undefined' && currentUser && (currentUser.id === payload.userId || currentUser.email === payload.email)) {
+              currentUser.total_snipes = payload.total_snipes;
+              currentUser.snipes_used = payload.snipes_used;
+              currentUser.snipes_remaining = payload.snipes_remaining;
+              currentUser.max_snipes_allowed = payload.max_snipes_allowed;
+              localStorage.setItem('sniper_user', JSON.stringify(currentUser));
+              if (typeof renderAuthHeaderUI === 'function') renderAuthHeaderUI();
+            }
           } else if (payload.type === 'zero_hop_snipe_confirmed') {
             logConsole(`🎉 [ZERO-HOP BUY CONFIRMED] Token #${payload.tokenId} confirmed in Block #${payload.blockNumber} (Tx: ${payload.txHash.slice(0, 14)}...)!`);
             showToast(`🎉 NFT #${payload.tokenId} bought successfully by ${payload.buyerName}!`);
