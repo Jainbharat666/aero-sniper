@@ -190,13 +190,6 @@ router.post('/auth/login', authLimiter, async (req, res) => {
           error: `⏳ VIP Validity Expired. Your subscription ended on ${new Date(user.valid_until).toLocaleDateString()}. Please contact Admin to renew.`
         });
       }
-
-      if (user.max_snipes_allowed > 0 && user.total_snipes >= user.max_snipes_allowed) {
-        return res.status(403).json({
-          success: false,
-          error: `🎯 Snipes Quota Exhausted. You have completed all ${user.max_snipes_allowed} allocated snipes for this key. Contact Admin to extend quota.`
-        });
-      }
     }
 
     // 6. Update last active timestamp ONLY
@@ -309,25 +302,9 @@ router.get('/auth/heartbeat', async (req, res) => {
       });
     }
 
-    // Check Snipes Quota Expiry
-    if (user.max_snipes_allowed > 0 && (user.total_snipes || 0) >= user.max_snipes_allowed) {
-      return res.json({
-        valid: false,
-        reason: 'EXPIRED_SNIPES',
-        message: `🎯 Snipes Quota Reached! You have used all ${user.max_snipes_allowed}/${user.max_snipes_allowed} snipes allocated to this key.`
-      });
-    }
-
-    const hbMax = user.max_snipes_allowed !== undefined ? parseInt(user.max_snipes_allowed) : 0;
-    const hbUsed = user.total_snipes !== undefined ? user.total_snipes : (user.snipes_used || 0);
-    const hbRem = hbMax > 0 ? Math.max(0, hbMax - hbUsed) : null;
     return res.json({
       valid: true,
       valid_until: user.valid_until,
-      max_snipes_allowed: hbMax,
-      snipes_remaining: hbRem,
-      snipes_used: hbUsed,
-      total_snipes: hbUsed,
       is_banned: false,
       role: user.role
     });

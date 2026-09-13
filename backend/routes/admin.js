@@ -53,7 +53,7 @@ router.get('/users', adminAuthMiddleware, async (req, res) => {
   res.json({ success: true, users: safeList });
 });
 
-// ─── 2. EXTEND VALIDITY DAYS ──────────────────────────────────────────────────
+// ─── 2. ADJUST VALIDITY (DAYS, HOURS, MINUTES OR LIFETIME) ───────────────────
 router.post('/users/extend-validity', adminAuthMiddleware, async (req, res) => {
   try {
     const userId = req.body.userId || req.body.user_id;
@@ -61,42 +61,30 @@ router.post('/users/extend-validity', adminAuthMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
 
     let newValidUntil;
-    if (req.body.valid_until) {
+    if (req.body.set_lifetime) {
+      const farFuture = new Date();
+      farFuture.setFullYear(farFuture.getFullYear() + 10);
+      newValidUntil = farFuture.toISOString();
+    } else if (req.body.valid_until) {
       newValidUntil = new Date(req.body.valid_until).toISOString();
     } else {
-      const addDays = parseInt(req.body.days) || 30;
-      const baseDate = user.valid_until && new Date(user.valid_until) > new Date() ? new Date(user.valid_until) : new Date();
-      baseDate.setDate(baseDate.getDate() + addDays);
-      newValidUntil = baseDate.toISOString();
+      const now = new Date();
+      // If user validity is still active in future, add/subtract from it. Otherwise start from now.
+      const baseDate = (user.valid_until && new Date(user.valid_until) > now) 
+        ? new Date(user.valid_until) 
+        : new Date(now);
+
+      const addMinutes = parseInt(req.body.minutes) || 0;
+      const addHours = parseInt(req.body.hours) || 0;
+      const addDays = parseInt(req.body.days) || 0;
+
+      const totalMsDelta = (addDays * 24 * 60 * 60 * 1000) + (addHours * 60 * 60 * 1000) + (addMinutes * 60 * 1000);
+      const targetTime = baseDate.getTime() + totalMsDelta;
+      newValidUntil = new Date(targetTime).toISOString();
     }
 
     const updated = await dbUpdateUser(user.id, { valid_until: newValidUntil });
     if (updated) return res.json({ success: true, valid_until: updated.valid_until });
-    return res.status(500).json({ success: false, error: 'Update failed' });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// ─── 3. EXTEND SNIPES QUOTA LIMIT ─────────────────────────────────────────────
-router.post('/users/extend-snipes', adminAuthMiddleware, async (req, res) => {
-  try {
-    const userId = req.body.userId || req.body.user_id;
-    const addCount = req.body.count || req.body.add_snipes || 10;
-    const user = await dbGetUserById(userId);
-    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
-
-    let newQuota = user.max_snipes_allowed;
-    if (req.body.set_unlimited) {
-      newQuota = 0;
-    } else if (req.body.set_total_quota !== undefined) {
-      newQuota = parseInt(req.body.set_total_quota) || 0;
-    } else {
-      newQuota = (user.max_snipes_allowed || 0) + parseInt(addCount);
-    }
-
-    const updated = await dbUpdateUser(user.id, { max_snipes_allowed: newQuota });
-    if (updated) return res.json({ success: true, max_snipes_allowed: updated.max_snipes_allowed, total_snipes: updated.total_snipes });
     return res.status(500).json({ success: false, error: 'Update failed' });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });

@@ -60,14 +60,6 @@
             openUserProfileModal('renew');
             return;
           }
-          // Check Snipes Quota
-          const maxAllowed = currentUser.max_snipes_allowed !== undefined ? parseInt(currentUser.max_snipes_allowed) : 0;
-          const used = currentUser.snipes_used !== undefined ? currentUser.snipes_used : (currentUser.total_snipes || 0);
-          if (maxAllowed > 0 && used >= maxAllowed) {
-            showToast(`⚠️ Snipes Quota Limit of ${maxAllowed} reached! Please redeem a renewal voucher in profile.`, true);
-            openUserProfileModal('renew');
-            return;
-          }
         }
       }
       
@@ -446,45 +438,11 @@
               triggerSnipeCheer(item.tokenId, item.price, buyer.name, data.txHash);
               refreshAllBalances();
 
-              // 🎯 SYNC USER QUOTA STATS IMMEDIATELY
-              if (currentUser && currentUser.max_snipes_allowed > 0) {
-                currentUser.total_snipes = (currentUser.total_snipes || 0) + 1;
-                currentUser.snipes_used = (currentUser.snipes_used || 0) + 1;
-                if (currentUser.snipes_remaining != null) {
-                  currentUser.snipes_remaining = Math.max(0, currentUser.snipes_remaining - 1);
-                }
-                localStorage.setItem('sniper_user', JSON.stringify(currentUser));
-                if (typeof renderAuthHeaderUI === 'function') renderAuthHeaderUI();
-
-                const isOwnerAdmin = currentUser.role === 'admin' || currentUser.email === 'jainbharat666@gmail.com';
-                if (!isOwnerAdmin && currentUser.total_snipes >= currentUser.max_snipes_allowed) {
-                  isArmed = false;
-                  const mBtn = document.getElementById('btn-master-action');
-                  if (mBtn) {
-                    mBtn.className = 'w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-black text-xs shadow-lg flex items-center justify-center gap-2 transition-all';
-                    mBtn.innerHTML = `<i class="fa-solid fa-lock"></i> 🛑 VIP QUOTA EXHAUSTED (${currentUser.total_snipes}/${currentUser.max_snipes_allowed})`;
-                  }
-                  showToast(`🛑 Quota reached (${currentUser.total_snipes}/${currentUser.max_snipes_allowed} snipes). Engine auto-disarmed!`, true);
-                  if (typeof openUserProfileModal === 'function') openUserProfileModal('renew');
-                }
-              }
-
               const isLimitHit = (activeMaxSnipesLimit > 0 && snipesExecutedCount >= activeMaxSnipesLimit) || data.circuitBreakerHit;
               if (isLimitHit) {
                 handleClientCircuitBreakerHit(data.executedCount || snipesExecutedCount, data.maxLimit || activeMaxSnipesLimit);
               }
             } else {
-              if (/Quota reached|expired/i.test(data.error || '')) {
-                isArmed = false;
-                const mBtn = document.getElementById('btn-master-action');
-                if (mBtn) {
-                  mBtn.className = 'w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-black text-xs shadow-lg flex items-center justify-center gap-2 transition-all';
-                  mBtn.innerHTML = `<i class="fa-solid fa-lock"></i> 🛑 VIP QUOTA EXHAUSTED (DISARMED)`;
-                }
-                showToast(data.error || '⚠️ Snipe Quota Exceeded! Please renew.', true);
-                if (typeof openUserProfileModal === 'function') openUserProfileModal('renew');
-                return;
-              }
               // Dead order detection
               if (data.isDeadOrder || /not valid|not found|cancelled|expired/i.test(data.error || '')) {
                 item.sniped = true;
@@ -582,29 +540,6 @@
           triggerSnipeCheer(tokenId, price, buyer.name, data.txHash);
           refreshAllBalances();
 
-          // 🎯 SYNC USER QUOTA STATS IMMEDIATELY
-          if (currentUser && currentUser.max_snipes_allowed > 0) {
-            currentUser.total_snipes = (currentUser.total_snipes || 0) + 1;
-            currentUser.snipes_used = (currentUser.snipes_used || 0) + 1;
-            if (currentUser.snipes_remaining != null) {
-              currentUser.snipes_remaining = Math.max(0, currentUser.snipes_remaining - 1);
-            }
-            localStorage.setItem('sniper_user', JSON.stringify(currentUser));
-            if (typeof renderAuthHeaderUI === 'function') renderAuthHeaderUI();
-
-            const isOwnerAdmin = currentUser.role === 'admin' || currentUser.email === 'jainbharat666@gmail.com';
-            if (!isOwnerAdmin && currentUser.total_snipes >= currentUser.max_snipes_allowed) {
-              isArmed = false;
-              const mBtn = document.getElementById('btn-master-action');
-              if (mBtn) {
-                mBtn.className = 'w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-black text-xs shadow-lg flex items-center justify-center gap-2 transition-all';
-                mBtn.innerHTML = `<i class="fa-solid fa-lock"></i> 🛑 VIP QUOTA EXHAUSTED (${currentUser.total_snipes}/${currentUser.max_snipes_allowed})`;
-              }
-              showToast(`🛑 Quota reached (${currentUser.total_snipes}/${currentUser.max_snipes_allowed} snipes). Engine auto-disarmed!`, true);
-              if (typeof openUserProfileModal === 'function') openUserProfileModal('renew');
-            }
-          }
-
           if (isArmed) {
             snipesExecutedCount++;
             const isLimitHit = (activeMaxSnipesLimit > 0 && snipesExecutedCount >= activeMaxSnipesLimit) || data.circuitBreakerHit;
@@ -613,11 +548,6 @@
             }
           }
         } else {
-          if (/Quota reached|expired/i.test(data.error || '')) {
-            showToast(data.error || '⚠️ Snipe Quota Exceeded! Please renew.', true);
-            if (typeof openUserProfileModal === 'function') openUserProfileModal('renew');
-            return;
-          }
           if (data.isDeadOrder || /not valid|not found|cancelled|expired/i.test(data.error || '')) {
             if (orderHash) clientDeadOrdersSet.add(orderHash);
             const row = document.querySelector(`tr[data-token="${tokenId}"]`);

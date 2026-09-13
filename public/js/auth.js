@@ -645,20 +645,95 @@
       }
     }
 
+    function formatVipTimeRemaining(validUntilIso) {
+      if (!validUntilIso) return { text: '∞ Lifetime', expired: false, totalSecs: Infinity };
+      const diff = new Date(validUntilIso).getTime() - Date.now();
+      if (diff <= 0) return { text: 'EXPIRED', expired: true, totalSecs: 0 };
+      const totalSecs = Math.floor(diff / 1000);
+      const days = Math.floor(totalSecs / 86400);
+      const hours = Math.floor((totalSecs % 86400) / 3600);
+      const minutes = Math.floor((totalSecs % 3600) / 60);
+      const seconds = totalSecs % 60;
+
+      let text = '';
+      if (days > 0) {
+        text = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+      } else if (hours > 0) {
+        text = `${hours}h ${minutes}m ${seconds}s`;
+      } else {
+        text = `${minutes}m ${seconds}s`;
+      }
+      return { text, expired: false, totalSecs };
+    }
+
+    let liveValidityClockInterval = null;
+    function startGlobalValidityClock() {
+      if (liveValidityClockInterval) clearInterval(liveValidityClockInterval);
+      liveValidityClockInterval = setInterval(() => {
+        if (!currentUser || !sessionToken) return;
+        const isOwner = currentUser.email?.toLowerCase() === 'jainbharat666@gmail.com' || currentUser.role === 'admin';
+        if (isOwner) return;
+
+        if (currentUser.valid_until) {
+          const remaining = formatVipTimeRemaining(currentUser.valid_until);
+          const clockEl = document.getElementById('header-live-validity-clock');
+          if (clockEl) {
+            if (remaining.expired) {
+              clockEl.innerHTML = `<span class="text-rose-600 font-black animate-pulse">⏳ EXPIRED</span>`;
+            } else {
+              clockEl.innerHTML = `⏳ ${remaining.text}`;
+            }
+          }
+
+          const profRemaining = document.getElementById('prof-quota-remaining');
+          if (profRemaining) {
+            if (remaining.expired) {
+              profRemaining.innerHTML = `<span class="text-rose-600 font-bold">VIP Status: EXPIRED</span>`;
+            } else {
+              profRemaining.innerHTML = `<span class="text-indigo-600 font-bold">Remaining: ${remaining.text}</span>`;
+            }
+          }
+
+          // 🛑 AUTOMATIC AUTO-LOGOUT WHEN VIP TIME EXPIRES
+          if (remaining.expired) {
+            clearInterval(liveValidityClockInterval);
+            liveValidityClockInterval = null;
+            if (typeof isArmed !== 'undefined' && isArmed) {
+              isArmed = false;
+            }
+            showToast('⏳ Your VIP subscription has expired! Session terminated.', true);
+            logoutUser();
+          }
+        }
+      }, 1000);
+    }
+
+    // 🔒 INACTIVITY AUTO-LOGOUT (Regular Users only, Admin exempt)
+    let lastUserActivityTimestamp = Date.now();
+    const INACTIVITY_TIMEOUT_MS = 25 * 60 * 1000; // 25 minutes of inactivity
+
+    ['mousedown', 'keydown', 'scroll', 'touchstart'].forEach(evt => {
+      window.addEventListener(evt, () => { lastUserActivityTimestamp = Date.now(); }, { passive: true });
+    });
+
+    setInterval(() => {
+      if (!currentUser || !sessionToken) return;
+      const isOwner = currentUser.email?.toLowerCase() === 'jainbharat666@gmail.com' || currentUser.role === 'admin';
+      if (isOwner) return; // Admin is 100% exempt from inactivity logout
+
+      if (Date.now() - lastUserActivityTimestamp > INACTIVITY_TIMEOUT_MS) {
+        if (typeof isArmed !== 'undefined' && isArmed) {
+          isArmed = false;
+        }
+        showToast('🔒 Logged out due to 25 minutes of inactivity for wallet security.', true);
+        logoutUser();
+      }
+    }, 30000);
+
     function renderAuthHeaderUI() {
       purgeAutofilledEmail();
       const container = document.getElementById('header-auth-container');
-      if (!container) return;
-
-      if (!currentUser) {
-        container.innerHTML = `
-          <button onclick="openAuthModal('login')" class="flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:to-pink-700 text-white px-3.5 py-1.5 rounded-xl font-mono-code text-xs font-black shadow-md shadow-indigo-500/20 transition-all cursor-pointer">
-            <i class="fa-solid fa-bolt text-xs text-amber-300"></i>
-            <span>VIP Login</span>
-          </button>
-        `;
-        return;
-      }
+      if (!container || !currentUser) return;
 
       const isOwnerAdmin = currentUser.role === 'admin' || currentUser.email === 'jainbharat666@gmail.com';
       
@@ -675,28 +750,12 @@
         ? currentUser.email.substring(0, 14) + '...' 
         : (currentUser.email || 'VIP Member');
 
-      const maxAllowed = currentUser.max_snipes_allowed !== undefined ? parseInt(currentUser.max_snipes_allowed) : 0;
-      const used = currentUser.snipes_used !== undefined ? currentUser.snipes_used : (currentUser.total_snipes || 0);
-      let remaining = currentUser.snipes_remaining;
-      if (remaining === undefined || remaining === null) {
-        remaining = maxAllowed > 0 ? Math.max(0, maxAllowed - used) : null;
-      }
-
       let accessMetric = '';
       if (isOwnerAdmin) {
-        accessMetric = `<span class="text-[10px] text-amber-700 font-black">👑 Master Access</span>`;
+        accessMetric = `<span class="text-[10px] text-amber-700 font-black">👑 Master Lifetime</span>`;
       } else {
-        let daysStr = '∞';
-        if (currentUser.valid_until) {
-          const diff = new Date(currentUser.valid_until).getTime() - Date.now();
-          const d = Math.ceil(diff / (1000 * 60 * 60 * 24));
-          daysStr = d > 0 ? `${d}d left` : `<span class="text-rose-600 font-black">EXPIRED</span>`;
-        }
-        let snipesStr = '∞';
-        if (maxAllowed > 0) {
-          snipesStr = remaining > 0 ? `${remaining} snipes left` : `<span class="text-rose-600 font-black">0 snipes</span>`;
-        }
-        accessMetric = `<span class="text-[10px] text-slate-500 font-bold">⏳ ${daysStr} • ⚡ ${snipesStr}</span>`;
+        const rem = formatVipTimeRemaining(currentUser.valid_until);
+        accessMetric = `<span id="header-live-validity-clock" class="text-[10px] font-bold text-slate-700">${rem.expired ? '<span class="text-rose-600 font-black">EXPIRED</span>' : `⏳ ${rem.text}`}</span> • <span class="text-emerald-700 font-black">⚡ Unlimited</span>`;
       }
 
       container.innerHTML = `
@@ -726,6 +785,8 @@
           </div>
         </div>
       `;
+
+      startGlobalValidityClock();
     }
 
     // --- 2. USER PROFILE & CLOUD VAULT MODAL (5 TABS) ---
@@ -758,31 +819,26 @@
 
       if (ownerBtn) ownerBtn.classList.toggle('hidden', !isOwnerAdmin);
 
-      // Snipes Quota Calculation
-      const maxAllowed = currentUser.max_snipes_allowed !== undefined ? parseInt(currentUser.max_snipes_allowed) : 0;
-      const used = currentUser.snipes_used !== undefined ? currentUser.snipes_used : (currentUser.total_snipes || 0);
-      let rem = currentUser.snipes_remaining;
-      if (rem === undefined || rem === null) {
-        rem = maxAllowed > 0 ? Math.max(0, maxAllowed - used) : null;
-      }
+      // VIP Unlimited Snipes Status
       const quotaLabel = document.getElementById('prof-quota-label');
       const quotaProgress = document.getElementById('prof-quota-progress');
       const quotaRemaining = document.getElementById('prof-quota-remaining');
       const inviteUsed = document.getElementById('prof-invite-used');
 
-      if (maxAllowed > 0) {
-        const pct = Math.min(100, Math.round((used / maxAllowed) * 100));
-        if (quotaLabel) quotaLabel.innerText = `${used} / ${maxAllowed} Snipes (${pct}%)`;
-        if (quotaProgress) quotaProgress.style.width = pct + '%';
-        if (quotaRemaining) {
-          quotaRemaining.innerHTML = rem > 0 ? `Remaining: ${rem} Snipes` : `<span class="text-rose-600 font-bold">Remaining: 0 Snipes (Exhausted)</span>`;
+      if (quotaLabel) quotaLabel.innerText = '⚡ Unlimited Sniping Active';
+      if (quotaProgress) quotaProgress.style.width = '100%';
+      if (inviteUsed) {
+        if (currentUser.valid_until) {
+          inviteUsed.innerText = 'Expires: ' + new Date(currentUser.valid_until).toLocaleString();
+        } else {
+          inviteUsed.innerText = 'Access: Lifetime VIP';
         }
-        if (inviteUsed) inviteUsed.innerText = 'Snipes Completed: ' + used;
-      } else {
-        if (quotaLabel) quotaLabel.innerText = 'Unlimited Snipes ⚡';
-        if (quotaProgress) quotaProgress.style.width = '100%';
-        if (quotaRemaining) quotaRemaining.innerText = 'Remaining: Unlimited';
-        if (inviteUsed) inviteUsed.innerText = 'Snipes Completed: ' + used;
+      }
+      if (quotaRemaining) {
+        const rem = formatVipTimeRemaining(currentUser.valid_until);
+        quotaRemaining.innerHTML = rem.expired 
+          ? `<span class="text-rose-600 font-bold">VIP Status: EXPIRED</span>`
+          : `<span class="text-indigo-600 font-bold">Remaining: ${rem.text}</span>`;
       }
 
       // Populate Cloud Vault counters and AeroMint V2 toggle state
@@ -1442,37 +1498,13 @@
         }
         const data = await res.json();
         if (!data.valid) {
-          if (data.reason === 'EXPIRED_SNIPES') {
-            if (currentUser) {
-              currentUser.total_snipes = currentUser.max_snipes_allowed;
-              currentUser.snipes_used = currentUser.max_snipes_allowed;
-              currentUser.snipes_remaining = 0;
-              localStorage.setItem('sniper_user', JSON.stringify(currentUser));
-              renderAuthHeaderUI();
-            }
-            if (typeof isArmed !== 'undefined' && isArmed) {
-              isArmed = false;
-              const btn = document.getElementById('btn-master-action');
-              if (btn) {
-                btn.className = 'w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-black text-xs shadow-lg flex items-center justify-center gap-2 transition-all';
-                btn.innerHTML = `<i class="fa-solid fa-lock"></i> 🛑 VIP QUOTA EXHAUSTED (DISARMED)`;
-              }
-            }
-            showToast(data.message || '⚠️ Your Snipe Quota has been exhausted! Please renew in profile.', true);
-          } else {
-            showToast(data.message || 'Session invalidated: Logged in from another device or expired!', true);
-            logoutUser();
-          }
+          showToast(data.message || 'Session invalidated: VIP subscription expired!', true);
+          logoutUser();
         } else {
-          // 🔄 LIVE QUOTA SYNCHRONIZATION INTO LOCAL CLIENT MEMORY
+          // 🔄 LIVE VALIDITY SYNCHRONIZATION
           if (currentUser) {
-            currentUser.total_snipes = data.total_snipes;
-            currentUser.snipes_used = data.snipes_used;
-            currentUser.snipes_remaining = data.snipes_remaining;
-            currentUser.max_snipes_allowed = data.max_snipes_allowed;
-            if (data.valid_until) currentUser.valid_until = data.valid_until;
+            currentUser.valid_until = data.valid_until;
             localStorage.setItem('sniper_user', JSON.stringify(currentUser));
-            renderAuthHeaderUI();
           }
         }
       } catch(e) {

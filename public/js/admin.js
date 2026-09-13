@@ -141,13 +141,9 @@
         
         const isBanned = !!u.is_banned;
         const isExpiredTime = u.valid_until && new Date(u.valid_until).getTime() <= Date.now();
-        const fMax = u.max_snipes_allowed !== undefined ? parseInt(u.max_snipes_allowed) : 0;
-        const fUsed = u.snipes_used !== undefined ? u.snipes_used : (u.total_snipes || 0);
-        const isExhaustedQuota = fMax > 0 && fUsed >= fMax;
 
-        if (filter === 'active') return !isBanned && !isExpiredTime && !isExhaustedQuota;
+        if (filter === 'active') return !isBanned && !isExpiredTime;
         if (filter === 'expired') return isExpiredTime;
-        if (filter === 'exhausted') return isExhaustedQuota;
         if (filter === 'banned') return isBanned;
         return true;
       });
@@ -163,6 +159,27 @@
       filterAdminUsers();
     }
 
+    function formatAdminUserValidity(validUntilIso) {
+      if (!validUntilIso) return '<span class="text-indigo-700 font-bold">👑 Lifetime</span>';
+      const diff = new Date(validUntilIso).getTime() - Date.now();
+      if (diff <= 0) return '<span class="text-rose-600 font-bold">Expired</span>';
+      const totalSecs = Math.floor(diff / 1000);
+      const days = Math.floor(totalSecs / 86400);
+      const hours = Math.floor((totalSecs % 86400) / 3600);
+      const mins = Math.floor((totalSecs % 3600) / 60);
+
+      const expDate = new Date(validUntilIso);
+      let remStr = '';
+      if (days > 0) {
+        remStr = `${days}d ${hours}h left`;
+      } else if (hours > 0) {
+        remStr = `${hours}h ${mins}m left`;
+      } else {
+        remStr = `${mins}m left`;
+      }
+      return `<span class="text-slate-900 font-black">${remStr}</span> <span class="text-slate-500 font-mono-code text-[10px]">(${expDate.toLocaleDateString()} ${expDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})</span>`;
+    }
+
     function renderAdminUsers(users) {
       const tbody = document.getElementById('admin-users-tbody');
       if (!tbody) return;
@@ -176,20 +193,7 @@
         const isOwner = u.email === 'jainbharat666@gmail.com';
         const isBanned = !!u.is_banned;
         const uidShort = u.id ? u.id.substring(0, 8) : '--';
-        
-        let validStr = '<span class="text-indigo-700 font-bold">Lifetime</span>';
-        if (u.valid_until) {
-          const expDate = new Date(u.valid_until);
-          const diffDays = Math.ceil((expDate - Date.now()) / (1000 * 60 * 60 * 24));
-          validStr = diffDays > 0 ? `<span class="text-slate-800 font-bold">${diffDays}d</span> <span class="text-slate-400 font-normal">(${expDate.toLocaleDateString()})</span>` : `<span class="text-rose-600 font-bold">Expired</span>`;
-        }
-
-        const uMax = u.max_snipes_allowed !== undefined ? parseInt(u.max_snipes_allowed) : 0;
-        const uUsed = u.snipes_used !== undefined ? u.snipes_used : (u.total_snipes || 0);
-        const uRem = uMax > 0 ? Math.max(0, uMax - uUsed) : null;
-        const quotaStr = (uMax === 0)
-          ? '<span class="text-emerald-700 font-bold">∞ Unlimited</span>'
-          : (uRem > 0 ? `<span class="text-purple-700 font-bold">${uRem} left</span> <span class="text-slate-500 font-normal">(${uUsed}/${uMax})</span>` : `<span class="text-rose-600 font-bold">0 left (${uUsed}/${uMax} Exhausted)</span>`);
+        const validStr = formatAdminUserValidity(u.valid_until);
         const statusBadge = isBanned 
           ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-rose-50 text-rose-700 border border-rose-200">SUSPENDED</span>`
           : `<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">ACTIVE</span>`;
@@ -206,19 +210,21 @@
             </td>
             <td class="py-2.5 px-3">${validStr}</td>
             <td class="py-2.5 px-3">
-              <div class="font-black">${quotaStr}</div>
-              <div class="text-[10px] text-slate-500">Used: ${u.snipes_used || u.total_snipes || 0}</div>
+              <div class="font-black text-emerald-700">⚡ Unlimited</div>
+              <div class="text-[10px] text-slate-500">Real-Time Sniping</div>
             </td>
             <td class="py-2.5 px-3">${statusBadge}</td>
             <td class="py-2.5 px-3 text-right">
               ${isOwner ? `<span class="text-[10px] text-slate-500 font-bold italic">Master Owner</span>` : `
-                <div class="flex items-center justify-end gap-1.5">
-                  <button onclick="adminExtendValidity('${u.id}', 30)" title="Add +30 Days" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-black border border-indigo-200 shadow-sm transition-colors">+30d</button>
-                  <button onclick="adminExtendSnipes('${u.id}', 10)" title="Add +10 Snipes" class="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-[10px] font-black border border-purple-200 shadow-sm transition-colors">+10🎯</button>
-                  <button onclick="adminToggleBan('${u.id}')" title="${isBanned ? 'Unban' : 'Suspend'}" class="px-2 py-1 ${isBanned ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200'} rounded-lg text-[10px] font-black border shadow-sm transition-colors">
+                <div class="flex items-center justify-end gap-1">
+                  <button onclick="adminAdjustTime('${u.id}', { days: 1 })" title="Add +1 Day (+24 Hours)" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-black border border-indigo-200 shadow-sm transition-colors cursor-pointer">+1d</button>
+                  <button onclick="adminAdjustTime('${u.id}', { hours: 1 })" title="Add +1 Hour" class="px-2 py-1 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 rounded-lg text-[10px] font-black border border-cyan-200 shadow-sm transition-colors cursor-pointer">+1h</button>
+                  <button onclick="adminAdjustTime('${u.id}', { minutes: 10 })" title="Add +10 Minutes (Test/Trial)" class="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-[10px] font-black border border-purple-200 shadow-sm transition-colors cursor-pointer">+10m</button>
+                  <button onclick="adminPromptCustomTime('${u.id}', '${u.email}')" title="Custom Add/Subtract (e.g. +30m, -1h, -1d)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-black border border-slate-300 shadow-sm transition-colors cursor-pointer">⏱️ +/-</button>
+                  <button onclick="adminToggleBan('${u.id}')" title="${isBanned ? 'Unban' : 'Suspend'}" class="px-2 py-1 ${isBanned ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200'} rounded-lg text-[10px] font-black border shadow-sm transition-colors cursor-pointer">
                     ${isBanned ? 'Unban' : 'Suspend'}
                   </button>
-                  <button onclick="adminDeleteUser('${u.id}')" title="Delete User" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-black border border-rose-200 shadow-sm transition-colors">✕</button>
+                  <button onclick="adminDeleteUser('${u.id}')" title="Delete User" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-[10px] font-black border border-rose-200 shadow-sm transition-colors cursor-pointer">✕</button>
                 </div>
               `}
             </td>
@@ -322,7 +328,7 @@
       } catch(e) { showToast(e.message, true); }
     }
 
-    async function adminExtendValidity(userId, days) {
+    async function adminAdjustTime(userId, { minutes = 0, hours = 0, days = 0 }) {
       try {
         const res = await fetch('/api/users/extend-validity', {
           method: 'POST',
@@ -330,36 +336,41 @@
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${sessionToken}`
           },
-          body: JSON.stringify({ userId, days })
+          body: JSON.stringify({ userId, minutes, hours, days })
         });
         const d = await res.json();
         if (d.success) {
-          showToast(`Added +${days} days to user!`);
+          let desc = '';
+          if (days !== 0) desc += `${days > 0 ? '+' : ''}${days}d `;
+          if (hours !== 0) desc += `${hours > 0 ? '+' : ''}${hours}h `;
+          if (minutes !== 0) desc += `${minutes > 0 ? '+' : ''}${minutes}m `;
+          showToast(`User validity adjusted: ${desc.trim()}`);
           refreshAdminData();
         } else {
-          showToast(d.error || 'Failed', true);
+          showToast(d.error || 'Failed to adjust time', true);
         }
       } catch(e) { showToast(e.message, true); }
     }
 
-    async function adminExtendSnipes(userId, count) {
-      try {
-        const res = await fetch('/api/users/extend-snipes', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionToken}`
-          },
-          body: JSON.stringify({ userId, count })
-        });
-        const d = await res.json();
-        if (d.success) {
-          showToast(`Added +${count} snipes to user!`);
-          refreshAdminData();
-        } else {
-          showToast(d.error || 'Failed', true);
-        }
-      } catch(e) { showToast(e.message, true); }
+    async function adminPromptCustomTime(userId, email) {
+      const input = prompt(`Adjust time for ${email}:\nEnter minutes (m), hours (h), or days (d).\nExamples:\n+10m (Add 10 mins)\n+1h (Add 1 hour)\n+7d (Add 7 days)\n-1h (Subtract 1 hour)\n-1d (Subtract 1 day)\n\nEnter value:`, '+1h');
+      if (!input) return;
+      const clean = input.trim().toLowerCase();
+      let minutes = 0, hours = 0, days = 0;
+      if (clean.endsWith('m')) {
+        minutes = parseInt(clean.replace('m', '')) || 0;
+      } else if (clean.endsWith('h')) {
+        hours = parseInt(clean.replace('h', '')) || 0;
+      } else if (clean.endsWith('d')) {
+        days = parseInt(clean.replace('d', '')) || 0;
+      } else {
+        days = parseInt(clean) || 0;
+      }
+      if (minutes === 0 && hours === 0 && days === 0) {
+        showToast('Invalid format. Use +10m, +1h, +7d, -1h etc.', true);
+        return;
+      }
+      adminAdjustTime(userId, { minutes, hours, days });
     }
 
     async function adminToggleBan(userId) {
