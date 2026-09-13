@@ -419,9 +419,15 @@
       }
     }
 
+    let directPhoenixJoinedSlug = null;
+
     async function connectDirectOpenSeaStream(slug) {
       if (!slug) return;
-      activePhoenixSlug = slug.toLowerCase();
+      const cleanSlug = slug.toLowerCase();
+      if (directPhoenixWs && (directPhoenixWs.readyState === WebSocket.OPEN || directPhoenixWs.readyState === WebSocket.CONNECTING) && activePhoenixSlug === cleanSlug) {
+        return;
+      }
+      activePhoenixSlug = cleanSlug;
 
       if (directPhoenixWs) {
         try { directPhoenixWs.close(); } catch(e) {}
@@ -480,8 +486,13 @@
             if (!Array.isArray(raw)) return;
             const [joinRef, ref, topic, eventName, payload] = raw;
 
+            if (topic === 'phoenix') return; // Silence internal heartbeat pongs
+
             if (eventName === 'phx_reply' && payload?.status === 'ok') {
-              logConsole(`⚡ [DIRECT WS ACTIVE] Connected to OpenSea Laser Grid for "${activePhoenixSlug}" (0ms Direct Push)`);
+              if (directPhoenixJoinedSlug !== activePhoenixSlug) {
+                directPhoenixJoinedSlug = activePhoenixSlug;
+                logConsole(`⚡ [DIRECT WS ACTIVE] Connected to OpenSea Laser Grid for "${activePhoenixSlug}" (0ms Direct Push)`);
+              }
               return;
             }
 
@@ -545,11 +556,12 @@
         };
 
         ws.onclose = () => {
+          directPhoenixJoinedSlug = null;
           if (directPhoenixHbInterval) clearInterval(directPhoenixHbInterval);
           if (currentScannedProject && currentScannedProject.slug === activePhoenixSlug) {
             directPhoenixReconnectTimer = setTimeout(() => {
               connectDirectOpenSeaStream(activePhoenixSlug);
-            }, 2000);
+            }, 10000);
           }
         };
       } catch(err) {
