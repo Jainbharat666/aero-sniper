@@ -5,7 +5,7 @@
       "destination": "/api"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|css/|js/|cache/|favicon\\.svg|auth-art-clean\\.png).*)",
       "destination": "/index.html"
     }
   ]
