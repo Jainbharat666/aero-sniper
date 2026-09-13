@@ -703,14 +703,29 @@ router.post('/snipe/buy', async (req, res) => {
     if (protocolData?.parameters && protocolData?.signature) {
       const txObj = seaportExecutor.buildSeaportTransaction(protocolData, buyerAddress, gasSpeed || 'turbo');
       const tx = await signer.sendTransaction(txObj);
-      const receipt = await tx.wait(1);
 
-      const cbStatus = handleSnipeSuccess(tx.hash, receipt.blockNumber);
+      // 🛡️ Permanent atomic lock so neither frontend nor backend double-snipes
+      if (tokIdStr) activeSniperEngine.snipedTokenIds.add(tokIdStr);
+
+      const cbStatus = handleSnipeSuccess(tx.hash, null);
+
+      // Background confirmation tracking
+      tx.wait(1).then(receipt => {
+        if (receipt) {
+          broadcastSnipeLog(`🎉 [ON-CHAIN CONFIRMED] Block #${receipt.blockNumber}! Token #${tokenId} secured!`);
+          broadcastToClients({
+            type: 'zero_hop_snipe_confirmed',
+            txHash: tx.hash,
+            blockNumber: receipt.blockNumber,
+            tokenId
+          });
+        }
+      }).catch(() => {});
 
       return res.json({
         success: true,
         txHash: tx.hash,
-        blockNumber: receipt.blockNumber,
+        mempoolAccepted: true,
         buyer: buyerAddress,
         tokenId,
         circuitBreakerHit: cbStatus.isCircuitBreakerHit,
@@ -760,14 +775,26 @@ router.post('/snipe/buy', async (req, res) => {
         };
 
         const tx = await signer.sendTransaction(txObj);
-        const receipt = await tx.wait(1);
+        
+        if (tokIdStr) activeSniperEngine.snipedTokenIds.add(tokIdStr);
+        const cbStatus = handleSnipeSuccess(tx.hash, null);
 
-        const cbStatus = handleSnipeSuccess(tx.hash, receipt.blockNumber);
+        tx.wait(1).then(receipt => {
+          if (receipt) {
+            broadcastSnipeLog(`🎉 [ON-CHAIN CONFIRMED] Block #${receipt.blockNumber}! Token #${tokenId} secured!`);
+            broadcastToClients({
+              type: 'zero_hop_snipe_confirmed',
+              txHash: tx.hash,
+              blockNumber: receipt.blockNumber,
+              tokenId
+            });
+          }
+        }).catch(() => {});
 
         return res.json({
           success: true,
           txHash: tx.hash,
-          blockNumber: receipt.blockNumber,
+          mempoolAccepted: true,
           buyer: buyerAddress,
           tokenId,
           circuitBreakerHit: cbStatus.isCircuitBreakerHit,

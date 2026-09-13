@@ -437,8 +437,8 @@
                 return;
               }
               snipesExecutedCount++;
-              logConsole(`🎉 BUY MINED ON-CHAIN: Token #${item.tokenId} confirmed in Block #${data.blockNumber} (TxHash: ${data.txHash.slice(0, 14)}...)!`);
-              showToast(`NFT #${item.tokenId} bought successfully by ${buyer.name}!`);
+              logConsole(`🚀 [MEMPOOL ACCEPTED] TxHash: ${data.txHash} (⚡ Instant Broadcast) ➔ Mining on Robinhood Chain...`);
+              showToast(`NFT #${item.tokenId} broadcasted to mempool!`);
               triggerSnipeCheer(item.tokenId, item.price, buyer.name, data.txHash);
               refreshAllBalances();
 
