@@ -41,6 +41,14 @@
         ? `<img src="${item.image}" class="w-8 h-8 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0" alt="#${item.tokenId}">`
         : `<div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center font-black text-white text-xs shadow-sm shrink-0">🎨</div>`;
 
+      const tokStr = String(item.tokenId || '');
+      const regRank = (window.rarityRegistry && window.rarityRegistry.get(tokStr)) ? window.rarityRegistry.get(tokStr) : null;
+      if (regRank && (!item.rarityRank || Number(item.rarityRank) <= 0)) {
+        item.rarityRank = regRank;
+      } else if (item.rarityRank && Number(item.rarityRank) > 0 && window.rarityRegistry) {
+        window.rarityRegistry.set(tokStr, Number(item.rarityRank));
+      }
+
       const hasRank = item.rarityRank != null && !isNaN(item.rarityRank) && Number(item.rarityRank) > 0;
       const numRank = hasRank ? Number(item.rarityRank) : null;
 
@@ -60,11 +68,11 @@
         : `https://opensea.io/collection/${currentScannedProject?.slug || 'ntrpygenesis'}`;
 
       tr.innerHTML = `
-        <td class="py-2.5 px-2 flex items-center gap-2">
+        <td class="py-2.5 px-2 flex items-center gap-2 token-image-container">
           ${imgHtml}
           <div class="min-w-0">
             <a href="${openSeaUrl}" target="_blank" rel="noopener noreferrer" class="font-black text-slate-900 hover:text-indigo-600 transition-colors text-xs flex items-center gap-1 group/link truncate" title="View #${item.tokenId} on OpenSea">
-              <span>${item.name || '#' + item.tokenId}</span>
+              <span class="token-name-label">${item.name || '#' + item.tokenId}</span>
               <i class="fa-solid fa-arrow-up-right-from-square text-[9px] text-slate-300 group-hover/link:text-indigo-500 transition-colors shrink-0"></i>
             </a>
             <span class="text-[9px] text-slate-400 font-mono-code block truncate">${item.seller ? 'By ' + item.seller : ''}</span>
@@ -74,7 +82,7 @@
           <span class="font-black ${isUnderfloor ? 'text-emerald-600' : 'text-slate-900'} text-xs">${item.priceFormatted || formatEthPrecise(item.price)}</span>
           <p class="text-[9px] text-slate-500 font-bold row-usd-price" data-eth="${item.price}">${(item.price * currentLiveEthPrice).toFixed(2)} USD</p>
         </td>
-        <td class="py-2.5 px-2">
+        <td class="py-2.5 px-2 token-rank-cell">
           ${rankBadge}
         </td>
         <td class="py-2.5 px-2 text-slate-500 text-xs live-timer" data-timestamp="${ts}">${formatAgeTime(ts)}</td>
@@ -281,14 +289,73 @@
         }
       }
 
-      const existingIdx = liveListingsStore.findIndex(i => String(i.tokenId) === String(payload.tokenId));
+      const tokStr = String(payload.tokenId || '');
+      const existingIdx = liveListingsStore.findIndex(i => String(i.tokenId) === tokStr);
       let isPriceChangeOrNew = true;
       if (existingIdx !== -1) {
         const oldItem = liveListingsStore[existingIdx];
+        // 🛡️ CRITICAL INVARIANT: NEVER DEMOTE A RESOLVED RANK TO NULL OR N/A
+        const regRank = (window.rarityRegistry && window.rarityRegistry.get(tokStr)) ? window.rarityRegistry.get(tokStr) : null;
+        const resolvedRank = regRank
+          || (oldItem.rarityRank != null && !isNaN(oldItem.rarityRank) && Number(oldItem.rarityRank) > 0 ? Number(oldItem.rarityRank) : null)
+          || (payload.rarityRank != null && !isNaN(payload.rarityRank) && Number(payload.rarityRank) > 0 ? Number(payload.rarityRank) : null);
+        if (resolvedRank && window.rarityRegistry) {
+          window.rarityRegistry.set(tokStr, Number(resolvedRank));
+        }
+        const resolvedImage = payload.image || payload.imageUrl || oldItem.image || oldItem.imageUrl || '';
+        const resolvedName = (payload.name && !payload.name.startsWith('#')) ? payload.name : (oldItem.name || payload.name);
+
         if (Math.abs(oldItem.price - payload.price) < 0.0000001) {
           isPriceChangeOrNew = false;
           Object.assign(oldItem, payload);
+          if (resolvedRank != null) oldItem.rarityRank = resolvedRank;
+          if (resolvedImage) { oldItem.image = resolvedImage; oldItem.imageUrl = resolvedImage; }
+          if (resolvedName) oldItem.name = resolvedName;
+
+          // In-place DOM update for existing row without wiping table
+          const existingRow = document.querySelector(`tr[data-token="${payload.tokenId}"]`);
+          if (existingRow) {
+            // 👑 1. ISOLATED RANK UPDATE (Only if valid positive rank!)
+            if (resolvedRank != null && Number(resolvedRank) > 0) {
+              existingRow.setAttribute('data-rank', resolvedRank);
+              const rankCell = existingRow.querySelector('.token-rank-cell') || existingRow.querySelector('td:nth-child(3)');
+              if (rankCell) {
+                const numRank = Number(resolvedRank);
+                const rankBadge = numRank <= 500
+                  ? `<span class="px-2 py-0.5 rounded-lg bg-pink-100 text-pink-800 border border-pink-300 font-black text-xs">#${numRank.toLocaleString()}</span>`
+                  : numRank <= 1200
+                  ? `<span class="px-2 py-0.5 rounded-lg bg-cyan-100 text-cyan-800 border border-cyan-300 font-black text-xs">#${numRank.toLocaleString()}</span>`
+                  : `<span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs">#${numRank.toLocaleString()}</span>`;
+                rankCell.innerHTML = rankBadge;
+              }
+            }
+
+            // 🖼️ 2. ISOLATED IMAGE UPDATE
+            if (resolvedImage) {
+              const imgContainer = existingRow.querySelector('.token-image-container') || existingRow.querySelector('td:nth-child(1)');
+              if (imgContainer) {
+                const img = imgContainer.querySelector('img');
+                if (img) {
+                  img.src = resolvedImage;
+                } else {
+                  const placeholder = imgContainer.querySelector('div.bg-gradient-to-tr');
+                  if (placeholder) {
+                    placeholder.outerHTML = `<img src="${resolvedImage}" class="w-8 h-8 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0" alt="#${payload.tokenId}">`;
+                  }
+                }
+              }
+            }
+
+            // 🏷️ 3. ISOLATED NAME UPDATE
+            if (resolvedName && !resolvedName.startsWith('#')) {
+              const nameEl = existingRow.querySelector('.token-name-label') || existingRow.querySelector('td:nth-child(1) a span');
+              if (nameEl) nameEl.innerText = resolvedName;
+            }
+          }
         } else {
+          payload.rarityRank = resolvedRank;
+          if (resolvedImage) { payload.image = resolvedImage; payload.imageUrl = resolvedImage; }
+          if (resolvedName) payload.name = resolvedName;
           liveListingsStore.splice(existingIdx, 1);
           liveListingsStore.unshift(payload);
         }
@@ -437,6 +504,7 @@
                       name: p.item.metadata?.name || `#${tokenId}`,
                       image: p.item.metadata?.image_url || '',
                       imageUrl: p.item.metadata?.image_url || '',
+                      traits: p.item.metadata?.traits || p.item?.traits || [],
                       price: priceEth,
                       priceFormatted: formatEthPrecise(priceEth),
                       priceUsd: parseFloat((priceEth * currentLiveEthPrice).toFixed(2)),
@@ -455,6 +523,7 @@
 
                     const cached = liveListingsStore.find(i => String(i.tokenId) === String(tokenId));
                     if (cached && cached.rarityRank) incomingItem.rarityRank = cached.rarityRank;
+                    if (cached && cached.traits && (!incomingItem.traits || incomingItem.traits.length === 0)) incomingItem.traits = cached.traits;
 
                     handleIncomingListingItem(incomingItem);
                   }
@@ -580,21 +649,57 @@
             logConsole(`❌ [SNIPE TX FAILED] Token #${payload.tokenId} — ${payload.error || 'Reverted on-chain'} (Tx: ${payload.txHash ? payload.txHash.slice(0, 14) + '...' : 'N/A'})`);
             showToast(`❌ Snipe failed for #${payload.tokenId}: ${payload.error || 'Transaction reverted'}`, true);
           } else if (payload.type === 'rank_update' && payload.tokenId) {
-            const item = liveListingsStore.find(i => String(i.tokenId) === String(payload.tokenId));
-            if (item) item.rarityRank = payload.rarityRank;
+            const tokStr = String(payload.tokenId);
+            // 👑 1. ISOLATED RANK UPDATE (Only if valid positive rank!)
+            if (payload.rarityRank != null && Number(payload.rarityRank) > 0) {
+              const numRank = Number(payload.rarityRank);
+              if (window.rarityRegistry) window.rarityRegistry.set(tokStr, numRank);
+              const item = liveListingsStore.find(i => String(i.tokenId) === tokStr);
+              if (item) item.rarityRank = numRank;
+              const existingRow = document.querySelector(`tr[data-token="${tokStr}"]`);
+              if (existingRow) {
+                existingRow.setAttribute('data-rank', numRank);
+                const rankCell = existingRow.querySelector('.token-rank-cell') || existingRow.querySelector('td:nth-child(3)');
+                if (rankCell) {
+                  const rankBadge = numRank <= 500
+                    ? `<span class="px-2 py-0.5 rounded-lg bg-pink-100 text-pink-800 border border-pink-300 font-black text-xs">#${numRank.toLocaleString()}</span>`
+                    : numRank <= 1200
+                    ? `<span class="px-2 py-0.5 rounded-lg bg-cyan-100 text-cyan-800 border border-cyan-300 font-black text-xs">#${numRank.toLocaleString()}</span>`
+                    : `<span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs">#${numRank.toLocaleString()}</span>`;
+                  rankCell.innerHTML = rankBadge;
+                }
+              }
+            }
+          } else if (payload.type === 'metadata_update' && payload.tokenId) {
+            const tokStr = String(payload.tokenId);
+            const item = liveListingsStore.find(i => String(i.tokenId) === tokStr);
+            const existingRow = document.querySelector(`tr[data-token="${tokStr}"]`);
 
-            const existingRow = document.querySelector(`tr[data-token="${payload.tokenId}"]`);
-            if (existingRow) {
-              existingRow.setAttribute('data-rank', payload.rarityRank);
-              const rankCell = existingRow.querySelector('td:nth-child(3)');
-              if (rankCell && payload.rarityRank) {
-                const numRank = Number(payload.rarityRank);
-                const rankBadge = numRank <= 500
-                  ? `<span class="px-2 py-0.5 rounded-lg bg-pink-100 text-pink-800 border border-pink-300 font-black text-xs">#${numRank.toLocaleString()}</span>`
-                  : numRank <= 1200
-                  ? `<span class="px-2 py-0.5 rounded-lg bg-cyan-100 text-cyan-800 border border-cyan-300 font-black text-xs">#${numRank.toLocaleString()}</span>`
-                  : `<span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs">#${numRank.toLocaleString()}</span>`;
-                rankCell.innerHTML = rankBadge;
+            // 🖼️ ISOLATED IMAGE UPDATE (Touches image ONLY, never rank!)
+            if (payload.image) {
+              if (item) { item.image = payload.image; item.imageUrl = payload.image; }
+              if (existingRow) {
+                const imgContainer = existingRow.querySelector('.token-image-container') || existingRow.querySelector('td:nth-child(1)');
+                if (imgContainer) {
+                  const img = imgContainer.querySelector('img');
+                  if (img) {
+                    if (img.src !== payload.image) img.src = payload.image;
+                  } else {
+                    const placeholder = imgContainer.querySelector('div.bg-gradient-to-tr');
+                    if (placeholder) {
+                      placeholder.outerHTML = `<img src="${payload.image}" class="w-8 h-8 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0" alt="#${tokStr}">`;
+                    }
+                  }
+                }
+              }
+            }
+
+            // 🏷️ ISOLATED NAME UPDATE (Touches name ONLY, never rank!)
+            if (payload.name && !payload.name.startsWith('#')) {
+              if (item) item.name = payload.name;
+              if (existingRow) {
+                const nameEl = existingRow.querySelector('.token-name-label') || existingRow.querySelector('td:nth-child(1) a span');
+                if (nameEl) nameEl.innerText = payload.name;
               }
             }
           } else if (payload.type === 'listing' && payload.tokenId) {
@@ -617,14 +722,73 @@
           if (res.ok) {
             const data = await res.json();
             if (data.success && Array.isArray(data.listings) && data.listings.length > 0) {
-              // Merge any missed listings
+              let hasNewItems = false;
               data.listings.forEach(incoming => {
-                const idx = liveListingsStore.findIndex(i => i.tokenId === incoming.tokenId);
+                const incomingTokenIdStr = String(incoming.tokenId || '');
+                if (!incomingTokenIdStr || incomingTokenIdStr === '0') return;
+
+                const idx = liveListingsStore.findIndex(i => String(i.tokenId) === incomingTokenIdStr);
+                const regRank = (window.rarityRegistry && window.rarityRegistry.get(incomingTokenIdStr)) ? window.rarityRegistry.get(incomingTokenIdStr) : null;
                 if (idx === -1) {
+                  if (regRank) incoming.rarityRank = regRank;
+                  else if (incoming.rarityRank && Number(incoming.rarityRank) > 0 && window.rarityRegistry) {
+                    window.rarityRegistry.set(incomingTokenIdStr, Number(incoming.rarityRank));
+                  }
                   liveListingsStore.push(incoming);
+                  hasNewItems = true;
+                } else {
+                  const existing = liveListingsStore[idx];
+                  // 🛡️ CRITICAL PRESERVATION: Known rank is permanent and immutable
+                  const finalRank = regRank || (existing.rarityRank && Number(existing.rarityRank) > 0 ? existing.rarityRank : null) || (incoming.rarityRank && Number(incoming.rarityRank) > 0 ? incoming.rarityRank : null);
+                  if (finalRank != null && Number(finalRank) > 0) {
+                    const numRank = Number(finalRank);
+                    existing.rarityRank = numRank;
+                    incoming.rarityRank = numRank;
+                    if (window.rarityRegistry) window.rarityRegistry.set(incomingTokenIdStr, numRank);
+                    // Update DOM row in place if rank was not already displayed
+                    const row = document.querySelector(`tr[data-token="${incomingTokenIdStr}"]`);
+                    if (row) {
+                      row.setAttribute('data-rank', numRank);
+                      const rankCell = row.querySelector('.token-rank-cell') || row.querySelector('td:nth-child(3)');
+                      if (rankCell && (!rankCell.innerHTML.includes('#' + numRank.toLocaleString()))) {
+                        const rankBadge = numRank <= 500
+                          ? `<span class="px-2 py-0.5 rounded-lg bg-pink-100 text-pink-800 border border-pink-300 font-black text-xs">#${numRank.toLocaleString()}</span>`
+                          : numRank <= 1200
+                          ? `<span class="px-2 py-0.5 rounded-lg bg-cyan-100 text-cyan-800 border border-cyan-300 font-black text-xs">#${numRank.toLocaleString()}</span>`
+                          : `<span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs">#${numRank.toLocaleString()}</span>`;
+                        rankCell.innerHTML = rankBadge;
+                      }
+                    }
+                  }
+
+                  // Update image in place: STRICTLY touches image ONLY, NEVER touches rank!
+                  const newImg = incoming.image || incoming.imageUrl;
+                  if (newImg && (!existing.image || existing.image.length === 0)) {
+                    existing.image = newImg;
+                    existing.imageUrl = newImg;
+                    const row = document.querySelector(`tr[data-token="${incomingTokenIdStr}"]`);
+                    if (row) {
+                      const container = row.querySelector('.token-image-container') || row.querySelector('td:nth-child(1)');
+                      if (container) {
+                        const img = container.querySelector('img');
+                        if (img) {
+                          if (img.src !== newImg) img.src = newImg;
+                        } else {
+                          const placeholder = container.querySelector('div.bg-gradient-to-tr');
+                          if (placeholder) {
+                            placeholder.outerHTML = `<img src="${newImg}" class="w-8 h-8 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0" alt="#${incomingTokenIdStr}">`;
+                          }
+                        }
+                      }
+                    }
+                  }
                 }
               });
-              renderRealListings(liveListingsStore);
+
+              // Only re-render if completely new listings arrived
+              if (hasNewItems) {
+                renderRealListings(liveListingsStore);
+              }
               if (isArmed) {
                 checkSniperTriggers(data.listings);
               }

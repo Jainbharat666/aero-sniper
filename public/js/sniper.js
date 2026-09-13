@@ -352,11 +352,19 @@
           const traitMaxEth = parseFloat(document.getElementById('param-trait-max-eth')?.value) || 0;
           const effectiveTraitCap = traitMaxEth > 0 ? traitMaxEth : (maxFloorEth > 0 ? maxFloorEth : Infinity);
           if (item.price <= effectiveTraitCap) {
-            const itemTraits = item.traits || [];
+            let itemTraits = item.traits || [];
+            if ((!itemTraits || itemTraits.length === 0) && typeof liveListingsStore !== 'undefined') {
+              const cached = liveListingsStore.find(i => String(i.tokenId) === String(cleanId));
+              if (cached?.traits?.length > 0) itemTraits = cached.traits;
+            }
             const matchesTrait = selectedTraitFilters.some(f => {
+              const targetType = (f.traitType || '').trim().toLowerCase();
+              const targetVal = (f.traitValue || '').trim().toLowerCase();
               return itemTraits.some(t => {
-                const typeMatch = !f.traitType || String(t.trait_type || t.traitType || '').toLowerCase() === f.traitType.toLowerCase();
-                const valMatch = !f.traitValue || String(t.value || '').toLowerCase() === f.traitValue.toLowerCase();
+                const tType = String(t.trait_type || t.traitType || t.type || '').trim().toLowerCase();
+                const tVal = String(t.value !== undefined ? t.value : (t.val !== undefined ? t.val : '')).trim().toLowerCase();
+                const typeMatch = !targetType || tType === targetType;
+                const valMatch = !targetVal || tVal === targetVal;
                 return typeMatch && valMatch;
               });
             });

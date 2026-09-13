@@ -364,7 +364,7 @@
       }
 
       loggedStreamTokensSet.clear(); // Reset console token log tracker for new project
-      if (typeof requestedRarityTokensSet !== 'undefined') requestedRarityTokensSet.clear(); // Reset rarity requested tokens for new scan
+      if (window.requestedRarityTokensSet) window.requestedRarityTokensSet.clear(); // Reset rarity requested tokens for new scan
       playBeep(850, 'sine', 0.1);
       logConsole(`🔍 Connecting to OpenSea Instant Scan Engine for: "${val}"...`);
       document.getElementById('btn-scan').innerHTML = `<i class="fa-solid fa-spinner fa-spin text-xs"></i> Scan`;
@@ -417,6 +417,15 @@
           }
 
           liveListingsStore = data.realListings || [];
+          // 🛡️ Pre-seed window.rarityRegistry with verified ranks from scan
+          window.rarityRegistry = window.rarityRegistry || new Map();
+          if (Array.isArray(liveListingsStore)) {
+            liveListingsStore.forEach(item => {
+              if (item.tokenId && item.rarityRank && Number(item.rarityRank) > 0) {
+                window.rarityRegistry.set(String(item.tokenId), Number(item.rarityRank));
+              }
+            });
+          }
           renderRealListings(liveListingsStore);
           startLiveListingsPoller(data.slug);
 
@@ -453,6 +462,7 @@
       const oldSlug = currentScannedProject ? currentScannedProject.slug : null;
       currentScannedProject = null;
       liveListingsStore = [];
+      if (window.rarityRegistry) window.rarityRegistry.clear();
 
       if (oldSlug) {
         fetch('/api/stream/clear', {

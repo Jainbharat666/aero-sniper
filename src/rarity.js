@@ -126,15 +126,17 @@ export class RarityEngine {
     return null;
   }
 
-  loadFromDiskCache() {
+  loadFromDiskCache(slug = this.collectionSlug, contract = this.contractAddress) {
+    const targetSlug = (slug || this.collectionSlug || '').toLowerCase();
+    const targetContract = (contract || this.contractAddress || '').toLowerCase();
     const candidateFiles = [];
-    if (this.collectionSlug) {
-      candidateFiles.push(path.join(this.bundleCacheDir, `${this.collectionSlug.toLowerCase()}-rarity.json`));
-      candidateFiles.push(path.join(this.writeCacheDir, `${this.collectionSlug.toLowerCase()}-rarity.json`));
+    if (targetSlug) {
+      candidateFiles.push(path.join(this.bundleCacheDir, `${targetSlug}-rarity.json`));
+      candidateFiles.push(path.join(this.writeCacheDir, `${targetSlug}-rarity.json`));
     }
-    if (this.contractAddress) {
-      candidateFiles.push(path.join(this.bundleCacheDir, `${this.contractAddress.toLowerCase()}-rarity.json`));
-      candidateFiles.push(path.join(this.writeCacheDir, `${this.contractAddress.toLowerCase()}-rarity.json`));
+    if (targetContract) {
+      candidateFiles.push(path.join(this.bundleCacheDir, `${targetContract}-rarity.json`));
+      candidateFiles.push(path.join(this.writeCacheDir, `${targetContract}-rarity.json`));
     }
 
     let loadedCount = 0;
@@ -147,10 +149,15 @@ export class RarityEngine {
           const raw = fs.readFileSync(cacheFile, 'utf8');
           const data = JSON.parse(raw);
           for (const [id, item] of Object.entries(data)) {
+            if (!item || item.rank == null || item.rank <= 0) continue;
+            const existing = this.tokenRarityMap.get(String(id));
+            if (existing && existing.image && !item.image) {
+              item.image = existing.image;
+            }
             this.tokenRarityMap.set(String(id), item);
             loadedCount++;
           }
-          console.log(chalk.green(`✔ [RARITY ENGINE V2] Loaded cached token ranks from disk: ${path.basename(cacheFile)} (${Object.keys(data).length} tokens)`));
+          console.log(chalk.green(`✔ [RARITY ENGINE V2] Loaded cached token ranks from disk: ${path.basename(cacheFile)} (${loadedCount} validated ranks)`));
         } catch (e) {}
       }
     }
@@ -172,11 +179,13 @@ export class RarityEngine {
         const cacheFile = path.join(this.writeCacheDir, `${this.collectionSlug.toLowerCase()}-rarity.json`);
         const obj = {};
         for (const [id, item] of this.tokenRarityMap.entries()) {
-          obj[id] = item;
+          if (item && item.rank != null && item.rank > 0) {
+            obj[id] = item;
+          }
         }
         await fs.promises.writeFile(cacheFile, JSON.stringify(obj, null, 2), 'utf8');
       } catch (e) {}
-    }, 3000);
+    }, 2000);
   }
 
   /**
@@ -185,8 +194,9 @@ export class RarityEngine {
   async fetchTokenRarity(tokenId, chain = this.chain, contract = this.contractAddress) {
     const idStr = String(tokenId);
 
-    if (this.tokenRarityMap.has(idStr)) {
-      return this.tokenRarityMap.get(idStr);
+    const existingCached = this.tokenRarityMap.get(idStr);
+    if (existingCached && existingCached.rank != null && existingCached.rank > 0) {
+      return existingCached;
     }
 
     const targetChain = (chain || this.chain || 'robinhood').toLowerCase();
@@ -208,24 +218,29 @@ export class RarityEngine {
         if (!nft) continue;
         config.opensea.clearKeyCooldown(apiKey);
 
-        const rank = nft?.rarity?.rank || null;
-        const name = nft?.name || `#${idStr}`;
-        const traits = nft?.traits || [];
-        const image = nft?.display_image_url || nft?.image_url || '';
+        const existing = this.tokenRarityMap.get(idStr);
+        const rank = (nft?.rarity?.rank != null && Number(nft.rarity.rank) > 0)
+          ? Number(nft.rarity.rank)
+          : (existing?.rank != null && Number(existing.rank) > 0 ? Number(existing.rank) : null);
+        const name = nft?.name || existing?.name || `#${idStr}`;
+        const traits = (nft?.traits && nft.traits.length > 0) ? nft.traits : (existing?.traits || []);
+        const image = nft?.display_image_url || nft?.image_url || existing?.image || '';
 
         const tokenInfo = {
           tokenId: idStr,
           name,
-          rank: rank !== null ? Number(rank) : null,
-          score: nft?.rarity?.score || 0,
+          rank,
+          score: nft?.rarity?.score || existing?.score || 0,
           traits,
           image,
-          isExactOpenRarity: (rank !== null),
+          isExactOpenRarity: Boolean(rank !== null && rank > 0),
           checked: true
         };
 
-        this.tokenRarityMap.set(idStr, tokenInfo);
-        this.scheduleSave();
+        if (rank != null && rank > 0) {
+          this.tokenRarityMap.set(idStr, tokenInfo);
+          this.scheduleSave();
+        }
 
         return tokenInfo;
       } catch (err) {
@@ -236,19 +251,22 @@ export class RarityEngine {
       }
     }
 
-    // Fallback if OpenSea has no record or all keys rate-limited (mark checked to prevent retry storm)
-    const fallbackInfo = {
+    // Fallback: If token was already known in memory or disk cache, NEVER wipe its rank!
+    const existing = this.tokenRarityMap.get(idStr);
+    if (existing && existing.rank != null && existing.rank > 0) {
+      return existing;
+    }
+
+    return {
       tokenId: idStr,
-      name: `#${idStr}`,
-      rank: null,
-      score: 0,
-      traits: [],
-      image: '',
-      isExactOpenRarity: false,
+      name: existing?.name || `#${idStr}`,
+      rank: (existing?.rank != null && existing.rank > 0) ? existing.rank : null,
+      score: existing?.score || 0,
+      traits: existing?.traits || [],
+      image: existing?.image || '',
+      isExactOpenRarity: Boolean(existing?.rank != null && existing.rank > 0),
       checked: true
     };
-    this.tokenRarityMap.set(idStr, fallbackInfo);
-    return fallbackInfo;
   }
 
   /**
@@ -277,7 +295,7 @@ export class RarityEngine {
     for (const id of tokenIds) {
       const idStr = String(id);
       const cached = this.tokenRarityMap.get(idStr);
-      if (cached) {
+      if (cached && cached.rank != null && cached.rank > 0) {
         results[idStr] = cached;
       } else {
         missingIds.push(idStr);
@@ -288,8 +306,8 @@ export class RarityEngine {
       return results;
     }
 
-    // Limit to top 15 missing floor tokens per batch to strictly stay within OpenSea rate limits
-    const cappedMissing = missingIds.slice(0, 15);
+    // Limit to top 20 missing floor tokens per batch
+    const cappedMissing = missingIds.slice(0, 20);
     const keys = config.opensea.apiKeys;
     let keyIdx = 0;
 
@@ -298,7 +316,7 @@ export class RarityEngine {
       const candidateKeys = config.opensea.getCandidateKeys(null, true);
       const keysToTry = candidateKeys.length > 0 ? candidateKeys : keys;
 
-      for (let attempt = 0; attempt < Math.min(keysToTry.length, 3); attempt++) {
+      for (let attempt = 0; attempt < Math.min(keysToTry.length, 4); attempt++) {
         const assignedKey = keysToTry[(keyIdx++) % keysToTry.length];
         if (config.opensea.isKeyCooledDown(assignedKey)) continue;
 
@@ -310,77 +328,75 @@ export class RarityEngine {
           });
           const nft = res.data?.nft;
           if (nft) {
-            const rank = nft?.rarity?.rank != null ? Number(nft.rarity.rank) : null;
-            const name = nft?.name || `#${idStr}`;
-            const traits = nft?.traits || [];
-            const image = nft?.display_image_url || nft?.image_url || '';
+            const existing = this.tokenRarityMap.get(idStr);
+            const rank = nft?.rarity?.rank != null ? Number(nft.rarity.rank) : (existing?.rank ?? null);
+            const name = nft?.name || existing?.name || `#${idStr}`;
+            const traits = (nft?.traits && nft.traits.length > 0) ? nft.traits : (existing?.traits || []);
+            const image = nft?.display_image_url || nft?.image_url || existing?.image || '';
 
             const tokenInfo = {
               tokenId: idStr,
               name,
               rank,
-              score: nft?.rarity?.score || 0,
+              score: nft?.rarity?.score || existing?.score || 0,
               traits,
               image,
-              isExactOpenRarity: (rank !== null),
+              isExactOpenRarity: (rank !== null && rank > 0),
               checked: true
             };
-            this.tokenRarityMap.set(idStr, tokenInfo);
+            if (rank != null && rank > 0) {
+              this.tokenRarityMap.set(idStr, tokenInfo);
+              this.scheduleSave();
+            }
             results[idStr] = tokenInfo;
             config.opensea.clearKeyCooldown(assignedKey);
             return;
           }
         } catch (err) {
           if (err.response?.status === 429) {
-            // Mark ONLY this specific key in 2.5s cooldown, and let the loop try the next key
             config.opensea.markKeyCooldown(assignedKey, 2500);
             continue;
           }
           if (err.response?.status === 404) {
-            const notFoundInfo = {
-              tokenId: idStr,
-              name: `#${idStr}`,
-              rank: null,
-              score: 0,
-              traits: [],
-              image: '',
-              isExactOpenRarity: false,
-              checked: true
-            };
-            this.tokenRarityMap.set(idStr, notFoundInfo);
-            results[idStr] = notFoundInfo;
+            const existing = this.tokenRarityMap.get(idStr);
+            if (existing && existing.rank != null && existing.rank > 0) {
+              results[idStr] = existing;
+            } else {
+              results[idStr] = {
+                tokenId: idStr,
+                name: existing?.name || `#${idStr}`,
+                rank: null,
+                score: 0,
+                traits: [],
+                image: existing?.image || '',
+                isExactOpenRarity: false,
+                checked: true
+              };
+            }
             return;
           }
         }
       }
 
-      // If all attempts failed, cache fallback to avoid continuous re-querying
-      if (!this.tokenRarityMap.has(idStr)) {
-        const fallbackInfo = {
+      // If all attempts failed, preserve existing or return fallback
+      const existing = this.tokenRarityMap.get(idStr);
+      if (existing && existing.rank != null && existing.rank > 0) {
+        results[idStr] = existing;
+      } else {
+        results[idStr] = {
           tokenId: idStr,
-          name: `#${idStr}`,
+          name: existing?.name || `#${idStr}`,
           rank: null,
           score: 0,
           traits: [],
-          image: '',
+          image: existing?.image || '',
           isExactOpenRarity: false,
           checked: true
         };
-        this.tokenRarityMap.set(idStr, fallbackInfo);
-        results[idStr] = fallbackInfo;
       }
     };
 
-    // Staggered micro-chunks: 3 concurrent requests spaced by 75ms
-    for (let i = 0; i < cappedMissing.length; i += 3) {
-      const chunk = cappedMissing.slice(i, i + 3);
-      await Promise.allSettled(chunk.map(id => worker(id)));
-      if (i + 3 < cappedMissing.length) {
-        await new Promise(r => setTimeout(r, 75));
-      }
-    }
-
-    this.scheduleSave();
+    await Promise.all(cappedMissing.map(worker));
     return results;
   }
 
@@ -390,7 +406,7 @@ export class RarityEngine {
   async resolveRarity(tokenId, chain, contract) {
     const idStr = String(tokenId);
     const cached = this.tokenRarityMap.get(idStr);
-    if (cached && cached.rank !== null) {
+    if (cached && cached.rank != null && cached.rank > 0) {
       return cached;
     }
     return await this.fetchTokenRarity(idStr, chain || this.chain, contract || this.contractAddress);

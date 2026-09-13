@@ -250,6 +250,7 @@ export class StreamListener {
         tokenId,
         name: p.item.metadata?.name || `#${tokenId}`,
         imageUrl: p.item.metadata?.image_url || '',
+        traits: p.item.metadata?.traits || p.item?.traits || [],
         price: priceEth,
         priceFormatted: formatEthPrecise(priceEth),
         priceUsd: usdPrice,
