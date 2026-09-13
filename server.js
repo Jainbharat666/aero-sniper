@@ -53,10 +53,10 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.js') || filePath.endsWith('.css') || filePath.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    } else if (filePath.endsWith('.js') || filePath.endsWith('.css') || filePath.endsWith('.svg') || filePath.endsWith('.png')) {
+      res.setHeader('Cache-Control', 'public, max-age=86400, must-revalidate');
     }
   }
 }));
