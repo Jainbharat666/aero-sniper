@@ -1,4 +1,13 @@
 {
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "aero-sniper"
+      }
+    }
+  ],
   "services": {
     "aero-sniper": {
       "root": ".",
