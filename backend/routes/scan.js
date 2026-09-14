@@ -253,21 +253,21 @@ router.post('/scan', async (req, res) => {
 
     const fetches = [];
     if (!colData) {
-      fetches.push(fetchOpenSeaWithFallback(`/collections/${slug}`, 0).then(d => { colData = d; }).catch(() => null));
+      fetches.push(fetchOpenSeaWithFallback(`/collections/${slug}`).then(d => { colData = d; }).catch(() => null));
     }
-    fetches.push(fetchOpenSeaWithFallback(`/listings/collection/${slug}/all?limit=50`, 1).then(d => { page1Res = d; }).catch(() => null));
+    fetches.push(fetchOpenSeaWithFallback(`/listings/collection/${slug}/all?limit=50`).then(d => { page1Res = d; }).catch(() => null));
     if (!tRes) {
-      fetches.push(fetchOpenSeaWithFallback(`/traits/${slug}`, 2).then(d => { tRes = d; }).catch(() => null));
+      fetches.push(fetchOpenSeaWithFallback(`/traits/${slug}`).then(d => { tRes = d; }).catch(() => null));
     }
 
     await Promise.all(fetches);
 
     if (!colData && slug.startsWith('0x')) {
       try {
-        const cRes = await fetchOpenSeaWithFallback(`/chain/robinhood/contract/${slug}`, 0);
+        const cRes = await fetchOpenSeaWithFallback(`/chain/robinhood/contract/${slug}`);
         if (cRes?.collection) {
           slug = cRes.collection;
-          colData = await fetchOpenSeaWithFallback(`/collections/${slug}`, 0);
+          colData = await fetchOpenSeaWithFallback(`/collections/${slug}`);
           rarityEngine.loadFromDiskCache(slug, input);
         }
       } catch(e) {}
@@ -279,7 +279,7 @@ router.post('/scan', async (req, res) => {
     } else if (!colData) {
       await new Promise(r => setTimeout(r, 150));
       try {
-        colData = await fetchOpenSeaWithFallback(`/collections/${slug}`, 4);
+        colData = await fetchOpenSeaWithFallback(`/collections/${slug}`);
       } catch(e) {}
     }
 
