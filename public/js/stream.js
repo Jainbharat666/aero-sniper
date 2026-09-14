@@ -615,11 +615,39 @@
             logConsole(`${isSim ? '🧪 [PAPER SNIPE SIMULATED]' : '🎯 ⚡ [ZERO-HOP DIRECT SNIPE]'} #${payload.name || payload.tokenId} triggered [${payload.reason || 'Rule Match'}] in ${payload.computeLatencyMs}ms ➔ TxHash: ${payload.txHash.slice(0, 14)}...!`);
             showToast(isSim ? `🧪 Paper Snipe Hit Token #${payload.tokenId} (Simulated)!` : `🚀 Mainnet Snipe broadcasted in ${payload.computeLatencyMs}ms!`);
             
-            const item = liveListingsStore.find(i => String(i.tokenId) === String(payload.tokenId));
-            if (item) item.sniped = true;
-            clientBoughtTokens.add(String(payload.tokenId));
+            const tokStr = String(payload.tokenId);
+            let item = liveListingsStore.find(i => String(i.tokenId) === tokStr);
+            if (item) {
+              item.sniped = true;
+            } else {
+              // 🚨 NEW SNIPED TOKEN: Insert into store and table at top
+              item = {
+                tokenId: tokStr,
+                name: payload.name || `#${tokStr}`,
+                price: payload.price || 0,
+                priceFormatted: payload.priceFormatted || formatEthPrecise(payload.price || 0),
+                priceUsd: parseFloat(((payload.price || 0) * currentLiveEthPrice).toFixed(2)),
+                rarityRank: (window.rarityRegistry && window.rarityRegistry.get(tokStr)) ? window.rarityRegistry.get(tokStr) : null,
+                contractAddress: currentScannedProject?.contractAddress || '',
+                chain: currentScannedProject?.chain || 'robinhood',
+                image: '',
+                sniped: true,
+                eventTimestamp: payload.timestamp || Date.now()
+              };
+              liveListingsStore.unshift(item);
+            }
+            clientBoughtTokens.add(tokStr);
             
-            const existingRow = document.querySelector(`tr[data-token="${payload.tokenId}"]`);
+            let existingRow = document.querySelector(`tr[data-token="${tokStr}"]`);
+            if (!existingRow) {
+              const tbody = document.getElementById('listings-tbody');
+              if (tbody) {
+                const placeholder = document.getElementById('empty-stream-placeholder');
+                if (placeholder) placeholder.remove();
+                existingRow = createListingRowElement(item, true);
+                tbody.insertBefore(existingRow, tbody.firstChild);
+              }
+            }
             if (existingRow) {
               existingRow.classList.add(isSim ? 'bg-purple-50/90' : 'bg-emerald-50/90');
               const actionCell = existingRow.querySelector('td:last-child');
@@ -628,8 +656,6 @@
                   ? '<span class="px-2.5 py-1 rounded-xl bg-purple-600 text-white font-black text-[10px]">🧪 SIMULATED</span>'
                   : '<span class="px-2.5 py-1 rounded-xl bg-emerald-500 text-white font-black text-[10px]">🚨 SNIPED</span>';
               }
-            } else {
-              renderRealListings(liveListingsStore);
             }
 
             if (isSim) {
