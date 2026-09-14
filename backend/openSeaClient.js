@@ -24,7 +24,9 @@ export async function fetchOpenSeaWithFallback(pathStr, preferredKeyIndex = null
   const url = `${config.opensea.restApiBase}${pathStr}${sep}_t=${Date.now()}`;
 
   let lastErr = null;
-  for (const key of candidateKeys) {
+  const maxAttempts = Math.min(candidateKeys.length, 3); // Don't burn all 21 keys on one request
+  for (let i = 0; i < maxAttempts; i++) {
+    const key = candidateKeys[i];
     const t0 = Date.now();
     try {
       const res = await apiClient.get(url, {
@@ -44,8 +46,8 @@ export async function fetchOpenSeaWithFallback(pathStr, preferredKeyIndex = null
       const status = err.response?.status || err.code || 'Timeout';
       trackKeyUse(key, Date.now() - t0, `${status}`);
       if (status === 429) {
-        config.opensea.markKeyCooldown(key, 3000);
-        await new Promise(r => setTimeout(r, 40));
+        config.opensea.markKeyCooldown(key, 10000); // 10s cooldown per key on rate limit
+        await new Promise(r => setTimeout(r, 500));  // 500ms pause before trying next key
       }
     }
   }
