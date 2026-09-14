@@ -29,7 +29,7 @@ router.get('/opensea/keys', (req, res) => {
     success: true,
     totalKeys: keys.length,
     totalRequests,
-    strategy: '6-Key Role-Specialized Laser Grid',
+    strategy: `${keys.length}-Key Round-Robin Fleet`,
     keys: list
   });
 });
