@@ -138,13 +138,26 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
     if (protocolData?.parameters && protocolData?.signature) {
       // Path A: 0ms Instant Direct Seaport Transaction
       broadcastSnipeLog(`⚡ [SEAPORT DIRECT] Building 0ms direct Seaport transaction from protocolData...`);
-      txObj = seaportExecutor.buildSeaportTransaction(
-        protocolData,
-        buyerAddress || '0x0000000000000000000000000000000000000001',
-        activeSniperEngine.gasSpeed || 'turbo',
-        activeSniperEngine.customGas
-      );
-    } else if (orderHash) {
+      try {
+        txObj = seaportExecutor.buildSeaportTransaction(
+          protocolData,
+          buyerAddress || '0x0000000000000000000000000000000000000001',
+          activeSniperEngine.gasSpeed || 'turbo',
+          activeSniperEngine.customGas
+        );
+        // ⚡ PREFLIGHT: Quick estimateGas to catch SignedZone/revert before wasting gas
+        await seaportExecutor.providers[0].estimateGas({
+          ...txObj,
+          from: buyerAddress
+        });
+      } catch (pathAErr) {
+        // Path A would revert — fallback to Path B (Fulfillment API with extraData)
+        broadcastSnipeLog(`⚠ [PATH A REVERT] Direct Seaport would revert: ${pathAErr.message?.slice(0, 80)}. Falling back to Fulfillment API...`);
+        txObj = null; // Reset — let Path B handle it
+      }
+    }
+
+    if (!txObj && orderHash) {
       // Path B: OpenSea Fulfillment API Fallback via Rotating 24/7 API Shop
       broadcastSnipeLog(`📡 [SEAPORT FULFILLMENT] Fetching OpenSea Seaport calldata for hash ${orderHash.slice(0, 14)}... via 24/7 API Shop...`);
       const fulRes = await fetchSeaportFulfillmentWithShop(orderHash, parsed.chain || 'robinhood', buyerAddress, tokenId);
