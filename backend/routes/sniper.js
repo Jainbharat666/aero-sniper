@@ -183,7 +183,17 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
       const fnName = txData.function.split('(')[0];
       let calldata;
       try {
-        calldata = seaportExecutor.seaportInterface.encodeFunctionData(fnName, [txData.input_data.parameters]);
+        if (fnName === 'fulfillAdvancedOrder') {
+          // fulfillAdvancedOrder takes 4 args: (advancedOrder, criteriaResolvers[], fulfillerConduitKey, recipient)
+          calldata = seaportExecutor.seaportInterface.encodeFunctionData(fnName, [
+            txData.input_data.parameters,
+            txData.input_data.criteriaResolvers || [],
+            txData.input_data.fulfillerConduitKey || ethers.ZeroHash,
+            txData.input_data.recipient || buyerAddress
+          ]);
+        } else {
+          calldata = seaportExecutor.seaportInterface.encodeFunctionData(fnName, [txData.input_data.parameters]);
+        }
       } catch (encErr) {
         broadcastSnipeLog(`❌ [SEAPORT ABI ERROR] Failed to encode Seaport function ${fnName}: ${encErr.message}`);
         activeSniperEngine.pendingSnipes.delete(tokenId);
