@@ -494,7 +494,7 @@ export async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = per
       try {
         const resolved = await Promise.race([
           rarityEngine.fetchTokenRarity(parsed.tokenId, streamChain, streamContract),
-          new Promise((_, rej) => setTimeout(() => rej('timeout'), 200))
+          new Promise((_, rej) => setTimeout(() => rej('timeout'), 800))
         ]);
         if (resolved?.rank > 0) rank = resolved.rank;
       } catch {} // Timeout — proceed without rank, backend stream-js will retry later
