@@ -456,12 +456,17 @@ export async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = per
       if (estimatedRank > 0) rank = estimatedRank;
     }
 
-    // 🔥 NON-BLOCKING BACKGROUND: Resolve exact rank asynchronously (does NOT delay trigger)
+    // ⚡ SHORT-TIMEOUT RANK FETCH: 200ms max (Vercel US → OpenSea US = ~50ms)
     if (rank === null) {
       const streamContract = parsed.contractAddress || rarityEngine.contractAddress;
       const streamChain = parsed.chain || rarityEngine.chain || 'robinhood';
-      rarityEngine.fetchTokenRarity(parsed.tokenId, streamChain, streamContract).catch(() => {});
-      // Don't await — rank will be available on next listing event for this token
+      try {
+        const resolved = await Promise.race([
+          rarityEngine.fetchTokenRarity(parsed.tokenId, streamChain, streamContract),
+          new Promise((_, rej) => setTimeout(() => rej('timeout'), 200))
+        ]);
+        if (resolved?.rank > 0) rank = resolved.rank;
+      } catch {} // Timeout — proceed without rank, backend stream-js will retry later
     }
 
     if (rank && rank <= activeSniperEngine.maxRareRank && parsed.price <= maxRareCap) {
