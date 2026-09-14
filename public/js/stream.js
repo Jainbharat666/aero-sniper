@@ -822,7 +822,20 @@
         } catch(e) {}
       };
 
-      streamEventSource.onerror = () => {};
+      streamEventSource.onerror = () => {
+        // ⚡ AUTO-RECONNECT: SSE dropped (Vercel restart/timeout) — reconnect in 2s
+        if (streamEventSource) {
+          streamEventSource.close();
+          streamEventSource = null;
+        }
+        setTimeout(() => {
+          const currentSlug = currentScannedProject?.slug;
+          if (currentSlug) {
+            console.log('[SSE] Reconnecting...');
+            startRealTimeWebSocketStream(currentSlug);
+          }
+        }, 2000);
+      };
     }
 
     function startLiveListingsPoller(slug) {
