@@ -420,6 +420,15 @@
           // 🛡️ PER-COLLECTION REGISTRY RESET: Reset client rarity cache on fresh collection scan
           window.rarityRegistry = new Map();
           if (window.requestedRarityTokensSet) window.requestedRarityTokensSet.clear();
+          
+          // ⚡ Initialize Dynamic Rarity Calculator from scan response
+          if (data.dynamicRarityState) {
+            window.dynamicRarityCalc = data.dynamicRarityState;
+            console.log(`⚡ [DynRarity] Loaded ${data.dynamicRarityState.rankedCount} ranked tokens, ${data.dynamicRarityState.traitTypes?.length || 0} trait types`);
+          } else {
+            window.dynamicRarityCalc = null;
+          }
+          
           if (Array.isArray(liveListingsStore)) {
             liveListingsStore.forEach(item => {
               if (item.tokenId && item.rarityRank && Number(item.rarityRank) > 0) {
@@ -464,6 +473,7 @@
       currentScannedProject = null;
       liveListingsStore = [];
       if (window.rarityRegistry) window.rarityRegistry.clear();
+      window.dynamicRarityCalc = null;
 
       if (oldSlug) {
         fetch('/api/stream/clear', {

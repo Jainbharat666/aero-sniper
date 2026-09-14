@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { config } from '../../src/config.js';
 import {
   rarityEngine,
+  dynamicRarityCalc,
   activeCollectionStats,
   setActiveCollectionStats,
   activeListedTokenIds,
@@ -321,6 +322,13 @@ router.post('/scan', async (req, res) => {
     const resolvedFloor = apiFloorEth || (colData?.stats?.floor_price ? parseFloat(colData.stats.floor_price) : null);
     const resolvedTotalSupply = colData?.total_supply || null;
 
+    // ⚡ DYNAMIC RARITY CALCULATOR: Ingest traits summary for local IC scoring
+    if (tRes && resolvedTotalSupply > 0) {
+      dynamicRarityCalc.reset();
+      dynamicRarityCalc.collectionSlug = slug;
+      dynamicRarityCalc.ingestTraitsSummary(tRes, resolvedTotalSupply);
+    }
+
     const primaryContract = colData?.contracts?.[0] || {};
     const contractAddress = primaryContract.address || (slug.startsWith('0x') ? slug : '');
     const chain = primaryContract.chain || 'robinhood';
@@ -377,8 +385,31 @@ router.post('/scan', async (req, res) => {
         sniped: false
       });
     });
-
     realListings.sort((a, b) => a.price - b.price);
+
+    // ⚡ DYNAMIC RARITY CALCULATOR: Bulk-rank all scanned listings from their traits
+    if (dynamicRarityCalc.isReady) {
+      const tokenTraitsMap = new Map();
+      for (const listing of realListings) {
+        const tokenInfo = rarityEngine.getTokenInfoSync(listing.tokenId);
+        if (tokenInfo?.traits?.length > 0) {
+          tokenTraitsMap.set(listing.tokenId, tokenInfo.traits);
+        }
+      }
+      if (tokenTraitsMap.size > 0) {
+        dynamicRarityCalc.bulkRankTokens(tokenTraitsMap);
+        // Backfill estimated ranks for listings that have no OpenRarity rank
+        for (const listing of realListings) {
+          if (!listing.rarityRank || listing.rarityRank === 'N/A') {
+            const estimatedRank = dynamicRarityCalc.getRank(listing.tokenId);
+            if (estimatedRank) {
+              listing.rarityRank = estimatedRank;
+              listing.isEstimatedRank = true;
+            }
+          }
+        }
+      }
+    }
 
     const floorEth = (realListings.length > 0 ? realListings[0].price : resolvedFloor);
 
@@ -450,7 +481,8 @@ router.post('/scan', async (req, res) => {
       image: colData?.image_url || '',
       traits: collectionTraits,
       streamKey: config.opensea.streamKey,
-      realListings
+      realListings,
+      dynamicRarityState: dynamicRarityCalc.getSerializableState()
     });
   } catch (error) {
     return res.status(500).json({ success: false, error: error.message });

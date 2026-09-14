@@ -8,7 +8,8 @@ import {
   activeSniperEngine,
   sseClients,
   cachedEthPrice,
-  broadcastToClients
+  broadcastToClients,
+  dynamicRarityCalc
 } from '../state.js';
 import { fetchOpenSeaWithFallback, formatEthPrecise } from '../openSeaClient.js';
 import { evaluateAndSnipe } from './sniper.js';
@@ -45,7 +46,17 @@ export function subscribeSlugToOpenSea(slug) {
       await evaluateAndSnipe(parsed, cleanSlug, tTriggerStart);
 
       // Asynchronously resolve true OpenRarity rank for UI display without blocking
-      const rankCached = rarityEngine.getRaritySync(parsed.tokenId);
+      let rankCached = rarityEngine.getRaritySync(parsed.tokenId);
+      let isEstimatedRank = false;
+
+      // Fallback: Dynamic IC-based estimated rank from traits (0.01ms, zero API calls)
+      if (rankCached == null && dynamicRarityCalc.isReady && parsed.traits?.length > 0) {
+        const { estimatedRank, isEstimated } = dynamicRarityCalc.scoreAndEstimateRank(parsed.tokenId, parsed.traits);
+        if (estimatedRank > 0) {
+          rankCached = estimatedRank;
+          isEstimatedRank = true;
+        }
+      }
 
       const payload = {
         type: 'listing',
@@ -59,6 +70,7 @@ export function subscribeSlugToOpenSea(slug) {
         priceFormatted: parsed.priceFormatted,
         priceUsd: parseFloat((parsed.price * cachedEthPrice).toFixed(2)),
         rarityRank: rankCached,
+        isEstimatedRank: isEstimatedRank,
         seller: parsed.seller ? `${parsed.seller.slice(0, 6)}...${parsed.seller.slice(-4)}` : '',
         sellerFull: parsed.seller || '',
         orderHash: parsed.orderHash,
@@ -207,7 +219,20 @@ router.get('/listings/live', async (req, res) => {
         }
         const eventTime = ev.event_timestamp ? (typeof ev.event_timestamp === 'number' ? (ev.event_timestamp > 1e11 ? ev.event_timestamp : ev.event_timestamp * 1000) : new Date(ev.event_timestamp).getTime()) : Date.now();
         const cachedInfo = rarityEngine.getTokenInfoSync(tokenId);
-        const resolvedRank = cachedInfo?.rank ?? rarityEngine.getRaritySync(tokenId);
+        let resolvedRank = cachedInfo?.rank ?? rarityEngine.getRaritySync(tokenId);
+        let isEstimatedRank = false;
+
+        if (resolvedRank == null && dynamicRarityCalc.isReady) {
+          const traits = asset.traits || ev.traits;
+          if (traits?.length > 0) {
+            const { estimatedRank, isEstimated } = dynamicRarityCalc.scoreAndEstimateRank(tokenId, traits);
+            if (estimatedRank > 0) {
+              resolvedRank = estimatedRank;
+              isEstimatedRank = true;
+            }
+          }
+        }
+
         const resolvedImage = asset.image_url || asset.display_image_url || cachedInfo?.image || '';
         const resolvedName = cachedInfo?.name || asset.name || `#${tokenId}`;
         return {
@@ -219,6 +244,7 @@ router.get('/listings/live', async (req, res) => {
           priceFormatted: formatEthPrecise(priceEth),
           priceUsd: parseFloat((priceEth * cachedEthPrice).toFixed(2)),
           rarityRank: resolvedRank,
+          isEstimatedRank: isEstimatedRank,
           seller: ev.maker ? `${ev.maker.slice(0, 6)}...${ev.maker.slice(-4)}` : '',
           sellerFull: ev.maker || '',
           orderHash: ev.order_hash || '',

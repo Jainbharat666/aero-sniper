@@ -51,14 +51,15 @@
 
       const hasRank = item.rarityRank != null && !isNaN(item.rarityRank) && Number(item.rarityRank) > 0;
       const numRank = hasRank ? Number(item.rarityRank) : null;
+      const rankPrefix = item.isEstimatedRank ? '~' : '#';
 
       const rankBadge = !hasRank
         ? `<span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500 font-bold text-xs">Rank #N/A</span>`
         : numRank <= 500
-        ? `<span class="px-2 py-0.5 rounded-lg bg-pink-100 text-pink-800 border border-pink-300 font-black text-xs">#${numRank.toLocaleString()}</span>`
+        ? `<span class="px-2 py-0.5 rounded-lg bg-pink-100 text-pink-800 border ${item.isEstimatedRank ? 'border-dashed' : ''} border-pink-300 font-black text-xs">${rankPrefix}${numRank.toLocaleString()}</span>`
         : numRank <= 1200
-        ? `<span class="px-2 py-0.5 rounded-lg bg-cyan-100 text-cyan-800 border border-cyan-300 font-black text-xs">#${numRank.toLocaleString()}</span>`
-        : `<span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs">#${numRank.toLocaleString()}</span>`;
+        ? `<span class="px-2 py-0.5 rounded-lg bg-cyan-100 text-cyan-800 border ${item.isEstimatedRank ? 'border-dashed' : ''} border-cyan-300 font-black text-xs">${rankPrefix}${numRank.toLocaleString()}</span>`
+        : `<span class="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs border ${item.isEstimatedRank ? 'border-dashed border-slate-300' : 'border-transparent'}">${rankPrefix}${numRank.toLocaleString()}</span>`;
 
       const ts = item.eventTimestamp ? (typeof item.eventTimestamp === 'number' ? item.eventTimestamp : new Date(item.eventTimestamp).getTime()) : Date.now();
       const contract = item.contractAddress || (currentScannedProject ? currentScannedProject.contractAddress : '');
@@ -203,7 +204,15 @@
 
       // Auto-resolve missing ranks if any token arrived with null/N/A and not yet requested
       const missingTokenIds = liveListingsStore
-        .filter(item => (!item.rarityRank || isNaN(item.rarityRank) || Number(item.rarityRank) <= 0) && item.tokenId && !requestedRarityTokensSet.has(String(item.tokenId)))
+        .filter(item => {
+          if ((item.rarityRank && !isNaN(item.rarityRank) && Number(item.rarityRank) > 0) && !item.isEstimatedRank) return false;
+          if (!item.tokenId) return false;
+          const reqState = window.rarityRequestMap ? window.rarityRequestMap.get(String(item.tokenId)) : null;
+          if (reqState && (reqState.status === 'pending' || reqState.status === 'resolved' || (reqState.status === 'failed' && reqState.attempts >= (window.MAX_RARITY_RETRIES || 3)))) {
+            return false;
+          }
+          return !requestedRarityTokensSet.has(String(item.tokenId));
+        })
         .slice(0, 15)
         .map(i => String(i.tokenId));
 
@@ -276,6 +285,23 @@
 
     function handleIncomingListingItem(payload) {
       if (!payload || !payload.tokenId) return;
+      
+      // ⚡ Local dynamic rarity scoring from stream traits (0.01ms)
+      if (!payload.rarityRank && window.dynamicRarityCalc?.weights && payload.traits?.length > 0) {
+        const calcState = window.dynamicRarityCalc;
+        let totalIC = 0;
+        for (const trait of payload.traits) {
+          const key = `${trait.trait_type}:${trait.value}`;
+          const w = calcState.weights[key];
+          totalIC += w ? w.ic : Math.log2(calcState.totalSupply);
+        }
+        // Estimate rank from score (rough linear mapping)
+        if (totalIC > 0 && calcState.rankedCount > 0) {
+          payload.rarityRank = Math.max(1, Math.round(calcState.rankedCount * (1 - totalIC / (Math.log2(calcState.totalSupply) * calcState.traitTypes.length))));
+          payload.isEstimatedRank = true;
+        }
+      }
+
       if (payload.price <= currentFloorEth || (payload.rarityRank && payload.rarityRank <= 1200)) {
         playBeep(920, 'sine', 0.05);
       }
@@ -554,6 +580,21 @@
                     const cached = liveListingsStore.find(i => String(i.tokenId) === tokStr);
                     if (!incomingItem.rarityRank && cached && cached.rarityRank) incomingItem.rarityRank = cached.rarityRank;
                     if (cached && cached.traits && (!incomingItem.traits || incomingItem.traits.length === 0)) incomingItem.traits = cached.traits;
+
+                    // ⚡ Local dynamic rarity scoring from stream traits (0.01ms)
+                    if (!incomingItem.rarityRank && window.dynamicRarityCalc?.weights && incomingItem.traits?.length > 0) {
+                      const calcState = window.dynamicRarityCalc;
+                      let totalIC = 0;
+                      for (const trait of incomingItem.traits) {
+                        const key = `${trait.trait_type}:${trait.value}`;
+                        const w = calcState.weights[key];
+                        totalIC += w ? w.ic : Math.log2(calcState.totalSupply);
+                      }
+                      if (totalIC > 0 && calcState.rankedCount > 0) {
+                        incomingItem.rarityRank = Math.max(1, Math.round(calcState.rankedCount * (1 - totalIC / (Math.log2(calcState.totalSupply) * calcState.traitTypes.length))));
+                        incomingItem.isEstimatedRank = true;
+                      }
+                    }
 
                     handleIncomingListingItem(incomingItem);
                   }

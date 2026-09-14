@@ -535,3 +535,234 @@ export class RarityEngine {
     console.log(table.toString());
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DYNAMIC RARITY CALCULATOR — Local IC (Information Content) Scoring
+// Works for ANY arbitrary collection using 1 single /traits API call.
+// Same algorithm as OpenRarity: -log2(probability) per trait value.
+// ══════════════════════════════════════════════════════════════════════════════
+
+export class DynamicRarityCalculator {
+  constructor() {
+    this.traitWeights = new Map();   // "traitType:traitValue" → { ic, count, probability }
+    this.traitTypes = new Set();     // All known trait type names
+    this.totalSupply = 0;
+    this.collectionSlug = null;
+    this.tokenScores = new Map();    // tokenId → { score, rank }
+    this.sortedScores = [];          // sorted array for binary search rank estimation
+    this.isReady = false;
+  }
+
+  /**
+   * Ingest trait distribution from OpenSea /collection/{slug}/traits response.
+   * This is the ONLY API call needed — gives complete trait counts for the entire collection.
+   *
+   * @param {Object} traitsResponse - Response from GET /api/v2/collection/{slug}/traits
+   *   Expected shape: { categories: { "Background": { "Blue": 312, ... }, ... } }
+   *   OR flat shape:  { "Background": { "Blue": 312, ... }, ... }
+   * @param {number} totalSupply - Collection total supply
+   */
+  ingestTraitsSummary(traitsResponse, totalSupply) {
+    if (!traitsResponse || totalSupply <= 0) return;
+
+    this.totalSupply = totalSupply;
+    this.traitWeights.clear();
+    this.traitTypes.clear();
+
+    // Handle both { categories: {...} } and flat { "Background": {...} } shapes
+    const categories = traitsResponse.categories || traitsResponse;
+    if (!categories || typeof categories !== 'object') return;
+
+    for (const [traitType, values] of Object.entries(categories)) {
+      if (!values || typeof values !== 'object') continue;
+      this.traitTypes.add(traitType);
+
+      // Count how many tokens have any value for this trait type
+      let traitTypeTotal = 0;
+      for (const count of Object.values(values)) {
+        traitTypeTotal += (typeof count === 'number' ? count : parseInt(count, 10) || 0);
+      }
+      const nullCount = Math.max(0, totalSupply - traitTypeTotal);
+
+      // Compute Information Content (IC) = -log2(probability) for each trait value
+      for (const [traitValue, rawCount] of Object.entries(values)) {
+        const count = typeof rawCount === 'number' ? rawCount : parseInt(rawCount, 10) || 0;
+        if (count <= 0) continue;
+        const probability = count / totalSupply;
+        const ic = -Math.log2(probability);
+        this.traitWeights.set(`${traitType}:${traitValue}`, { ic, count, probability });
+      }
+
+      // IC for "null" / missing trait (tokens that don't have this trait type)
+      if (nullCount > 0) {
+        const probability = nullCount / totalSupply;
+        const ic = -Math.log2(probability);
+        this.traitWeights.set(`${traitType}:__null__`, { ic, count: nullCount, probability });
+      }
+    }
+
+    this.isReady = this.traitWeights.size > 0;
+    console.log(chalk.cyan(`⚡ [DynamicRarityCalc] Ingested ${this.traitWeights.size} trait weights for supply=${totalSupply} (${this.traitTypes.size} trait types)`));
+  }
+
+  /**
+   * Score a single token from its traits array.
+   * Called in <0.01ms per token — ZERO API calls needed.
+   *
+   * @param {Array} traits - [{ trait_type: "Background", value: "Blue" }, ...]
+   * @returns {number} Raw IC score (higher = rarer)
+   */
+  scoreToken(traits) {
+    if (!this.isReady || !traits || traits.length === 0) return 0;
+
+    let totalIC = 0;
+    const seenTypes = new Set();
+
+    for (const trait of traits) {
+      const traitType = String(trait.trait_type || trait.traitType || trait.type || '').trim();
+      const traitValue = String(trait.value !== undefined ? trait.value : '').trim();
+      if (!traitType || !traitValue) continue;
+
+      const key = `${traitType}:${traitValue}`;
+      const weight = this.traitWeights.get(key);
+      if (weight) {
+        totalIC += weight.ic;
+      } else {
+        // Unknown trait value = extremely rare, assign maximum IC
+        totalIC += Math.log2(this.totalSupply);
+      }
+      seenTypes.add(traitType);
+    }
+
+    // Account for missing trait types (null traits contribute IC)
+    for (const traitType of this.traitTypes) {
+      if (!seenTypes.has(traitType)) {
+        const nullWeight = this.traitWeights.get(`${traitType}:__null__`);
+        if (nullWeight) {
+          totalIC += nullWeight.ic;
+        }
+      }
+    }
+
+    return totalIC;
+  }
+
+  /**
+   * Bulk-rank all known tokens after scanning floor listings.
+   *
+   * @param {Map|Object} tokenTraitsMap - Map<tokenId, traits[]> or { tokenId: traits[], ... }
+   */
+  bulkRankTokens(tokenTraitsMap) {
+    if (!this.isReady) return;
+
+    this.tokenScores.clear();
+    this.sortedScores = [];
+
+    const entries = tokenTraitsMap instanceof Map
+      ? tokenTraitsMap
+      : new Map(Object.entries(tokenTraitsMap));
+
+    for (const [tokenId, traits] of entries) {
+      if (!traits || !Array.isArray(traits) || traits.length === 0) continue;
+      const score = this.scoreToken(traits);
+      this.tokenScores.set(String(tokenId), { score, rank: 0 });
+    }
+
+    // Sort by score descending (higher IC = rarer = lower rank number)
+    this.sortedScores = [...this.tokenScores.entries()]
+      .sort((a, b) => b[1].score - a[1].score);
+
+    // Assign ranks
+    for (let i = 0; i < this.sortedScores.length; i++) {
+      const [tokenId] = this.sortedScores[i];
+      this.tokenScores.get(tokenId).rank = i + 1;
+    }
+
+    console.log(chalk.green(`✔ [DynamicRarityCalc] Ranked ${this.sortedScores.length} tokens from traits`));
+  }
+
+  /**
+   * Instant rank lookup for any token already in the ranked set.
+   * 0.001ms response — used by stream handler and UI.
+   *
+   * @param {string} tokenId
+   * @returns {number|null} Rank (1-based) or null if not ranked
+   */
+  getRank(tokenId) {
+    const entry = this.tokenScores.get(String(tokenId));
+    return entry && entry.rank > 0 ? entry.rank : null;
+  }
+
+  /**
+   * Score + estimate rank for a NEW token not yet in the ranked set.
+   * Uses binary search across sorted scores for O(log n) rank estimation.
+   * Used for incoming WebSocket listings of unseen tokens.
+   *
+   * @param {string} tokenId
+   * @param {Array} traits - [{ trait_type, value }, ...]
+   * @returns {{ score: number, estimatedRank: number, isEstimated: boolean }}
+   */
+  scoreAndEstimateRank(tokenId, traits) {
+    const idStr = String(tokenId);
+
+    // If already ranked, return exact rank
+    const existing = this.tokenScores.get(idStr);
+    if (existing && existing.rank > 0) {
+      return { score: existing.score, estimatedRank: existing.rank, isEstimated: false };
+    }
+
+    const score = this.scoreToken(traits);
+    if (score === 0 || this.sortedScores.length === 0) {
+      return { score, estimatedRank: this.sortedScores.length + 1, isEstimated: true };
+    }
+
+    // Binary search: find where this score fits in the sorted array
+    let estimatedRank = this.sortedScores.length + 1;
+    let lo = 0, hi = this.sortedScores.length - 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >>> 1;
+      if (this.sortedScores[mid][1].score >= score) {
+        lo = mid + 1;
+      } else {
+        estimatedRank = mid + 1;
+        hi = mid - 1;
+      }
+    }
+
+    // Cache for future lookups (don't re-sort the full array for perf)
+    this.tokenScores.set(idStr, { score, rank: estimatedRank });
+
+    return { score, estimatedRank, isEstimated: true };
+  }
+
+  /**
+   * Get serializable trait weights for sending to frontend
+   * Frontend can then do local scoring without any API calls
+   */
+  getSerializableState() {
+    if (!this.isReady) return null;
+    const weights = {};
+    for (const [key, val] of this.traitWeights) {
+      weights[key] = { ic: val.ic, count: val.count };
+    }
+    return {
+      totalSupply: this.totalSupply,
+      traitTypes: [...this.traitTypes],
+      weights,
+      rankedCount: this.sortedScores.length
+    };
+  }
+
+  /**
+   * Reset calculator for a new collection
+   */
+  reset() {
+    this.traitWeights.clear();
+    this.traitTypes.clear();
+    this.tokenScores.clear();
+    this.sortedScores = [];
+    this.totalSupply = 0;
+    this.collectionSlug = null;
+    this.isReady = false;
+  }
+}

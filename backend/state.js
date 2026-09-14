@@ -1,10 +1,11 @@
 import { StreamListener } from '../src/stream.js';
-import { RarityEngine } from '../src/rarity.js';
+import { RarityEngine, DynamicRarityCalculator } from '../src/rarity.js';
 import { SeaportExecutor } from '../src/executor.js';
 import { config } from '../src/config.js';
 
 export const streamListener = new StreamListener(config.opensea.streamKey);
 export const rarityEngine = new RarityEngine();
+export const dynamicRarityCalc = new DynamicRarityCalculator();
 export const seaportExecutor = new SeaportExecutor('robinhood');
 export const sseClients = new Set();
 
