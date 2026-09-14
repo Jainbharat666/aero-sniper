@@ -180,26 +180,34 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
       }
 
       const txData = fulRes.data.fulfillment_data.transaction;
-      const fnName = txData.function.split('(')[0];
       let calldata;
-      try {
-        if (fnName === 'fulfillAdvancedOrder') {
-          // fulfillAdvancedOrder takes 4 args: (advancedOrder, criteriaResolvers[], fulfillerConduitKey, recipient)
-          calldata = seaportExecutor.seaportInterface.encodeFunctionData(fnName, [
-            txData.input_data.parameters,
-            txData.input_data.criteriaResolvers || [],
-            txData.input_data.fulfillerConduitKey || ethers.ZeroHash,
-            txData.input_data.recipient || buyerAddress
-          ]);
-        } else {
-          calldata = seaportExecutor.seaportInterface.encodeFunctionData(fnName, [txData.input_data.parameters]);
+
+      // ⚡ BEST PATH: Use pre-encoded calldata from OpenSea directly (zero encoding needed)
+      if (txData.data && txData.data.length > 10) {
+        calldata = txData.data;
+      } else {
+        // FALLBACK: Manual ABI encoding from input_data
+        const fnName = txData.function.split('(')[0];
+        try {
+          if (fnName === 'fulfillAdvancedOrder') {
+            calldata = seaportExecutor.seaportInterface.encodeFunctionData(fnName, [
+              txData.input_data.parameters,
+              txData.input_data.criteriaResolvers || [],
+              txData.input_data.fulfillerConduitKey || ethers.ZeroHash,
+              txData.input_data.recipient || buyerAddress
+            ]);
+          } else {
+            calldata = seaportExecutor.seaportInterface.encodeFunctionData(fnName, [txData.input_data.parameters]);
+          }
+        } catch (encErr) {
+          broadcastSnipeLog(`❌ [SEAPORT ABI ERROR] Failed to encode ${fnName}: ${encErr.message}`);
+          activeSniperEngine.pendingSnipes.delete(tokenId);
+          return;
         }
-      } catch (encErr) {
-        broadcastSnipeLog(`❌ [SEAPORT ABI ERROR] Failed to encode Seaport function ${fnName}: ${encErr.message}`);
-        activeSniperEngine.pendingSnipes.delete(tokenId);
-        return;
       }
-      if (txData.calldata_suffix) calldata += txData.calldata_suffix.replace('0x', '');
+      if (txData.calldata_suffix && !calldata.includes(txData.calldata_suffix.replace('0x', ''))) {
+        calldata += txData.calldata_suffix.replace('0x', '');
+      }
 
       let gasPrice;
       if (activeSniperEngine.customGas?.customMaxFeeGwei && parseFloat(activeSniperEngine.customGas.customMaxFeeGwei) > 0) {
