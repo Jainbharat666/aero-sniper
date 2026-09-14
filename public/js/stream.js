@@ -242,6 +242,20 @@
       const tokStr = String(tokenId);
       const delIdx = liveListingsStore.findIndex(i => String(i.tokenId) === tokStr);
       if (delIdx !== -1) {
+        // 🛡️ DO NOT DELETE SNIPED NFTS: Keep them visible in table with green 🚨 SNIPED badge!
+        if (liveListingsStore[delIdx].sniped || (typeof clientBoughtTokens !== 'undefined' && clientBoughtTokens.has(tokStr))) {
+          liveListingsStore[delIdx].sniped = true;
+          const tr = document.querySelector(`tr[data-token="${tokStr}"]`);
+          if (tr) {
+            tr.classList.add('bg-emerald-50/90');
+            const actionCell = tr.querySelector('td:last-child');
+            if (actionCell) {
+              actionCell.innerHTML = '<span class="px-2.5 py-1 rounded-xl bg-emerald-500 text-white font-black text-[10px]">🚨 SNIPED</span>';
+            }
+          }
+          return;
+        }
+
         const wasFloor = (liveListingsStore[delIdx].price === currentFloorEth);
         liveListingsStore.splice(delIdx, 1);
         const tr = document.querySelector(`tr[data-token="${tokStr}"]`);
@@ -407,16 +421,18 @@
         }
       }
 
+      // ⚡ AUTO-RESOLVE MISSING RANK ON STREAM: Triggers 150ms background rank fetch
+      if ((!payload.rarityRank || Number(payload.rarityRank) <= 0) && currentScannedProject && typeof debouncedResolveMissingRanks === 'function') {
+        debouncedResolveMissingRanks([String(payload.tokenId)]);
+      }
+
       const tokIdStr = String(payload.tokenId);
       if (!loggedStreamTokensSet.has(tokIdStr)) {
         loggedStreamTokensSet.add(tokIdStr);
         logConsole(`⚡ [STREAM] ${payload.name || '#' + tokIdStr} listed at ${payload.priceFormatted} (Rank #${payload.rarityRank || 'N/A'})`);
       }
 
-      // Evaluate trigger if armed
-      if (isArmed && !payload.sniped && !clientBoughtTokens.has(tokIdStr)) {
-        checkSniperTriggers([payload]);
-      }
+      // ⚡ Auto-sniping is executed exclusively by backend Zero-Hop Engine (0ms mempool blast)
     }
 
     let directPhoenixJoinedSlug = null;
@@ -532,8 +548,11 @@
                       sniped: false
                     };
 
-                    const cached = liveListingsStore.find(i => String(i.tokenId) === String(tokenId));
-                    if (cached && cached.rarityRank) incomingItem.rarityRank = cached.rarityRank;
+                    const tokStr = String(tokenId);
+                    const regRank = (window.rarityRegistry && window.rarityRegistry.get(tokStr)) ? window.rarityRegistry.get(tokStr) : null;
+                    if (regRank) incomingItem.rarityRank = regRank;
+                    const cached = liveListingsStore.find(i => String(i.tokenId) === tokStr);
+                    if (!incomingItem.rarityRank && cached && cached.rarityRank) incomingItem.rarityRank = cached.rarityRank;
                     if (cached && cached.traits && (!incomingItem.traits || incomingItem.traits.length === 0)) incomingItem.traits = cached.traits;
 
                     handleIncomingListingItem(incomingItem);
@@ -806,9 +825,7 @@
               if (hasNewItems) {
                 renderRealListings(liveListingsStore);
               }
-              if (isArmed) {
-                checkSniperTriggers(data.listings);
-              }
+              // ⚡ Auto-sniping is executed exclusively by backend Zero-Hop Engine (0ms mempool blast)
             }
           }
         } catch(e) {}
