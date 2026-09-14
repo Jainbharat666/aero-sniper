@@ -186,21 +186,34 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
       if (txData.data && txData.data.length > 10) {
         calldata = txData.data;
       } else {
-        // FALLBACK: Manual ABI encoding from input_data
+        // 🔍 DEBUG: Log actual API response structure for diagnosis
+        broadcastSnipeLog(`🔍 [DEBUG] txData keys: ${JSON.stringify(Object.keys(txData))}`);
+        broadcastSnipeLog(`🔍 [DEBUG] input_data keys: ${JSON.stringify(Object.keys(txData.input_data || {}))}`);
+        broadcastSnipeLog(`🔍 [DEBUG] function: ${txData.function}`);
+
+        // RESILIENT: Try multiple field name patterns from OpenSea API
         const fnName = txData.function.split('(')[0];
         try {
           if (fnName === 'fulfillAdvancedOrder') {
-            calldata = seaportExecutor.seaportInterface.encodeFunctionData(fnName, [
-              txData.input_data.parameters,
-              txData.input_data.criteriaResolvers || [],
-              txData.input_data.fulfillerConduitKey || ethers.ZeroHash,
-              txData.input_data.recipient || buyerAddress
-            ]);
+            // OpenSea may use "order", "advancedOrder", or "parameters" as the key
+            const advOrder = txData.input_data.order || txData.input_data.advancedOrder || txData.input_data.parameters;
+            const criteria = txData.input_data.criteriaResolvers || txData.input_data.criteria_resolvers || [];
+            const conduit = txData.input_data.fulfillerConduitKey || txData.input_data.fulfiller_conduit_key || ethers.ZeroHash;
+            const recip = txData.input_data.recipient || buyerAddress;
+
+            if (!advOrder) {
+              // Last resort: try passing entire input_data as positional args
+              broadcastSnipeLog(`🔍 [DEBUG] advOrder null. Full input_data: ${JSON.stringify(txData.input_data).slice(0, 500)}`);
+              activeSniperEngine.pendingSnipes.delete(tokenId);
+              return;
+            }
+            calldata = seaportExecutor.seaportInterface.encodeFunctionData(fnName, [advOrder, criteria, conduit, recip]);
           } else {
-            calldata = seaportExecutor.seaportInterface.encodeFunctionData(fnName, [txData.input_data.parameters]);
+            calldata = seaportExecutor.seaportInterface.encodeFunctionData(fnName, [txData.input_data.parameters || txData.input_data.order]);
           }
         } catch (encErr) {
           broadcastSnipeLog(`❌ [SEAPORT ABI ERROR] Failed to encode ${fnName}: ${encErr.message}`);
+          broadcastSnipeLog(`🔍 [DEBUG] input_data dump: ${JSON.stringify(txData.input_data).slice(0, 800)}`);
           activeSniperEngine.pendingSnipes.delete(tokenId);
           return;
         }
