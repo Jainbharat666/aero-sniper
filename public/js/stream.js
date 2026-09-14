@@ -596,6 +596,16 @@
                       }
                     }
 
+                    // ⚡ INSTANT BACKEND TRIGGER RELAY: Bypass 3s @opensea/stream-js delay
+                    // Frontend direct WS detects listing ~3s before backend. Fire instantly.
+                    if (window.sniperArmed) {
+                      fetch('/api/snipe/evaluate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(incomingItem)
+                      }).catch(() => {});
+                    }
+
                     handleIncomingListingItem(incomingItem);
                   }
                 }
@@ -741,6 +751,7 @@
               showToast('⏳ VIP Subscription Expired! Sniper disarmed.', true);
             }
           } else if (payload.type === 'circuit_breaker_paused') {
+            window.sniperArmed = false;
             handleClientCircuitBreakerHit(payload.executed, payload.limit);
           } else if (payload.type === 'zero_hop_snipe_confirmed') {
             logConsole(`🎉 [ZERO-HOP BUY CONFIRMED] Token #${payload.tokenId} confirmed in Block #${payload.blockNumber} (Tx: ${payload.txHash.slice(0, 14)}...)!`);

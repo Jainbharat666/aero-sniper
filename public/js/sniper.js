@@ -147,6 +147,7 @@
           })
         }).then(r => r.json()).then(d => {
           if (d.success) {
+            window.sniperArmed = true;  // ⚡ Enable instant frontend-to-backend trigger relay
             logConsole(`⚡ [ZERO-HOP BACKEND ACTIVE] Pre-warmed Signer pool (${d.workersLoaded} workers) & multi-RPC blast ready. Mode: ${d.isDryRun ? 'Paper Simulation' : 'Live'}.`);
           } else {
             showToast(d.error || 'Failed to arm sniper', true);
@@ -165,6 +166,7 @@
       } else {
         snipesExecutedCount = 0;
         clientArmedTimestamp = 0;
+        window.sniperArmed = false;  // ⚡ Disable frontend-to-backend trigger relay
         btn.className = 'w-full py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer';
         btn.innerHTML = isDryRun
           ? `<i class="fa-solid fa-flask text-sm"></i> ARM PAPER SNIPER (SIMULATED - 0 ETH)`

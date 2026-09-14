@@ -866,4 +866,16 @@ router.post('/snipe/buy', async (req, res) => {
   }
 });
 
+// ⚡ POST /api/snipe/evaluate — INSTANT FRONTEND-TO-BACKEND TRIGGER RELAY
+// Frontend direct WebSocket detects listing ~3s BEFORE backend @opensea/stream-js.
+// This endpoint lets frontend instantly relay the parsed listing for sub-ms evaluation.
+router.post('/snipe/evaluate', async (req, res) => {
+  if (!activeSniperEngine.isArmed) return res.json({ triggered: false, reason: 'not_armed' });
+  const parsed = req.body;
+  if (!parsed || !parsed.tokenId) return res.json({ triggered: false, reason: 'no_data' });
+  const tStart = performance.now();
+  await evaluateAndSnipe(parsed, (parsed.slug || '').toLowerCase(), tStart);
+  res.json({ triggered: true, tokenId: parsed.tokenId, evaluateMs: (performance.now() - tStart).toFixed(2) });
+});
+
 export default router;
