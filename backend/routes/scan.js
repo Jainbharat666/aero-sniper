@@ -171,7 +171,8 @@ export async function runBackgroundListingIndexer(slug, startCursor, initialToke
     }
     page++;
     try {
-      const keyIdx = (page % 5) + 1;
+      const restKeyCount = Math.max(1, config.opensea.apiKeys.length - 1); // Exclude stream key
+      const keyIdx = (page % restKeyCount) + 1;
       const pageUrl = `/listings/collection/${slug}/all?limit=100&next=${cursor}`;
       const pageRes = await fetchOpenSeaWithFallback(pageUrl, keyIdx);
       const items = Array.isArray(pageRes?.listings) ? pageRes.listings : [];

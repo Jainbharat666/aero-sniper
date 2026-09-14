@@ -39,14 +39,19 @@ export async function getNextNonce(provider, address) {
   return nonce;
 }
 
-export const openseaKeyStats = {
-  '5f32ee9b98e84ea184a514f975ad4f3f': { label: 'Key #1: WebSocket Stream (Dedicated)', role: 'stream', count: 0, lastPingMs: 82, status: '200 OK' },
-  '840e6b17791d415db3c98657fbc71979': { label: 'Key #2: Seaport Fulfillment Data', role: 'fulfillment', count: 0, lastPingMs: 95, status: '200 OK' },
-  '411d0cfd7b294d71a71dc852999dcbfc': { label: 'Key #3: Rarity & Traits Ingestion', role: 'rarity', count: 0, lastPingMs: 98, status: '200 OK' },
-  'a88ffbf11b864b8398af8b2c5e3921fa': { label: 'Key #4: Floor & Live Order Poller', role: 'floor', count: 0, lastPingMs: 91, status: '200 OK' },
-  '4793b5e5637a4a3fa75e81c828970113': { label: 'Key #5: Rapid Collection Scanner', role: 'scanner', count: 0, lastPingMs: 104, status: '200 OK' },
-  '7f2b82423f01405eac037f4b1a661027': { label: 'Key #6: High-Traffic Backup Relay', role: 'backup', count: 0, lastPingMs: 110, status: '200 OK' }
-};
+// 🏪 Dynamic Key Stats — auto-generated for ANY number of API keys
+const _keyRoles = ['stream', 'fulfillment', 'rarity', 'floor', 'scanner', 'backup'];
+const _keyLabels = ['WebSocket Stream (Dedicated)', 'Seaport Fulfillment Data', 'Rarity & Traits Ingestion', 'Floor & Live Order Poller', 'Rapid Collection Scanner', 'High-Traffic Backup Relay'];
+export const openseaKeyStats = {};
+config.opensea.apiKeys.forEach((key, i) => {
+  openseaKeyStats[key] = {
+    label: `Key #${i + 1}: ${_keyLabels[i] || 'REST Pool'}`,
+    role: _keyRoles[i] || 'pool',
+    count: 0,
+    lastPingMs: 80 + Math.round(Math.random() * 30),
+    status: '200 OK'
+  };
+});
 
 export function trackKeyUse(key, latency = 0, status = '200 OK') {
   if (!openseaKeyStats[key]) {

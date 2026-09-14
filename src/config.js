@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Parse 6 OpenSea API Keys
+// Parse N OpenSea API Keys (flexible pool — supports 6, 21, or any count)
 const allKeys = (process.env.OPENSEA_API_KEYS || '')
   .split(',')
   .map(k => k.trim())
@@ -16,7 +16,7 @@ const DEFAULT_KEYS = [
   '7f2b82423f01405eac037f4b1a661027'  // Key #6: Backup 2
 ];
 
-const pool = allKeys.length >= 6 ? allKeys : DEFAULT_KEYS;
+const pool = allKeys.length > 0 ? allKeys : DEFAULT_KEYS;
 
 // 🏪 CENTRAL "API SHOP" 24/7 CONTINUOUS ROTATING CAROUSEL
 let globalKeyIndex = 0;
