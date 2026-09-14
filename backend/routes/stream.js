@@ -205,7 +205,7 @@ router.get('/listings/live', async (req, res) => {
   if (!slug) return res.json({ success: true, listings: [] });
 
   try {
-    const evData = await fetchOpenSeaWithFallback(`/events/collection/${slug}?event_type=listing&limit=15`, 3);
+    const evData = await fetchOpenSeaWithFallback(`/events/collection/${slug}?event_type=listing&limit=15`);
     let listings = [];
     if (evData && Array.isArray(evData.asset_events)) {
       listings = evData.asset_events.map(ev => {
