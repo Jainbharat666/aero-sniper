@@ -1,12 +1,9 @@
 {
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api"
-    },
-    {
-      "source": "/((?!api/|css/|js/|cache/|favicon\\.svg|auth-art-clean\\.png).*)",
-      "destination": "/index.html"
+  "services": {
+    "aero-sniper": {
+      "root": ".",
+      "buildCommand": "npm install",
+      "entrypoint": "server.js"
     }
-  ]
+  }
 }
