@@ -5,6 +5,7 @@ import { config } from '../../src/config.js';
 import {
   seaportExecutor,
   rarityEngine,
+  dynamicRarityCalc,
   activeSniperEngine,
   setActiveSniperEngine,
   activeCollectionStats,
@@ -403,11 +404,11 @@ export async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = per
           if (cachedInfo?.traits && cachedInfo.traits.length > 0) {
             itemTraits = cachedInfo.traits;
           } else {
-            // If not in RAM, fetch token rarity/traits with Key #3 keepalive agent
+            // 🔥 NON-BLOCKING: Fire background fetch, don't delay trigger pipeline
             const streamContract = parsed.contractAddress || rarityEngine.contractAddress;
             const streamChain = parsed.chain || rarityEngine.chain || 'robinhood';
-            const resolved = await rarityEngine.fetchTokenRarity(parsed.tokenId, streamChain, streamContract);
-            if (resolved?.traits) itemTraits = resolved.traits;
+            rarityEngine.fetchTokenRarity(parsed.tokenId, streamChain, streamContract).catch(() => {});
+            // Traits will be in RAM on next event for this token
           }
         }
 
@@ -442,17 +443,25 @@ export async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = per
     }
   }
 
-  // 👑 RULE 2: TOP RARITY RANK SNIPE (PRIORITY 4)
+  // 👑 RULE 2: TOP RARITY RANK SNIPE (PRIORITY 4) — 0.01ms INSTANT RANK CHECK
   const maxRareCap = activeSniperEngine.maxRareEth > 0
     ? activeSniperEngine.maxRareEth
     : (activeSniperEngine.maxFloorEth > 0 ? activeSniperEngine.maxFloorEth : 0);
   if (!triggered && activeSniperEngine.ruleStates?.rarity && maxRareCap > 0) {
     let rank = rarityEngine.getRaritySync(parsed.tokenId);
+
+    // ⚡ INSTANT FALLBACK: DynamicRarityCalculator IC-based estimated rank (0.01ms, ZERO API calls)
+    if (rank === null && dynamicRarityCalc.isReady && parsed.traits?.length > 0) {
+      const { estimatedRank } = dynamicRarityCalc.scoreAndEstimateRank(parsed.tokenId, parsed.traits);
+      if (estimatedRank > 0) rank = estimatedRank;
+    }
+
+    // 🔥 NON-BLOCKING BACKGROUND: Resolve exact rank asynchronously (does NOT delay trigger)
     if (rank === null) {
       const streamContract = parsed.contractAddress || rarityEngine.contractAddress;
       const streamChain = parsed.chain || rarityEngine.chain || 'robinhood';
-      const resolved = await rarityEngine.fetchTokenRarity(parsed.tokenId, streamChain, streamContract);
-      rank = resolved?.rank || null;
+      rarityEngine.fetchTokenRarity(parsed.tokenId, streamChain, streamContract).catch(() => {});
+      // Don't await — rank will be available on next listing event for this token
     }
 
     if (rank && rank <= activeSniperEngine.maxRareRank && parsed.price <= maxRareCap) {
