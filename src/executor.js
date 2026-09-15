@@ -9,8 +9,8 @@ export class SeaportExecutor {
     this.seaportInterface = new ethers.Interface(SEAPORT_V16_ABI);
     this.seaportAddress = config.seaport.v1_6 || '0x0000000000000068F116a894984e2DB1123eB395';
     this.rpcs = (config.networks[chain]?.rpcUrls || [
-      'https://robinhood-mainnet.g.alchemy.com/v2/alch_FtrEfyyJYzEBZ0SQ3ctbJ',
-      'https://rpc.mainnet.chain.robinhood.com'
+      process.env.ROBINHOOD_RPC_URL || 'https://rpc.mainnet.chain.robinhood.com',
+      process.env.ROBINHOOD_FALLBACK_RPC || 'https://mainnet.chain.robinhood.com/rpc'
     ]);
     this.providers = this.rpcs.map(url => {
       const p = new ethers.JsonRpcProvider(url, undefined, { staticNetwork: true });
@@ -19,7 +19,15 @@ export class SeaportExecutor {
     });
     this.cachedBaseFee = 22000000n;
     this.gasTickerInterval = null;
-    this.startGasTicker();
+  }
+
+  /**
+   * ⚡ Dynamic Base Fee Updater (Synchronized by Master Telemetry Poller)
+   */
+  updateBaseFee(feeWei) {
+    if (typeof feeWei === 'bigint' && feeWei > 0n) {
+      this.cachedBaseFee = feeWei;
+    }
   }
 
   /**
@@ -54,19 +62,6 @@ export class SeaportExecutor {
       } catch (e) {}
     });
     await Promise.allSettled(pingPromises);
-  }
-
-  startGasTicker() {
-    const update = async () => {
-      try {
-        const block = await this.providers[0].getBlock('latest');
-        if (block?.baseFeePerGas) {
-          this.cachedBaseFee = block.baseFeePerGas;
-        }
-      } catch (e) {}
-    };
-    this.gasTickerInterval = setInterval(update, 1000);
-    update();
   }
 
   /**

@@ -130,9 +130,14 @@ export function subscribeSlugToOpenSea(slug) {
   } catch (e) {}
 }
 
-// ─── PERIODIC 15s STATS SYNC ──────────────────────────────────────────────────
+// ─── PERIODIC 45s STATS SYNC (Optimized: Idle Guarded & Anti-Cloudflare Block) ───
 setInterval(async () => {
   if (!activeCollectionStats || !activeCollectionStats.slug) return;
+  // Skip background sync if no clients connected and sniper is not armed (Zero wasted calls)
+  const hasActiveClients = sseClients && sseClients.size > 0;
+  const isSniperActive = activeSniperEngine && activeSniperEngine.isArmed;
+  if (!hasActiveClients && !isSniperActive) return;
+
   try {
     const slug = activeCollectionStats.slug;
     const stats = await fetchOpenSeaAuthoritativeStats(slug);
@@ -152,7 +157,7 @@ setInterval(async () => {
       });
     }
   } catch(e) {}
-}, 15000);
+}, 45000);
 
 // ─── ROUTES ───────────────────────────────────────────────────────────────────
 

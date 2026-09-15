@@ -1,22 +1,24 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Parse N OpenSea API Keys (flexible pool — supports 6, 21, or any count)
-const allKeys = (process.env.OPENSEA_API_KEYS || '')
+// Parse N OpenSea API Keys from environment (flexible pool — supports 6, 21, or any count)
+const envKeyList = (process.env.OPENSEA_API_KEYS || '')
   .split(',')
   .map(k => k.trim())
   .filter(k => k.length > 0);
 
-const DEFAULT_KEYS = [
-  '5f32ee9b98e84ea184a514f975ad4f3f', // Key #1: Dedicated Stream
-  '840e6b17791d415db3c98657fbc71979', // Key #2: Fulfillment
-  '411d0cfd7b294d71a71dc852999dcbfc', // Key #3: Rarity
-  'a88ffbf11b864b8398af8b2c5e3921fa', // Key #4: Floor Poller
-  '4793b5e5637a4a3fa75e81c828970113', // Key #5: Backup 1
-  '7f2b82423f01405eac037f4b1a661027'  // Key #6: Backup 2
-];
+const individualEnvKeys = [
+  process.env.OPENSEA_API_KEY_STREAM,
+  process.env.OPENSEA_API_KEY_FULFILLMENT,
+  process.env.OPENSEA_API_KEY_RARITY,
+  process.env.OPENSEA_API_KEY_FLOOR,
+  process.env.OPENSEA_API_KEY_BACKUP1,
+  process.env.OPENSEA_API_KEY_BACKUP2
+].filter(Boolean).map(k => k.trim());
 
-const pool = allKeys.length > 0 ? allKeys : DEFAULT_KEYS;
+const pool = envKeyList.length > 0 
+  ? envKeyList 
+  : (individualEnvKeys.length > 0 ? individualEnvKeys : ['']);
 
 // 🏪 CENTRAL "API SHOP" 24/7 CONTINUOUS ROTATING CAROUSEL
 let globalKeyIndex = 0;
@@ -156,8 +158,8 @@ export const config = {
       name: 'Robinhood Chain',
       chainId: 4663,
       rpcUrls: [
-        process.env.ROBINHOOD_RPC_URL || 'https://robinhood-mainnet.g.alchemy.com/v2/alch_FtrEfyyJYzEBZ0SQ3ctbJ',
-        process.env.ROBINHOOD_FALLBACK_RPC || 'https://rpc.mainnet.chain.robinhood.com'
+        process.env.ROBINHOOD_RPC_URL || 'https://rpc.mainnet.chain.robinhood.com',
+        process.env.ROBINHOOD_FALLBACK_RPC || 'https://mainnet.chain.robinhood.com/rpc'
       ],
       symbol: 'ETH',
       explorer: 'https://robinhoodchain.blockscout.com',

@@ -497,7 +497,8 @@
         } catch(e) {}
       }
       if (!streamApiKey) {
-        streamApiKey = '840e6b17791d415db3c98657fbc71979';
+        console.warn('[DIRECT WS] Missing stream API key config.');
+        return;
       }
 
       try {

@@ -9,8 +9,8 @@ const router = express.Router();
 
 export const DEFAULT_GLOBAL_FLEET = {
   robinhood: [
-    { id: 'fleet-rbh-1', network_key: 'robinhood', name: '⚡ Sniper Official RPC', url: 'https://robinhood-mainnet.g.alchemy.com/v2/alch_FtrEfyyJYzEBZ0SQ3ctbJ', is_active: true, priority: 1 },
-    { id: 'fleet-rbh-2', network_key: 'robinhood', name: '⚡ Robinhood Official Sequencer', url: 'https://rpc.mainnet.chain.robinhood.com', is_active: true, priority: 2 },
+    { id: 'fleet-rbh-1', network_key: 'robinhood', name: '⚡ Robinhood Primary Sequencer', url: process.env.ROBINHOOD_RPC_URL || 'https://rpc.mainnet.chain.robinhood.com', is_active: true, priority: 1 },
+    { id: 'fleet-rbh-2', network_key: 'robinhood', name: '⚡ Robinhood Official Node', url: process.env.ROBINHOOD_FALLBACK_RPC || 'https://rpc.mainnet.chain.robinhood.com', is_active: true, priority: 2 },
     { id: 'fleet-rbh-3', network_key: 'robinhood', name: '⚡ Robinhood Direct Node', url: 'https://mainnet.chain.robinhood.com/rpc', is_active: true, priority: 3 }
   ],
   base: [
@@ -96,7 +96,7 @@ export async function fetchLiveEthPrice() {
     console.warn(`⚠ [PRICE] ETH price data is stale. USD calculations may be inaccurate.`);
   }
 }
-setInterval(fetchLiveEthPrice, 4000);
+setInterval(fetchLiveEthPrice, 12000); // Optimized: 12s interval saves 66% API calls while maintaining fresh USD pricing
 fetchLiveEthPrice();
 
 export async function fetchLiveTelemetry() {
@@ -120,6 +120,13 @@ export async function fetchLiveTelemetry() {
       cachedTelemetry.baseFeeGwei = parseFloat(gasPriceGwei.toFixed(4));
       cachedTelemetry.stdGasGwei = parseFloat((gasPriceGwei * 1.15).toFixed(4));
       cachedTelemetry.turboGasGwei = parseFloat((gasPriceGwei * 1.5).toFixed(4));
+
+      // ⚡ Single Master Sync: Keep SeaportExecutor cached base fee accurate in 0ms RAM
+      if (typeof seaportExecutor.updateBaseFee === 'function') {
+        seaportExecutor.updateBaseFee(gasPriceWei);
+      } else {
+        seaportExecutor.cachedBaseFee = gasPriceWei;
+      }
     }
   } catch (err) {}
 }

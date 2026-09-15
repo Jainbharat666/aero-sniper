@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import axios from 'axios';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';

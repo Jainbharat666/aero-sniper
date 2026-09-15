@@ -15,6 +15,7 @@ export function setActiveCollectionStats(val) {
 }
 
 export const activeListedTokenIds = new Set();
+export const inFlightEvaluationTokens = new Set(); // 🛡️ Microsecond atomic lock against race conditions
 export const collectionMetadataCache = new Map();
 export const liveListingsCache = new Map();
 

@@ -75,9 +75,18 @@ export function resolveClosestCollectionSlug(inputSlug) {
 }
 
 // ─── 1-SHOT DIRECT AUTHORITATIVE STATS RESOLVER (EXACT OPENSEA MATCH) ─────────
+const authoritativeStatsCache = new Map(); // slug -> { stats, expiresAt }
+
 export async function fetchOpenSeaAuthoritativeStats(slug) {
+  if (!slug) return null;
+  const clean = slug.trim().toLowerCase();
+  const cached = authoritativeStatsCache.get(clean);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.stats;
+  }
+
   try {
-    const res = await fetch(`https://opensea.io/collection/${slug}`, {
+    const res = await fetch(`https://opensea.io/collection/${clean}`, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
@@ -128,16 +137,18 @@ export async function fetchOpenSeaAuthoritativeStats(slug) {
       owners = mOwners ? parseInt(mOwners[1], 10) : null;
     }
 
-    if (listedCount === null && floorEth === null) {
-      console.warn(`⚠ [STATS] Failed to extract any stats from OpenSea HTML for "${slug}"`);
-    }
-
-    return {
+    const statsObj = {
       listedCount: (listedCount && listedCount > 0) ? listedCount : null,
       floorEth: (floorEth && floorEth > 0) ? floorEth : null,
       floorUsd: (floorUsd && floorUsd > 0) ? floorUsd : null,
       owners
     };
+
+    if (statsObj.listedCount || statsObj.floorEth) {
+      authoritativeStatsCache.set(clean, { stats: statsObj, expiresAt: Date.now() + 30000 }); // 30s TTL cache
+    }
+
+    return statsObj;
   } catch (e) {
     console.warn(`⚠ [STATS] fetchOpenSeaAuthoritativeStats error for "${slug}": ${e.message}`);
   }
