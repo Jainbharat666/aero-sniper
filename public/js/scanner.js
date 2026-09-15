@@ -442,6 +442,11 @@
           logConsole(`✔ OpenSea Verified Collection: "${data.name}" (${data.chain})`);
           logConsole(`✔ Synced Floor: ${formatEthPrecise(currentFloorEth)} ($${(currentFloorEth * currentLiveEthPrice).toFixed(2)} USD) | Populated ${liveListingsStore.length} real-time floor listings.`);
           showToast(`Target Synced: ${data.name}`);
+
+          try {
+            localStorage.setItem('sniper_last_collection_input', val);
+            localStorage.setItem('sniper_last_collection_slug', data.slug);
+          } catch(e) {}
         } else {
           showToast(data.error || 'Failed to scan collection', true);
           logConsole(`❌ [SCAN ERROR] ${data.error || 'Failed to scan collection'}`);
@@ -474,6 +479,11 @@
       liveListingsStore = [];
       if (window.rarityRegistry) window.rarityRegistry.clear();
       window.dynamicRarityCalc = null;
+
+      try {
+        localStorage.removeItem('sniper_last_collection_input');
+        localStorage.removeItem('sniper_last_collection_slug');
+      } catch(e) {}
 
       if (oldSlug) {
         fetch('/api/stream/clear', {
@@ -521,3 +531,16 @@
       logConsole('Target cleared. Bot is in clean standby mode (Old stream disconnected).');
       showToast('Collection target cleared');
     }
+
+    // ─── 🔄 AUTO-RESTORE SCANNED COLLECTION ON TAB REOPEN / REFRESH ───
+    async function restoreLastCollectionIfAny() {
+      try {
+        const savedInput = localStorage.getItem('sniper_last_collection_input');
+        const inputEl = document.getElementById('scan-input');
+        if (savedInput && inputEl && !currentScannedProject) {
+          inputEl.value = savedInput;
+          await scanProject();
+        }
+      } catch(e) {}
+    }
+    window.restoreLastCollectionIfAny = restoreLastCollectionIfAny;

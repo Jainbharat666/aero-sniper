@@ -158,3 +158,23 @@
       loadUserScopedWallets();
       loadUserRpcsAndFleet(currentUser);
     }
+
+    // 🔄 Auto-restore Scanned Collection, Armed State & Log History on Tab Reopen / Reload
+    async function bootAutoRestoreEngine() {
+      try {
+        if (typeof restoreLastCollectionIfAny === 'function') {
+          await restoreLastCollectionIfAny();
+        }
+        if (typeof restoreSniperStateAndLogs === 'function') {
+          await restoreSniperStateAndLogs();
+        }
+      } catch (e) {
+        console.warn('[BOOT AUTO RESTORE] Exception:', e);
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', bootAutoRestoreEngine);
+    } else {
+      setTimeout(bootAutoRestoreEngine, 200);
+    }

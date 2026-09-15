@@ -15,6 +15,7 @@ import {
   trackKeyUse,
   broadcastToClients,
   broadcastSnipeLog,
+  getRecentLogs,
   inFlightEvaluationTokens
 } from '../state.js';
 import { apiClient } from '../openSeaClient.js';
@@ -758,6 +759,18 @@ router.get('/snipe/telemetry', (req, res) => {
     activeCollectionStats: activeCollectionStats,
     activeEnginesCount: activeSniperEngines.size,
     timestamp: Date.now()
+  });
+});
+
+// GET /api/snipe/logs (Fetches persistent ring buffer of execution logs)
+router.get('/snipe/logs', (req, res) => {
+  const reqUserId = String(req.query.userId || '');
+  const limit = parseInt(req.query.limit, 10) || 100;
+  const logs = getRecentLogs(reqUserId, limit);
+  res.json({
+    success: true,
+    logs: logs,
+    count: logs.length
   });
 });
 

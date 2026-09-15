@@ -172,10 +172,12 @@
           ? `<i class="fa-solid fa-flask text-sm"></i> ARM PAPER SNIPER (SIMULATED - 0 ETH)`
           : `<i class="fa-solid fa-crosshairs text-sm"></i> ARM AUTO-SNIPER (MAINNET LIVE)`;
         playBeep(440, 'triangle', 0.15);
-        logConsole(`Sniper Engine PAUSED by user.`);
-        showToast('Sniper Engine PAUSED');
-
-        fetch('/api/snipe/disarm', { method: 'POST' }).catch(() => {});
+        const disarmPayload = { userId: currentUser?.id };
+        fetch('/api/snipe/disarm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(disarmPayload)
+        }).catch(() => {});
       }
     }
 
@@ -193,7 +195,11 @@
       }
       playBeep(440, 'triangle', 0.15);
       logConsole(`⏸ [AUTO-DISARM] Sniper Engine Disarmed & Stopped.`);
-      fetch('/api/snipe/disarm', { method: 'POST' }).catch(() => {});
+      fetch('/api/snipe/disarm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser?.id })
+      }).catch(() => {});
     }
     window.forceDisarmSniperUI = forceDisarmSniperUI;
 
@@ -985,3 +991,63 @@
       const cM = localStorage.getItem('sniper_custom_max');
       if (cM && document.getElementById('param-custom-max-fee')) document.getElementById('param-custom-max-fee').value = cM;
     } catch(e) {}
+
+    // ─── 🔄 AUTO-RESTORE ARMED STATE & PERSISTENT LOGS ON REFRESH / TAB REOPEN ───
+    async function restoreSniperStateAndLogs() {
+      try {
+        const uid = (typeof currentUser !== 'undefined' && currentUser?.id) ? currentUser.id : '';
+        
+        // 1. Fetch Backend Telemetry
+        const telRes = await fetch(`/api/snipe/telemetry?userId=${encodeURIComponent(uid)}`);
+        const telData = await telRes.json();
+        if (telData.success && telData.isArmed) {
+          isArmed = true;
+          window.sniperArmed = true;
+          isDryRun = !!telData.dryRun;
+          activeMaxSnipesLimit = telData.maxSnipesLimit || 1;
+          
+          const btn = document.getElementById('btn-master-action');
+          if (btn) {
+            const bgGrad = isDryRun 
+              ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 shadow-purple-500/25'
+              : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 shadow-emerald-500/25';
+            btn.className = `w-full py-3 px-4 rounded-2xl ${bgGrad} text-white font-black text-xs shadow-lg flex items-center justify-center gap-2 transition-all animate-pulse`;
+            btn.innerHTML = isDryRun 
+              ? `<i class="fa-solid fa-flask fa-spin text-sm"></i> 🧪 PAPER SNIPER ARMED &amp; SIMULATING (CLICK TO PAUSE)`
+              : `<i class="fa-solid fa-crosshairs fa-spin text-sm"></i> ⚡ SNIPER ARMED &amp; HUNTING (CLICK TO PAUSE)`;
+          }
+
+          if (telData.targetSlug && (!currentScannedProject || currentScannedProject.slug !== telData.targetSlug)) {
+            const inputEl = document.getElementById('scan-input');
+            if (inputEl) {
+              inputEl.value = telData.targetSlug;
+              if (typeof scanProject === 'function') scanProject();
+            }
+          }
+        }
+
+        // 2. Fetch Persistent Ring Buffer Logs
+        const logRes = await fetch(`/api/snipe/logs?userId=${encodeURIComponent(uid)}&limit=150`);
+        const logData = await logRes.json();
+        if (logData.success && Array.isArray(logData.logs) && logData.logs.length > 0) {
+          const c1 = document.getElementById('console-logs');
+          const c2 = document.getElementById('wallet-console-logs');
+          let logsHtml = '';
+          logData.logs.forEach(item => {
+            const timeStr = item.timestamp ? new Date(item.timestamp).toLocaleTimeString() + '.' + String(item.timestamp % 1000).padStart(3, '0') : 'RESTORED';
+            logsHtml += `<div><span class="text-slate-500">[${timeStr}]</span> ${item.message}</div>`;
+          });
+          if (c1) {
+            c1.innerHTML = logsHtml;
+            c1.scrollTop = c1.scrollHeight;
+          }
+          if (c2) {
+            c2.innerHTML = logsHtml;
+            c2.scrollTop = c2.scrollHeight;
+          }
+        }
+      } catch (err) {
+        console.warn('[RESTORE STATE] Error restoring sniper state:', err);
+      }
+    }
+    window.restoreSniperStateAndLogs = restoreSniperStateAndLogs;

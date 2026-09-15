@@ -649,7 +649,8 @@
         streamEventSource = null;
       }
 
-      const streamUrl = `/api/stream/events?slug=${encodeURIComponent(slug)}`;
+      const uid = (typeof currentUser !== 'undefined' && currentUser?.id) ? currentUser.id : '';
+      const streamUrl = `/api/stream/events?slug=${encodeURIComponent(slug)}&userId=${encodeURIComponent(uid)}`;
       streamEventSource = new EventSource(streamUrl);
 
       streamEventSource.onmessage = (event) => {

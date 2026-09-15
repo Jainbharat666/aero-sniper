@@ -119,8 +119,34 @@ export function broadcastToClients(payload, targetUserId = null) {
   });
 }
 
+// 📜 RING BUFFER FOR PERSISTENT EXECUTION LOGS (Stores last 150 logs per user in RAM)
+export const userLogBuffers = new Map(); // userId -> Array of { message, timestamp }
+export const globalLogBuffer = [];
+
+export function recordLogToBuffer(msg, targetUserId = null) {
+  const logItem = { message: msg, timestamp: Date.now() };
+  if (targetUserId) {
+    const key = String(targetUserId);
+    if (!userLogBuffers.has(key)) userLogBuffers.set(key, []);
+    const buf = userLogBuffers.get(key);
+    buf.push(logItem);
+    if (buf.length > 150) buf.shift();
+  }
+  globalLogBuffer.push(logItem);
+  if (globalLogBuffer.length > 150) globalLogBuffer.shift();
+}
+
+export function getRecentLogs(targetUserId = null, limit = 100) {
+  if (targetUserId && userLogBuffers.has(String(targetUserId))) {
+    const buf = userLogBuffers.get(String(targetUserId));
+    return buf.slice(-limit);
+  }
+  return globalLogBuffer.slice(-limit);
+}
+
 export function broadcastSnipeLog(msg, targetUserId = null) {
   console.log(msg);
+  recordLogToBuffer(msg, targetUserId);
   broadcastToClients({
     type: 'snipe_log',
     message: msg,
@@ -128,4 +154,5 @@ export function broadcastSnipeLog(msg, targetUserId = null) {
     timestamp: Date.now()
   }, targetUserId);
 }
+
 
