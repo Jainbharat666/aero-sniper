@@ -100,7 +100,20 @@ if (!process.env.VERCEL) {
     console.log(` ⚡ 6-Key OpenSea Laser Grid (Role-Specialized) ACTIVE`);
     console.log(` ⚡ AeroMint-Style Modular Architecture ACTIVE`);
     console.log(` ⚡ Multi-RPC Simultaneous Mempool Blast ACTIVE`);
+    console.log(` ⚡ 24/7 Keep-Alive Ping Engine ACTIVE`);
     console.log(`======================================================\n`);
+
+    // 🛡️ 24/7 RENDER KEEP-ALIVE HEARTBEAT LOOP (Prevents Free-Tier Inactivity Sleep)
+    const renderHost = process.env.RENDER_EXTERNAL_URL || 'https://aero-sniper.onrender.com';
+    setInterval(async () => {
+      try {
+        const res = await fetch(`${renderHost}/api/snipe/telemetry`);
+        const data = await res.json();
+        console.log(`[KEEP-ALIVE] 💓 Heartbeat sent to ${renderHost} (Active Engines: ${data.activeEnginesCount || 0})`);
+      } catch (e) {
+        console.warn(`[KEEP-ALIVE] Ping error: ${e.message}`);
+      }
+    }, 7 * 60 * 1000); // Ping every 7 minutes
   });
 }
 
