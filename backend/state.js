@@ -72,6 +72,9 @@ export const cachedTelemetry = {
   timestamp: Date.now()
 };
 
+// ⚡ MULTI-TENANT SNIPER ENGINES MAP (Map<userId/userKey, UserSniperEngine>)
+export const activeSniperEngines = new Map();
+
 export let activeSniperEngine = {
   isArmed: false,
   armedTimestamp: 0,
@@ -89,14 +92,23 @@ export let activeSniperEngine = {
   invalidOrderHashes: new Set(),
   pendingSnipes: new Set()
 };
-export function setActiveSniperEngine(val) {
+
+export function setActiveSniperEngine(val, userKey = 'default') {
   activeSniperEngine = val;
+  if (val && (val.userId || userKey)) {
+    const key = String(val.userId || userKey);
+    activeSniperEngines.set(key, val);
+  }
 }
 
-export function broadcastToClients(payload) {
+export function broadcastToClients(payload, targetUserId = null) {
   if (!payload) return;
   const msg = `data: ${JSON.stringify(payload)}\n\n`;
   sseClients.forEach(client => {
+    // If targeted to a specific user, ensure client matches targetUserId
+    if (targetUserId && client.userId && String(client.userId) !== String(targetUserId)) {
+      return;
+    }
     if (!payload.slug || !client.slug || client.slug.toLowerCase() === payload.slug.toLowerCase() || client.slug === '*') {
       try {
         client.res.write(msg);
@@ -107,11 +119,13 @@ export function broadcastToClients(payload) {
   });
 }
 
-export function broadcastSnipeLog(msg) {
+export function broadcastSnipeLog(msg, targetUserId = null) {
   console.log(msg);
   broadcastToClients({
     type: 'snipe_log',
     message: msg,
+    targetUserId: targetUserId || undefined,
     timestamp: Date.now()
-  });
+  }, targetUserId);
 }
+

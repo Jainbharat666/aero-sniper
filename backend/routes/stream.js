@@ -6,6 +6,7 @@ import {
   activeCollectionStats,
   rarityEngine,
   activeSniperEngine,
+  activeSniperEngines,
   sseClients,
   cachedEthPrice,
   broadcastToClients,
@@ -133,10 +134,10 @@ export function subscribeSlugToOpenSea(slug) {
 // ─── PERIODIC 45s STATS SYNC (Optimized: Idle Guarded & Anti-Cloudflare Block) ───
 setInterval(async () => {
   if (!activeCollectionStats || !activeCollectionStats.slug) return;
-  // Skip background sync if no clients connected and sniper is not armed (Zero wasted calls)
+  // Skip background sync if no clients connected and no sniper is armed (Zero wasted calls)
   const hasActiveClients = sseClients && sseClients.size > 0;
-  const isSniperActive = activeSniperEngine && activeSniperEngine.isArmed;
-  if (!hasActiveClients && !isSniperActive) return;
+  const isAnySniperActive = Array.from(activeSniperEngines.values()).some(e => e.isArmed) || (activeSniperEngine && activeSniperEngine.isArmed);
+  if (!hasActiveClients && !isAnySniperActive) return;
 
   try {
     const slug = activeCollectionStats.slug;
@@ -173,25 +174,27 @@ router.get('/stream/ws-config', (req, res) => {
 // GET /api/stream/events (SSE)
 router.get('/stream/events', (req, res) => {
   const slug = (req.query.slug || '').trim().toLowerCase();
+  const userId = (req.query.userId || '').trim();
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive'
   });
 
-  const client = { res, slug };
+  const client = { res, slug, userId };
   sseClients.add(client);
   if (slug) subscribeSlugToOpenSea(slug);
 
   res.write('retry: 500\n\n');
-  res.write(`data: ${JSON.stringify({ type: 'connected', slug, time: Date.now() })}\n\n`);
+  res.write(`data: ${JSON.stringify({ type: 'connected', slug, userId, time: Date.now() })}\n\n`);
 
   req.on('close', () => {
     sseClients.delete(client);
     if (slug) {
       const hasOther = Array.from(sseClients).some(c => c.slug === slug);
-      const isSniperActive = activeSniperEngine.isArmed && (activeSniperEngine.slug === slug || activeSniperEngine.slug === '*');
-      if (!hasOther && !isSniperActive) streamListener.unsubscribe(slug);
+      const isAnySniperActive = Array.from(activeSniperEngines.values()).some(e => e.isArmed && (e.slug === slug || e.slug === '*')) ||
+                                (activeSniperEngine.isArmed && (activeSniperEngine.slug === slug || activeSniperEngine.slug === '*'));
+      if (!hasOther && !isAnySniperActive) streamListener.unsubscribe(slug);
     }
   });
 });

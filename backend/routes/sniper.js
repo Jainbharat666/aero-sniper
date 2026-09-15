@@ -7,6 +7,7 @@ import {
   rarityEngine,
   dynamicRarityCalc,
   activeSniperEngine,
+  activeSniperEngines,
   setActiveSniperEngine,
   activeCollectionStats,
   walletNonceMap,
@@ -75,63 +76,65 @@ export async function fetchSeaportFulfillmentWithShop(orderHash, chain, buyerAdd
 }
 
 // ⚡ ZERO-HOP DIRECT SUB-MILLISECOND SNIPE EXECUTION (AEROMINT MULTI-RPC BLAST)
-export async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
-  if (!activeSniperEngine.isArmed) return;
+export async function executeZeroHopSnipe(parsed, reason, tTriggerStart, userEngine = null) {
+  const engine = userEngine || activeSniperEngine;
+  if (!engine || !engine.isArmed) return;
 
   // 🛡️ FEATURE 1: Anti-Drain Circuit Breaker Check
-  if (activeSniperEngine.maxSnipesLimit > 0 && activeSniperEngine.snipesExecutedCount >= activeSniperEngine.maxSnipesLimit) {
-    activeSniperEngine.isArmed = false;
-    broadcastSnipeLog(`🛑 [CIRCUIT BREAKER HIT] Max snipes limit reached (${activeSniperEngine.snipesExecutedCount}/${activeSniperEngine.maxSnipesLimit}). Sniper auto-paused.`);
+  if (engine.maxSnipesLimit > 0 && engine.snipesExecutedCount >= engine.maxSnipesLimit) {
+    engine.isArmed = false;
+    broadcastSnipeLog(`🛑 [CIRCUIT BREAKER HIT] Max snipes limit reached (${engine.snipesExecutedCount}/${engine.maxSnipesLimit}). Sniper auto-paused.`, engine.userId);
     broadcastToClients({
       type: 'circuit_breaker_paused',
-      executed: activeSniperEngine.snipesExecutedCount,
-      limit: activeSniperEngine.maxSnipesLimit
-    });
+      executed: engine.snipesExecutedCount,
+      limit: engine.maxSnipesLimit
+    }, engine.userId);
     return;
   }
 
   const tokenId = String(parsed.tokenId);
-  if (activeSniperEngine.snipedTokenIds.has(tokenId)) return;
+  if (engine.snipedTokenIds && engine.snipedTokenIds.has(tokenId)) return;
   const protocolData = parsed.protocolData;
   const orderHash = parsed.orderHash || protocolData?.orderHash;
-  if (orderHash && activeSniperEngine.invalidOrderHashes && activeSniperEngine.invalidOrderHashes.has(orderHash)) return;
+  if (orderHash && engine.invalidOrderHashes && engine.invalidOrderHashes.has(orderHash)) return;
 
-  if (activeSniperEngine.pendingSnipes && activeSniperEngine.pendingSnipes.has(tokenId)) return;
-  if (!activeSniperEngine.pendingSnipes) activeSniperEngine.pendingSnipes = new Set();
+  if (engine.pendingSnipes && engine.pendingSnipes.has(tokenId)) return;
+  if (!engine.pendingSnipes) engine.pendingSnipes = new Set();
+  if (!engine.snipedTokenIds) engine.snipedTokenIds = new Set();
 
   if ((!protocolData?.parameters || !protocolData?.signature) && !orderHash) {
-    broadcastSnipeLog(`⚠ [SNIPER V2] Cannot snipe #${tokenId}: both protocolData and orderHash are missing!`);
+    broadcastSnipeLog(`⚠ [SNIPER V2] Cannot snipe #${tokenId}: both protocolData and orderHash are missing!`, engine.userId);
     return;
   }
 
   // 🛡️ ATOMIC SYNCHRONOUS LOCK: Mark immediately so SSE payload.sniped = true (prevents duplicate frontend dispatch)
-  activeSniperEngine.pendingSnipes.add(tokenId);
-  activeSniperEngine.snipedTokenIds.add(tokenId);
+  engine.pendingSnipes.add(tokenId);
+  engine.snipedTokenIds.add(tokenId);
 
-  broadcastSnipeLog(`🎯 ⚡ [TRIGGER MATCHED] Woodie #${tokenId} at ${parsed.price} ETH [${reason}]`);
+  broadcastSnipeLog(`🎯 ⚡ [TRIGGER MATCHED] Woodie #${tokenId} at ${parsed.price} ETH [${reason}]`, engine.userId);
 
   try {
-    let currentWorker = activeSniperEngine.walletSigner;
-    let buyerAddress = activeSniperEngine.buyerAddress;
-    let buyerName = activeSniperEngine.buyerName;
+    let currentWorker = engine.walletSigner;
+    let buyerAddress = engine.buyerAddress;
+    let buyerName = engine.buyerName;
 
-    if (activeSniperEngine.workerPool && activeSniperEngine.workerPool.length > 0) {
-      if (activeSniperEngine.workerStrategy === 'round_robin') {
-        const w = activeSniperEngine.workerPool[activeSniperEngine.workerIndex % activeSniperEngine.workerPool.length];
-        activeSniperEngine.workerIndex++;
+    if (engine.workerPool && engine.workerPool.length > 0) {
+      if (engine.workerStrategy === 'round_robin') {
+        const w = engine.workerPool[engine.workerIndex % engine.workerPool.length];
+        engine.workerIndex++;
         currentWorker = w.signer;
         buyerAddress = w.address;
         buyerName = w.name;
       } else if (!currentWorker) {
-        currentWorker = activeSniperEngine.workerPool[0].signer;
-        buyerAddress = activeSniperEngine.workerPool[0].address;
-        buyerName = activeSniperEngine.workerPool[0].name;
+        currentWorker = engine.workerPool[0].signer;
+        buyerAddress = engine.workerPool[0].address;
+        buyerName = engine.workerPool[0].name;
       }
     }
 
-    if (!currentWorker && !activeSniperEngine.dryRun) {
-      broadcastSnipeLog(`⚠ [SNIPER V2] No valid worker signer available for execution!`);
-      activeSniperEngine.pendingSnipes.delete(tokenId);
+    if (!currentWorker && !engine.dryRun) {
+      broadcastSnipeLog(`⚠ [SNIPER V2] No valid worker signer available for execution!`, engine.userId);
+      engine.pendingSnipes.delete(tokenId);
       return;
     }
 
@@ -139,40 +142,40 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
 
     if (protocolData?.parameters && protocolData?.signature) {
       // Path A: 0ms Instant Direct Seaport Transaction
-      broadcastSnipeLog(`⚡ [SEAPORT DIRECT] Building 0ms direct Seaport transaction from protocolData...`);
+      broadcastSnipeLog(`⚡ [SEAPORT DIRECT] Building 0ms direct Seaport transaction from protocolData...`, engine.userId);
       try {
         txObj = seaportExecutor.buildSeaportTransaction(
           protocolData,
           buyerAddress || '0x0000000000000000000000000000000000000001',
-          activeSniperEngine.gasSpeed || 'turbo',
-          activeSniperEngine.customGas
+          engine.gasSpeed || 'turbo',
+          engine.customGas
         );
       } catch (pathAErr) {
         // Path A build failed — fallback to Path B (Fulfillment API)
-        broadcastSnipeLog(`⚠ [PATH A BUILD FAILED] Direct Seaport build failed: ${pathAErr.message?.slice(0, 80)}. Falling back to Fulfillment API...`);
+        broadcastSnipeLog(`⚠ [PATH A BUILD FAILED] Direct Seaport build failed: ${pathAErr.message?.slice(0, 80)}. Falling back to Fulfillment API...`, engine.userId);
         txObj = null; // Reset — let Path B handle it
       }
     }
 
     if (!txObj && orderHash) {
       // Path B: OpenSea Fulfillment API Fallback via Rotating 24/7 API Shop
-      broadcastSnipeLog(`📡 [SEAPORT FULFILLMENT] Fetching OpenSea Seaport calldata for hash ${orderHash.slice(0, 14)}... via 24/7 API Shop...`);
+      broadcastSnipeLog(`📡 [SEAPORT FULFILLMENT] Fetching OpenSea Seaport calldata for hash ${orderHash.slice(0, 14)}... via 24/7 API Shop...`, engine.userId);
       const fulRes = await fetchSeaportFulfillmentWithShop(orderHash, parsed.chain || 'robinhood', buyerAddress, tokenId);
       if (!fulRes.success) {
         if (fulRes.isDeadOrder) {
-          if (orderHash) activeSniperEngine.invalidOrderHashes.add(orderHash);
-          activeSniperEngine.snipedTokenIds.add(tokenId);
-          broadcastSnipeLog(`ℹ [ORDER INACTIVE] #${tokenId} (${orderHash ? orderHash.slice(0, 14) + '...' : ''}) is no longer active on OpenSea (cancelled/filled). Blacklisted.`);
+          if (orderHash && engine.invalidOrderHashes) engine.invalidOrderHashes.add(orderHash);
+          engine.snipedTokenIds.add(tokenId);
+          broadcastSnipeLog(`ℹ [ORDER INACTIVE] #${tokenId} (${orderHash ? orderHash.slice(0, 14) + '...' : ''}) is no longer active on OpenSea (cancelled/filled). Blacklisted.`, engine.userId);
         } else {
-          broadcastSnipeLog(`❌ [FULFILLMENT ERROR] OpenSea returned error for #${tokenId}: ${fulRes.error}`);
+          broadcastSnipeLog(`❌ [FULFILLMENT ERROR] OpenSea returned error for #${tokenId}: ${fulRes.error}`, engine.userId);
         }
-        activeSniperEngine.pendingSnipes.delete(tokenId);
+        engine.pendingSnipes.delete(tokenId);
         return;
       }
 
       if (!fulRes.data?.fulfillment_data?.transaction) {
-        broadcastSnipeLog(`❌ [FULFILLMENT ERROR] OpenSea returned no fulfillment transaction for #${tokenId}`);
-        activeSniperEngine.pendingSnipes.delete(tokenId);
+        broadcastSnipeLog(`❌ [FULFILLMENT ERROR] OpenSea returned no fulfillment transaction for #${tokenId}`, engine.userId);
+        engine.pendingSnipes.delete(tokenId);
         return;
       }
 
@@ -184,9 +187,9 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
         calldata = txData.data;
       } else {
         // 🔍 DEBUG: Log actual API response structure for diagnosis
-        broadcastSnipeLog(`🔍 [DEBUG] txData keys: ${JSON.stringify(Object.keys(txData))}`);
-        broadcastSnipeLog(`🔍 [DEBUG] input_data keys: ${JSON.stringify(Object.keys(txData.input_data || {}))}`);
-        broadcastSnipeLog(`🔍 [DEBUG] function: ${txData.function}`);
+        broadcastSnipeLog(`🔍 [DEBUG] txData keys: ${JSON.stringify(Object.keys(txData))}`, engine.userId);
+        broadcastSnipeLog(`🔍 [DEBUG] input_data keys: ${JSON.stringify(Object.keys(txData.input_data || {}))}`, engine.userId);
+        broadcastSnipeLog(`🔍 [DEBUG] function: ${txData.function}`, engine.userId);
 
         // RESILIENT: Try multiple field name patterns from OpenSea API
         const fnName = txData.function.split('(')[0];
@@ -199,9 +202,8 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
             const recip = txData.input_data.recipient || buyerAddress;
 
             if (!advOrder) {
-              // Last resort: try passing entire input_data as positional args
-              broadcastSnipeLog(`🔍 [DEBUG] advOrder null. Full input_data: ${JSON.stringify(txData.input_data).slice(0, 500)}`);
-              activeSniperEngine.pendingSnipes.delete(tokenId);
+              broadcastSnipeLog(`🔍 [DEBUG] advOrder null. Full input_data: ${JSON.stringify(txData.input_data).slice(0, 500)}`, engine.userId);
+              engine.pendingSnipes.delete(tokenId);
               return;
             }
             calldata = seaportExecutor.seaportInterface.encodeFunctionData(fnName, [advOrder, criteria, conduit, recip]);
@@ -209,9 +211,9 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
             calldata = seaportExecutor.seaportInterface.encodeFunctionData(fnName, [txData.input_data.parameters || txData.input_data.order]);
           }
         } catch (encErr) {
-          broadcastSnipeLog(`❌ [SEAPORT ABI ERROR] Failed to encode ${fnName}: ${encErr.message}`);
-          broadcastSnipeLog(`🔍 [DEBUG] input_data dump: ${JSON.stringify(txData.input_data).slice(0, 800)}`);
-          activeSniperEngine.pendingSnipes.delete(tokenId);
+          broadcastSnipeLog(`❌ [SEAPORT ABI ERROR] Failed to encode ${fnName}: ${encErr.message}`, engine.userId);
+          broadcastSnipeLog(`🔍 [DEBUG] input_data dump: ${JSON.stringify(txData.input_data).slice(0, 800)}`, engine.userId);
+          engine.pendingSnipes.delete(tokenId);
           return;
         }
       }
@@ -220,10 +222,10 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
       }
 
       let gasPrice;
-      if (activeSniperEngine.customGas?.customMaxFeeGwei && parseFloat(activeSniperEngine.customGas.customMaxFeeGwei) > 0) {
-        gasPrice = ethers.parseUnits(String(activeSniperEngine.customGas.customMaxFeeGwei), 'gwei');
+      if (engine.customGas?.customMaxFeeGwei && parseFloat(engine.customGas.customMaxFeeGwei) > 0) {
+        gasPrice = ethers.parseUnits(String(engine.customGas.customMaxFeeGwei), 'gwei');
       } else {
-        const gasSpeed = activeSniperEngine.gasSpeed || 'turbo';
+        const gasSpeed = engine.gasSpeed || 'turbo';
         let gasMultiplier = 175n;
         if (gasSpeed === 'surge') gasMultiplier = 235n;
         if (gasSpeed === 'hyped') gasMultiplier = 300n;
@@ -241,25 +243,25 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
     }
 
     if (!txObj) {
-      broadcastSnipeLog(`❌ [SNIPER V2] Failed to construct transaction for #${tokenId}`);
-      activeSniperEngine.pendingSnipes.delete(tokenId);
+      broadcastSnipeLog(`❌ [SNIPER V2] Failed to construct transaction for #${tokenId}`, engine.userId);
+      engine.pendingSnipes.delete(tokenId);
       return;
     }
 
-    const isSim = activeSniperEngine.dryRun;
+    const isSim = engine.dryRun;
     let txHash = '';
 
     if (isSim) {
       const simulatedLatency = Math.floor(Math.random() * 3) + 1;
       txHash = '0xsimulated_' + Date.now().toString(16) + Math.random().toString(16).slice(2, 10);
-      broadcastSnipeLog(`🧪 [PAPER SNIPE] Token #${tokenId} simulated in ${simulatedLatency}ms! MockTx: ${txHash}`);
+      broadcastSnipeLog(`🧪 [PAPER SNIPE] Token #${tokenId} simulated in ${simulatedLatency}ms! MockTx: ${txHash}`, engine.userId);
     } else {
       const provider = seaportExecutor.providers[0];
       const explicitNonce = await getNextNonce(provider, buyerAddress);
       txObj.nonce = explicitNonce;
       txObj.chainId = 4663; // Robinhood L2
 
-      broadcastSnipeLog(`➔ [RAM CPU SIGN & MULTI-RPC BLAST] Signing & blasting for #${tokenId} (Worker: ${buyerName} - ${buyerAddress.slice(0, 6)}... Nonce: ${explicitNonce})...`);
+      broadcastSnipeLog(`➔ [RAM CPU SIGN & MULTI-RPC BLAST] Signing & blasting for #${tokenId} (Worker: ${buyerName} - ${buyerAddress.slice(0, 6)}... Nonce: ${explicitNonce})...`, engine.userId);
       
       const signedRawTx = await currentWorker.signTransaction(txObj); // ~2ms Local CPU ECDSA
       const blastResult = await seaportExecutor.multiRpcBroadcast(signedRawTx); // Simultaneous multi-RPC dispatch
@@ -269,38 +271,38 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
       const latencyMs = (tSigned - tTriggerStart).toFixed(2);
       
       const winningNode = blastResult.rpcUrl ? (blastResult.rpcUrl.includes('//') ? new URL(blastResult.rpcUrl).hostname : blastResult.rpcUrl) : 'Fastest Node';
-      broadcastSnipeLog(`🚀 [MEMPOOL ACCEPTED via ${winningNode}] TxHash: ${txHash} (${latencyMs}ms | Blast RTT: ${blastResult.latencyMs}ms) ➔ Mining on Robinhood Chain...`);
+      broadcastSnipeLog(`🚀 [MEMPOOL ACCEPTED via ${winningNode}] TxHash: ${txHash} (${latencyMs}ms | Blast RTT: ${blastResult.latencyMs}ms) ➔ Mining on Robinhood Chain...`, engine.userId);
 
       // Track receipt in background (non-blocking)
       if (provider && typeof provider.waitForTransaction === 'function') {
         provider.waitForTransaction(txHash, 1, 35000).then(receipt => {
           if (receipt) {
-            broadcastSnipeLog(`🎉 [ON-CHAIN CONFIRMED] Block #${receipt.blockNumber}! Token #${tokenId} secured by ${buyerName} (Tx: ${txHash.slice(0, 14)}...)!`);
+            broadcastSnipeLog(`🎉 [ON-CHAIN CONFIRMED] Block #${receipt.blockNumber}! Token #${tokenId} secured by ${buyerName} (Tx: ${txHash.slice(0, 14)}...)!`, engine.userId);
             broadcastToClients({
               type: 'zero_hop_snipe_confirmed',
-              slug: activeSniperEngine.slug,
+              slug: engine.slug,
               tokenId: tokenId,
               price: parsed.price,
               buyerName: buyerName,
               txHash: txHash,
               blockNumber: receipt.blockNumber,
               timestamp: Date.now()
-            });
+            }, engine.userId);
           }
         }).catch(e => {
-          broadcastSnipeLog(`❌ [TX REVERTED] Block revert for #${tokenId}: ${e.message}`);
-          activeSniperEngine.snipedTokenIds.delete(tokenId);
+          broadcastSnipeLog(`❌ [TX REVERTED] Block revert for #${tokenId}: ${e.message}`, engine.userId);
+          engine.snipedTokenIds.delete(tokenId);
         });
       }
     }
 
     // Now that tx is broadcasted on-chain, mark as sniped and count
-    activeSniperEngine.snipedTokenIds.add(tokenId);
-    activeSniperEngine.snipesExecutedCount++;
+    engine.snipedTokenIds.add(tokenId);
+    engine.snipesExecutedCount++;
 
     broadcastToClients({
       type: isSim ? 'paper_snipe_broadcast' : 'zero_hop_snipe_broadcast',
-      slug: activeSniperEngine.slug,
+      slug: engine.slug,
       tokenId: tokenId,
       name: parsed.name,
       price: parsed.price,
@@ -309,60 +311,66 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart) {
       txHash: txHash,
       computeLatencyMs: (performance.now() - tTriggerStart).toFixed(2),
       isDryRun: isSim,
-      snipesExecuted: activeSniperEngine.snipesExecutedCount,
-      maxLimit: activeSniperEngine.maxSnipesLimit,
+      snipesExecuted: engine.snipesExecutedCount,
+      maxLimit: engine.maxSnipesLimit,
       reason: reason,
       timestamp: Date.now()
-    });
+    }, engine.userId);
 
     // Auto-pause if max limit reached
-    if (activeSniperEngine.maxSnipesLimit > 0 && activeSniperEngine.snipesExecutedCount >= activeSniperEngine.maxSnipesLimit) {
-      activeSniperEngine.isArmed = false;
-      broadcastSnipeLog(`🛑 [CIRCUIT BREAKER] Completed ${activeSniperEngine.snipesExecutedCount} of ${activeSniperEngine.maxSnipesLimit} allowed snipes. Auto-disarmed.`);
+    if (engine.maxSnipesLimit > 0 && engine.snipesExecutedCount >= engine.maxSnipesLimit) {
+      engine.isArmed = false;
+      broadcastSnipeLog(`🛑 [CIRCUIT BREAKER] Completed ${engine.snipesExecutedCount} of ${engine.maxSnipesLimit} allowed snipes. Auto-disarmed.`, engine.userId);
       broadcastToClients({
         type: 'circuit_breaker_paused',
-        executed: activeSniperEngine.snipesExecutedCount,
-        limit: activeSniperEngine.maxSnipesLimit
-      });
+        executed: engine.snipesExecutedCount,
+        limit: engine.maxSnipesLimit
+      }, engine.userId);
     }
 
   } catch (err) {
-    if (activeSniperEngine.pendingSnipes) activeSniperEngine.pendingSnipes.delete(tokenId);
-    activeSniperEngine.snipedTokenIds.delete(tokenId);
-    broadcastSnipeLog(`❌ [ZERO-HOP SNIPE ERROR] Token #${tokenId}: ${err.message}`);
+    if (engine.pendingSnipes) engine.pendingSnipes.delete(tokenId);
+    engine.snipedTokenIds.delete(tokenId);
+    broadcastSnipeLog(`❌ [ZERO-HOP SNIPE ERROR] Token #${tokenId}: ${err.message}`, engine.userId);
   }
 }
 
 /**
  * 🛡️ UNIVERSAL VIP SUBSCRIPTION GUARD & AUTO-DISARM WATCHDOG
- * If the user's validity expires while sniper is armed in memory:
- * Instantly auto-disarms, purges private keys from RAM, clears nonces, and notifies clients.
+ * If a user's validity expires while sniper is armed in memory:
+ * Instantly auto-disarms, purges private keys from RAM, and notifies the specific user.
  */
-export function checkAndEnforceUserValidity() {
-  if (!activeSniperEngine.isArmed) return true;
-  if (!activeSniperEngine.authenticatedUserId) return true;
-  if (activeSniperEngine.userEmail && activeSniperEngine.userEmail.toLowerCase() === OWNER_EMAIL.toLowerCase()) return true;
+export function checkAndEnforceUserValidity(targetEngine = null) {
+  const enginesToCheck = targetEngine ? [targetEngine] : Array.from(activeSniperEngines.values());
+  if (enginesToCheck.length === 0 && activeSniperEngine.isArmed) {
+    enginesToCheck.push(activeSniperEngine);
+  }
 
-  if (activeSniperEngine.userValidUntil) {
-    const exp = new Date(activeSniperEngine.userValidUntil).getTime();
-    if (Date.now() >= exp) {
-      console.log(`⏳ [SNIPER AUTO-DISARM] User VIP subscription expired (${activeSniperEngine.userValidUntil}). Auto-disarming sniper...`);
-      activeSniperEngine.isArmed = false;
-      activeSniperEngine.walletSigner = null;
-      activeSniperEngine.buyerPrivateKey = '';
-      if (activeSniperEngine.workerPool && activeSniperEngine.workerPool.length > 0) {
-        activeSniperEngine.workerPool.forEach(w => { delete w.privateKey; w.signer = null; });
+  let allValid = true;
+  for (const engine of enginesToCheck) {
+    if (!engine.isArmed || !engine.authenticatedUserId) continue;
+    if (engine.userEmail && engine.userEmail.toLowerCase() === OWNER_EMAIL.toLowerCase()) continue;
+
+    if (engine.userValidUntil) {
+      const exp = new Date(engine.userValidUntil).getTime();
+      if (Date.now() >= exp) {
+        console.log(`⏳ [SNIPER AUTO-DISARM] User [${engine.userId}] VIP subscription expired (${engine.userValidUntil}). Auto-disarming sniper...`);
+        engine.isArmed = false;
+        engine.walletSigner = null;
+        engine.buyerPrivateKey = '';
+        if (engine.workerPool && engine.workerPool.length > 0) {
+          engine.workerPool.forEach(w => { delete w.privateKey; w.signer = null; });
+        }
+        broadcastSnipeLog(`⏳ [AUTO-DISARMED] VIP subscription expired! Background sniper engine stopped.`, engine.userId);
+        broadcastToClients({
+          type: 'sniper_disarmed',
+          reason: 'subscription_expired'
+        }, engine.userId);
+        allValid = false;
       }
-      walletNonceMap.clear();
-      broadcastSnipeLog(`⏳ [AUTO-DISARMED] VIP subscription expired! Background sniper engine stopped.`);
-      broadcastToClients({
-        type: 'sniper_disarmed',
-        reason: 'subscription_expired'
-      });
-      return false;
     }
   }
-  return true;
+  return allValid;
 }
 
 // 🛡️ Continuous 5-Second Background Watchdog
@@ -372,37 +380,29 @@ setInterval(() => {
   } catch (e) {}
 }, 5000);
 
-// ⚡ MICROSECOND ZERO-HOP SNIPER TRIGGER EVALUATOR (ALL 4 RULES ENFORCED)
+// ⚡ MICROSECOND ZERO-HOP MULTI-USER SNIPER TRIGGER EVALUATOR (ALL 4 RULES ENFORCED)
 export async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = performance.now()) {
   if (!parsed || !parsed.tokenId) return;
   const itemSlug = (parsed.slug || incomingSlug || '').toLowerCase();
 
-  if (!activeSniperEngine.isArmed) return;
-  if (!checkAndEnforceUserValidity()) return;
-  if (activeSniperEngine.slug !== '*' && activeSniperEngine.slug !== itemSlug) return;
-
-  // 🛡️ Circuit Breaker guard
-  if (activeSniperEngine.maxSnipesLimit > 0 && activeSniperEngine.snipesExecutedCount >= activeSniperEngine.maxSnipesLimit) {
-    activeSniperEngine.isArmed = false;
-    return;
+  // Find all active user engines registered for this slug (or wildcard '*')
+  let candidateEngines = Array.from(activeSniperEngines.values()).filter(e => e && e.isArmed && (e.slug === '*' || e.slug === itemSlug));
+  if (candidateEngines.length === 0 && activeSniperEngine && activeSniperEngine.isArmed && (activeSniperEngine.slug === '*' || activeSniperEngine.slug === itemSlug)) {
+    candidateEngines = [activeSniperEngine];
   }
+  if (candidateEngines.length === 0) return;
 
   const tokenIdStr = String(parsed.tokenId);
 
   // 🛡️ ATOMIC IN-FLIGHT SYNCHRONOUS LOCK:
   // Drops duplicate concurrent events in 0.001ms BEFORE any async await/yield occurs.
-  if (
-    inFlightEvaluationTokens.has(tokenIdStr) || 
-    activeSniperEngine.snipedTokenIds.has(tokenIdStr) || 
-    (activeSniperEngine.pendingSnipes && activeSniperEngine.pendingSnipes.has(tokenIdStr))
-  ) {
+  if (inFlightEvaluationTokens.has(tokenIdStr)) {
     return;
   }
   inFlightEvaluationTokens.add(tokenIdStr);
 
   try {
     const orderHash = parsed.orderHash || parsed.protocolData?.orderHash;
-    if (orderHash && activeSniperEngine.invalidOrderHashes && activeSniperEngine.invalidOrderHashes.has(orderHash)) return;
 
     // 🛡️ VALID SEAPORT ORDER GUARD: Skip incomplete listings that lack both orderHash and parameters
     const hasOrderHash = Boolean(orderHash && orderHash.length > 10);
@@ -411,135 +411,145 @@ export async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = per
       return; // Wait until order hash or protocol data is populated by OpenSea
     }
 
-    let triggered = false;
-    let reason = '';
-
-    // 🎯 RULE 4: SPECIFIC TOKEN ID TRAP (HIGHEST PRIORITY)
-    const isTokenIdActive = activeSniperEngine.ruleStates?.tokenId !== undefined
-      ? Boolean(activeSniperEngine.ruleStates.tokenId)
-      : Boolean(activeSniperEngine.specificTokenIds && activeSniperEngine.specificTokenIds.size > 0);
-    const cleanTokenId = String(parsed.tokenId || '').trim().replace(/[^0-9]/g, '');
-    if (isTokenIdActive && cleanTokenId && activeSniperEngine.specificTokenIds && activeSniperEngine.specificTokenIds.has(cleanTokenId)) {
-      const maxEth = activeSniperEngine.specificTokenMaxEth > 0
-        ? activeSniperEngine.specificTokenMaxEth
-        : (activeSniperEngine.maxFloorEth > 0 ? activeSniperEngine.maxFloorEth : Infinity);
-      if (parsed.price <= maxEth) {
-        triggered = true;
-        reason = `🎯 Target Token #${cleanTokenId}: ${parsed.price} ETH <= Cap ${maxEth === Infinity ? 'Market' : maxEth + ' ETH'}`;
+    // Evaluate each candidate user engine independently
+    for (const engine of candidateEngines) {
+      if (!engine.isArmed) continue;
+      if (engine.maxSnipesLimit > 0 && engine.snipesExecutedCount >= engine.maxSnipesLimit) {
+        engine.isArmed = false;
+        continue;
       }
-    }
+      if (engine.snipedTokenIds && engine.snipedTokenIds.has(tokenIdStr)) continue;
+      if (engine.pendingSnipes && engine.pendingSnipes.has(tokenIdStr)) continue;
+      if (orderHash && engine.invalidOrderHashes && engine.invalidOrderHashes.has(orderHash)) continue;
 
-    // 👑 RULE 3: RARE TRAIT HUNTER (PRIORITY 2 - MULTI-TRAIT & DYNAMIC RESOLUTION)
-    const isTraitActive = activeSniperEngine.ruleStates?.trait !== undefined
-      ? Boolean(activeSniperEngine.ruleStates.trait)
-      : Boolean((activeSniperEngine.traitFilters && activeSniperEngine.traitFilters.length > 0) || activeSniperEngine.traitFilter);
-    if (!triggered && isTraitActive && (activeSniperEngine.traitFilter || (activeSniperEngine.traitFilters && activeSniperEngine.traitFilters.length > 0))) {
-      const maxEth = activeSniperEngine.traitMaxEth > 0
-        ? activeSniperEngine.traitMaxEth
-        : (activeSniperEngine.traitFilter?.maxEth > 0
-            ? activeSniperEngine.traitFilter.maxEth
-            : (activeSniperEngine.maxFloorEth > 0 ? activeSniperEngine.maxFloorEth : Infinity));
-      if (parsed.price <= maxEth) {
-        const filters = (activeSniperEngine.traitFilters && activeSniperEngine.traitFilters.length > 0)
-          ? activeSniperEngine.traitFilters
-          : (activeSniperEngine.traitFilter ? [activeSniperEngine.traitFilter] : []);
+      let triggered = false;
+      let reason = '';
 
-        let matchedFilterName = '';
-
-        // ⚡ FAST PATH 1: 0.0ms INSTANT RAM TRAIT INDEX MATCH
-        const instantRamMatch = filters.some(f => {
-          if (rarityEngine.hasTraitSync(parsed.tokenId, f.traitType, f.traitValue)) {
-            matchedFilterName = `${f.traitType || 'Any'}: ${f.traitValue}`;
-            return true;
-          }
-          return false;
-        });
-
-        if (instantRamMatch) {
+      // 🎯 RULE 4: SPECIFIC TOKEN ID TRAP (HIGHEST PRIORITY)
+      const isTokenIdActive = engine.ruleStates?.tokenId !== undefined
+        ? Boolean(engine.ruleStates.tokenId)
+        : Boolean(engine.specificTokenIds && engine.specificTokenIds.size > 0);
+      const cleanTokenId = String(parsed.tokenId || '').trim().replace(/[^0-9]/g, '');
+      if (isTokenIdActive && cleanTokenId && engine.specificTokenIds && engine.specificTokenIds.has(cleanTokenId)) {
+        const maxEth = engine.specificTokenMaxEth > 0
+          ? engine.specificTokenMaxEth
+          : (engine.maxFloorEth > 0 ? engine.maxFloorEth : Infinity);
+        if (parsed.price <= maxEth) {
           triggered = true;
-          reason = `👑 Trait Match [${matchedFilterName}]: ${parsed.price} ETH <= Cap ${maxEth === Infinity ? 'Market' : maxEth + ' ETH'} (⚡ 0ms RAM Index)`;
-        } else {
-          // FAST PATH 2: Check traits from parsed event or cached token info
-          let itemTraits = parsed.traits || parsed.rawEvent?.payload?.item?.metadata?.traits || parsed.rawEvent?.payload?.item?.traits || [];
-          if (!itemTraits || itemTraits.length === 0) {
-            const cachedInfo = rarityEngine.getTokenInfoSync(parsed.tokenId);
-            if (cachedInfo?.traits && cachedInfo.traits.length > 0) {
-              itemTraits = cachedInfo.traits;
-            } else {
-              // 🔥 NON-BLOCKING: Fire background fetch, don't delay trigger pipeline
-              const streamContract = parsed.contractAddress || rarityEngine.contractAddress;
-              const streamChain = parsed.chain || rarityEngine.chain || 'robinhood';
-              rarityEngine.fetchTokenRarity(parsed.tokenId, streamChain, streamContract).catch(() => {});
-              // Traits will be in RAM on next event for this token
-            }
-          }
+          reason = `🎯 Target Token #${cleanTokenId}: ${parsed.price} ETH <= Cap ${maxEth === Infinity ? 'Market' : maxEth + ' ETH'}`;
+        }
+      }
 
-          const match = filters.some(f => {
-            const targetType = (f.traitType || '').trim().toLowerCase();
-            const targetVal = (f.traitValue || '').trim().toLowerCase();
-            const found = itemTraits.some(t => {
-              const tType = String(t.trait_type || t.traitType || t.type || '').trim().toLowerCase();
-              const tVal = String(t.value !== undefined ? t.value : (t.val !== undefined ? t.val : '')).trim().toLowerCase();
-              return (!targetType || tType === targetType) && (!targetVal || tVal === targetVal);
-            });
-            if (found) {
+      // 👑 RULE 3: RARE TRAIT HUNTER (PRIORITY 2 - MULTI-TRAIT & DYNAMIC RESOLUTION)
+      const isTraitActive = engine.ruleStates?.trait !== undefined
+        ? Boolean(engine.ruleStates.trait)
+        : Boolean((engine.traitFilters && engine.traitFilters.length > 0) || engine.traitFilter);
+      if (!triggered && isTraitActive && (engine.traitFilter || (engine.traitFilters && engine.traitFilters.length > 0))) {
+        const maxEth = engine.traitMaxEth > 0
+          ? engine.traitMaxEth
+          : (engine.traitFilter?.maxEth > 0
+              ? engine.traitFilter.maxEth
+              : (engine.maxFloorEth > 0 ? engine.maxFloorEth : Infinity));
+        if (parsed.price <= maxEth) {
+          const filters = (engine.traitFilters && engine.traitFilters.length > 0)
+            ? engine.traitFilters
+            : (engine.traitFilter ? [engine.traitFilter] : []);
+
+          let matchedFilterName = '';
+
+          // ⚡ FAST PATH 1: 0.0ms INSTANT RAM TRAIT INDEX MATCH
+          const instantRamMatch = filters.some(f => {
+            if (rarityEngine.hasTraitSync(parsed.tokenId, f.traitType, f.traitValue)) {
               matchedFilterName = `${f.traitType || 'Any'}: ${f.traitValue}`;
               return true;
             }
             return false;
           });
 
-          if (match) {
+          if (instantRamMatch) {
             triggered = true;
-            reason = `👑 Trait Match [${matchedFilterName}]: ${parsed.price} ETH <= Cap ${maxEth === Infinity ? 'Market' : maxEth + ' ETH'}`;
+            reason = `👑 Trait Match [${matchedFilterName}]: ${parsed.price} ETH <= Cap ${maxEth === Infinity ? 'Market' : maxEth + ' ETH'} (⚡ 0ms RAM Index)`;
+          } else {
+            // FAST PATH 2: Check traits from parsed event or cached token info
+            let itemTraits = parsed.traits || parsed.rawEvent?.payload?.item?.metadata?.traits || parsed.rawEvent?.payload?.item?.traits || [];
+            if (!itemTraits || itemTraits.length === 0) {
+              const cachedInfo = rarityEngine.getTokenInfoSync(parsed.tokenId);
+              if (cachedInfo?.traits && cachedInfo.traits.length > 0) {
+                itemTraits = cachedInfo.traits;
+              } else {
+                const streamContract = parsed.contractAddress || rarityEngine.contractAddress;
+                const streamChain = parsed.chain || rarityEngine.chain || 'robinhood';
+                rarityEngine.fetchTokenRarity(parsed.tokenId, streamChain, streamContract).catch(() => {});
+              }
+            }
+
+            const match = filters.some(f => {
+              const targetType = (f.traitType || '').trim().toLowerCase();
+              const targetVal = (f.traitValue || '').trim().toLowerCase();
+              const found = itemTraits.some(t => {
+                const tType = String(t.trait_type || t.traitType || t.type || '').trim().toLowerCase();
+                const tVal = String(t.value !== undefined ? t.value : (t.val !== undefined ? t.val : '')).trim().toLowerCase();
+                return (!targetType || tType === targetType) && (!targetVal || tVal === targetVal);
+              });
+              if (found) {
+                matchedFilterName = `${f.traitType || 'Any'}: ${f.traitValue}`;
+                return true;
+              }
+              return false;
+            });
+
+            if (match) {
+              triggered = true;
+              reason = `👑 Trait Match [${matchedFilterName}]: ${parsed.price} ETH <= Cap ${maxEth === Infinity ? 'Market' : maxEth + ' ETH'}`;
+            }
           }
         }
       }
-    }
 
-    // ⚡ RULE 1: FLOOR UNDERPRICE TRAP (PRIORITY 3)
-    if (!triggered && activeSniperEngine.ruleStates?.floor && activeSniperEngine.maxFloorEth > 0) {
-      if (parsed.price <= activeSniperEngine.maxFloorEth) {
-        triggered = true;
-        reason = `⚡ Floor Fat-Finger: ${parsed.price} ETH <= Target ${activeSniperEngine.maxFloorEth} ETH`;
-      }
-    }
-
-    // 👑 RULE 2: TOP RARITY RANK SNIPE (PRIORITY 4) — 0.01ms INSTANT RANK CHECK
-    const maxRareCap = activeSniperEngine.maxRareEth > 0
-      ? activeSniperEngine.maxRareEth
-      : (activeSniperEngine.maxFloorEth > 0 ? activeSniperEngine.maxFloorEth : 0);
-    if (!triggered && activeSniperEngine.ruleStates?.rarity && maxRareCap > 0) {
-      let rank = rarityEngine.getRaritySync(parsed.tokenId);
-
-      // ⚡ INSTANT FALLBACK: DynamicRarityCalculator IC-based estimated rank (0.01ms, ZERO API calls)
-      if (rank === null && dynamicRarityCalc.isReady && parsed.traits?.length > 0) {
-        const { estimatedRank } = dynamicRarityCalc.scoreAndEstimateRank(parsed.tokenId, parsed.traits);
-        if (estimatedRank > 0) rank = estimatedRank;
+      // ⚡ RULE 1: FLOOR UNDERPRICE TRAP (PRIORITY 3)
+      if (!triggered && engine.ruleStates?.floor && engine.maxFloorEth > 0) {
+        if (parsed.price <= engine.maxFloorEth) {
+          triggered = true;
+          reason = `⚡ Floor Fat-Finger: ${parsed.price} ETH <= Target ${engine.maxFloorEth} ETH`;
+        }
       }
 
-      // ⚡ SHORT-TIMEOUT RANK FETCH: 200ms max (Vercel US → OpenSea US = ~50ms)
-      if (rank === null) {
-        const streamContract = parsed.contractAddress || rarityEngine.contractAddress;
-        const streamChain = parsed.chain || rarityEngine.chain || 'robinhood';
-        try {
-          const resolved = await Promise.race([
-            rarityEngine.fetchTokenRarity(parsed.tokenId, streamChain, streamContract),
-            new Promise((_, rej) => setTimeout(() => rej('timeout'), 800))
-          ]);
-          if (resolved?.rank > 0) rank = resolved.rank;
-        } catch {} // Timeout — proceed without rank, backend stream-js will retry later
+      // 👑 RULE 2: TOP RARITY RANK SNIPE (PRIORITY 4) — 0.01ms INSTANT RANK CHECK
+      const maxRareCap = engine.maxRareEth > 0
+        ? engine.maxRareEth
+        : (engine.maxFloorEth > 0 ? engine.maxFloorEth : 0);
+      if (!triggered && engine.ruleStates?.rarity && maxRareCap > 0) {
+        let rank = rarityEngine.getRaritySync(parsed.tokenId);
+
+        // ⚡ INSTANT FALLBACK: DynamicRarityCalculator IC-based estimated rank (0.01ms, ZERO API calls)
+        if (rank === null && dynamicRarityCalc.isReady && parsed.traits?.length > 0) {
+          const { estimatedRank } = dynamicRarityCalc.scoreAndEstimateRank(parsed.tokenId, parsed.traits);
+          if (estimatedRank > 0) rank = estimatedRank;
+        }
+
+        // ⚡ SHORT-TIMEOUT RANK FETCH: 200ms max
+        if (rank === null) {
+          const streamContract = parsed.contractAddress || rarityEngine.contractAddress;
+          const streamChain = parsed.chain || rarityEngine.chain || 'robinhood';
+          try {
+            const resolved = await Promise.race([
+              rarityEngine.fetchTokenRarity(parsed.tokenId, streamChain, streamContract),
+              new Promise((_, rej) => setTimeout(() => rej('timeout'), 800))
+            ]);
+            if (resolved?.rank > 0) rank = resolved.rank;
+          } catch {}
+        }
+
+        if (rank && rank <= engine.maxRareRank && parsed.price <= maxRareCap) {
+          triggered = true;
+          reason = `👑 Top Rarity #${rank} at ${parsed.price} ETH <= Target ${maxRareCap} ETH`;
+        }
       }
 
-      if (rank && rank <= activeSniperEngine.maxRareRank && parsed.price <= maxRareCap) {
-        triggered = true;
-        reason = `👑 Top Rarity #${rank} at ${parsed.price} ETH <= Target ${maxRareCap} ETH`;
+      if (triggered) {
+        console.log(`🎯 [MULTI-USER SNIPER TRIGGERED] User [${engine.buyerName || engine.userId}]: ${reason} on #${parsed.tokenId}`);
+        await executeZeroHopSnipe(parsed, reason, tTriggerStart, engine);
       }
-    }
-
-    if (triggered) {
-      console.log(`🎯 [SNIPER TRIGGERED] ${reason} on #${parsed.tokenId}`);
-      await executeZeroHopSnipe(parsed, reason, tTriggerStart);
     }
   } finally {
     inFlightEvaluationTokens.delete(tokenIdStr);
@@ -637,58 +647,65 @@ router.post('/snipe/arm', async (req, res) => {
       });
     }
 
-    activeSniperEngine.isArmed = true;
-    activeSniperEngine.armedTimestamp = Date.now();
-    activeSniperEngine.slug = (slug || '*').trim().toLowerCase();
-    activeSniperEngine.triggerMode = triggerMode || 'both';
-    activeSniperEngine.maxFloorEth = parseFloat(maxFloorEth) || 0;
-    activeSniperEngine.maxRareRank = parseInt(maxRareRank, 10) || 1200;
-    activeSniperEngine.maxRareEth = parseFloat(maxRareEth) || 0;
-    activeSniperEngine.gasSpeed = gasSpeed || 'turbo';
-    activeSniperEngine.customGas = customGas || null;
-    activeSniperEngine.buyerPrivateKey = buyerPrivateKey || '';
-    activeSniperEngine.buyerAddress = buyerAddress;
-    activeSniperEngine.buyerName = buyerName || 'Worker';
-    activeSniperEngine.walletSigner = signer;
-    activeSniperEngine.snipedTokenIds = new Set();
-    activeSniperEngine.invalidOrderHashes = new Set();
-    activeSniperEngine.pendingSnipes = new Set();
+    const userKey = String(userId || buyerAddress || 'default');
+    const targetSlug = (slug || '*').trim().toLowerCase();
 
-    activeSniperEngine.maxSnipesLimit = (maxSnipesLimit !== undefined && maxSnipesLimit !== null) ? parseInt(maxSnipesLimit, 10) : 1;
-    activeSniperEngine.snipesExecutedCount = 0;
-    activeSniperEngine.specificTokenIds = tokenSet;
-    activeSniperEngine.specificTokenMaxEth = parseFloat(specificTokenMaxEth) || 0;
-    activeSniperEngine.traitFilter = (traitFilter && (traitFilter.traitType || traitFilter.traitValue)) ? {
-      traitType: (traitFilter.traitType || '').trim(),
-      traitValue: (traitFilter.traitValue || '').trim(),
-      maxEth: parseFloat(traitFilter.maxEth) || 0
-    } : null;
-    activeSniperEngine.traitFilters = Array.isArray(traitFilters) ? traitFilters.map(f => ({
-      traitType: String(f.traitType || '').trim(),
-      traitValue: String(f.traitValue || '').trim()
-    })).filter(f => f.traitType || f.traitValue) : [];
-    activeSniperEngine.traitMaxEth = parseFloat(traitMaxEth) || (traitFilter?.maxEth ? parseFloat(traitFilter.maxEth) : 0);
-    activeSniperEngine.dryRun = !!dryRun;
-    activeSniperEngine.workerStrategy = workerStrategy || 'single';
-    activeSniperEngine.workerPool = workerPool;
-    activeSniperEngine.workerIndex = 0;
-    activeSniperEngine.ruleStates = {
-      floor: ruleStates?.floor !== false,
-      rarity: ruleStates?.rarity !== false,
-      trait: !!ruleStates?.trait || (Array.isArray(traitFilters) && traitFilters.length > 0) || !!traitFilter,
-      tokenId: !!ruleStates?.tokenId || (tokenSet.size > 0)
+    const userEngine = {
+      userId: userKey,
+      isArmed: true,
+      armedTimestamp: Date.now(),
+      slug: targetSlug,
+      triggerMode: triggerMode || 'both',
+      maxFloorEth: parseFloat(maxFloorEth) || 0,
+      maxRareRank: parseInt(maxRareRank, 10) || 1200,
+      maxRareEth: parseFloat(maxRareEth) || 0,
+      gasSpeed: gasSpeed || 'turbo',
+      customGas: customGas || null,
+      buyerPrivateKey: buyerPrivateKey || '',
+      buyerAddress: buyerAddress,
+      buyerName: buyerName || 'Worker',
+      walletSigner: signer,
+      snipedTokenIds: new Set(),
+      invalidOrderHashes: new Set(),
+      pendingSnipes: new Set(),
+      maxSnipesLimit: (maxSnipesLimit !== undefined && maxSnipesLimit !== null) ? parseInt(maxSnipesLimit, 10) : 1,
+      snipesExecutedCount: 0,
+      specificTokenIds: tokenSet,
+      specificTokenMaxEth: parseFloat(specificTokenMaxEth) || 0,
+      traitFilter: (traitFilter && (traitFilter.traitType || traitFilter.traitValue)) ? {
+        traitType: (traitFilter.traitType || '').trim(),
+        traitValue: (traitFilter.traitValue || '').trim(),
+        maxEth: parseFloat(traitFilter.maxEth) || 0
+      } : null,
+      traitFilters: Array.isArray(traitFilters) ? traitFilters.map(f => ({
+        traitType: String(f.traitType || '').trim(),
+        traitValue: String(f.traitValue || '').trim()
+      })).filter(f => f.traitType || f.traitValue) : [],
+      traitMaxEth: parseFloat(traitMaxEth) || (traitFilter?.maxEth ? parseFloat(traitFilter.maxEth) : 0),
+      dryRun: !!dryRun,
+      workerStrategy: workerStrategy || 'single',
+      workerPool: workerPool,
+      workerIndex: 0,
+      ruleStates: {
+        floor: ruleStates?.floor !== false,
+        rarity: ruleStates?.rarity !== false,
+        trait: !!ruleStates?.trait || (Array.isArray(traitFilters) && traitFilters.length > 0) || !!traitFilter,
+        tokenId: !!ruleStates?.tokenId || (tokenSet.size > 0)
+      },
+      authenticatedUserId: userId || null,
+      userValidUntil: armedDbUser ? armedDbUser.valid_until : null,
+      userEmail: armedDbUser ? armedDbUser.email : ''
     };
-    activeSniperEngine.authenticatedUserId = userId || null;
-    activeSniperEngine.userValidUntil = armedDbUser ? armedDbUser.valid_until : null;
-    activeSniperEngine.userEmail = armedDbUser ? armedDbUser.email : '';
 
-    console.log(`🎯 ⚡ [SNIPER ARMED - 8-FEATURE PRO ENGINE]`);
-    console.log(`   Target Slug: "${activeSniperEngine.slug}" | Mode: ${activeSniperEngine.dryRun ? '🧪 PAPER SNIPE (SIMULATED)' : '⚡ LIVE MAINNET'}`);
-    console.log(`   Limit: ${activeSniperEngine.maxSnipesLimit === 0 ? 'Unlimited' : activeSniperEngine.maxSnipesLimit + ' Snipes'} | Workers: ${workerPool.length} (${activeSniperEngine.workerStrategy})`);
-    console.log(`   Rules: Floor=${activeSniperEngine.ruleStates.floor} | Rarity=${activeSniperEngine.ruleStates.rarity} | Trait=${activeSniperEngine.ruleStates.trait} | TokenTrap=${activeSniperEngine.ruleStates.tokenId}`);
+    activeSniperEngines.set(userKey, userEngine);
+    setActiveSniperEngine(userEngine, userKey);
 
-    if (activeSniperEngine.slug && activeSniperEngine.slug !== '*') {
-      subscribeSlugToOpenSea(activeSniperEngine.slug);
+    console.log(`🎯 ⚡ [MULTI-USER SNIPER ARMED: User "${userKey}"]`);
+    console.log(`   Target Slug: "${userEngine.slug}" | Mode: ${userEngine.dryRun ? '🧪 PAPER SNIPE' : '⚡ LIVE MAINNET'}`);
+    console.log(`   Limit: ${userEngine.maxSnipesLimit === 0 ? 'Unlimited' : userEngine.maxSnipesLimit + ' Snipes'} | Active Fleet Total: ${activeSniperEngines.size} users`);
+
+    if (targetSlug && targetSlug !== '*') {
+      subscribeSlugToOpenSea(targetSlug);
     }
 
     // ⚡ PRE-WARM ATOMIC NONCES & RPC SOCKETS IN RAM
@@ -707,12 +724,14 @@ router.post('/snipe/arm', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Ultra-Fast 8-Feature Sniper Engine ARMED in Node.js backend memory',
+      message: 'Ultra-Fast Multi-Tenant Sniper Engine ARMED in Node.js backend memory',
+      userId: userKey,
       buyerAddress: buyerAddress,
-      targetSlug: activeSniperEngine.slug,
-      isDryRun: activeSniperEngine.dryRun,
+      targetSlug: targetSlug,
+      isDryRun: userEngine.dryRun,
       workersLoaded: workerPool.length,
-      maxLimit: activeSniperEngine.maxSnipesLimit
+      maxLimit: userEngine.maxSnipesLimit,
+      activeEnginesCount: activeSniperEngines.size
     });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
@@ -721,45 +740,80 @@ router.post('/snipe/arm', async (req, res) => {
 
 // GET /api/snipe/telemetry
 router.get('/snipe/telemetry', (req, res) => {
+  const reqUserId = String(req.query.userId || '');
+  const engine = (reqUserId && activeSniperEngines.has(reqUserId))
+    ? activeSniperEngines.get(reqUserId)
+    : activeSniperEngine;
+
   res.json({
     success: true,
-    isArmed: activeSniperEngine.isArmed,
-    snipesExecutedCount: activeSniperEngine.snipesExecutedCount,
-    maxSnipesLimit: activeSniperEngine.maxSnipesLimit,
-    dryRun: activeSniperEngine.dryRun,
-    targetSlug: activeSniperEngine.slug,
-    workerStrategy: activeSniperEngine.workerStrategy,
-    workersCount: activeSniperEngine.workerPool ? activeSniperEngine.workerPool.length : 1,
-    ruleStates: activeSniperEngine.ruleStates,
+    isArmed: engine ? engine.isArmed : false,
+    snipesExecutedCount: engine ? engine.snipesExecutedCount : 0,
+    maxSnipesLimit: engine ? engine.maxSnipesLimit : 1,
+    dryRun: engine ? engine.dryRun : false,
+    targetSlug: engine ? engine.slug : '',
+    workerStrategy: engine ? engine.workerStrategy : 'single',
+    workersCount: engine?.workerPool ? engine.workerPool.length : 1,
+    ruleStates: engine ? engine.ruleStates : {},
     activeCollectionStats: activeCollectionStats,
+    activeEnginesCount: activeSniperEngines.size,
     timestamp: Date.now()
   });
 });
 
 // POST /api/snipe/disarm
 router.post('/snipe/disarm', (req, res) => {
-  activeSniperEngine.isArmed = false;
-  activeSniperEngine.walletSigner = null;
-  activeSniperEngine.buyerPrivateKey = '';
-  if (activeSniperEngine.workerPool && activeSniperEngine.workerPool.length > 0) {
-    activeSniperEngine.workerPool.forEach(w => { delete w.privateKey; w.signer = null; });
+  const { userId, buyerAddress } = req.body || {};
+  const userKey = String(userId || buyerAddress || req.query.userId || '');
+
+  if (userKey && activeSniperEngines.has(userKey)) {
+    const engine = activeSniperEngines.get(userKey);
+    engine.isArmed = false;
+    engine.walletSigner = null;
+    engine.buyerPrivateKey = '';
+    if (engine.workerPool && engine.workerPool.length > 0) {
+      engine.workerPool.forEach(w => { delete w.privateKey; w.signer = null; });
+    }
+    activeSniperEngines.delete(userKey);
+    console.log(`⏸ [SNIPER DISARMED] User [${userKey}] keys purged from RAM.`);
+
+    if (engine.slug && engine.slug !== '*') {
+      const isAnyOtherWatching = Array.from(activeSniperEngines.values()).some(e => e.isArmed && (e.slug === engine.slug || e.slug === '*'));
+      if (!isAnyOtherWatching) streamListener.unsubscribe(engine.slug);
+    }
+  } else {
+    // Global disarm fallback
+    for (const [k, engine] of activeSniperEngines.entries()) {
+      engine.isArmed = false;
+      engine.walletSigner = null;
+      engine.buyerPrivateKey = '';
+      if (engine.workerPool) engine.workerPool.forEach(w => { delete w.privateKey; w.signer = null; });
+    }
+    activeSniperEngines.clear();
+    activeSniperEngine.isArmed = false;
+    activeSniperEngine.walletSigner = null;
+    activeSniperEngine.buyerPrivateKey = '';
+    walletNonceMap.clear();
+    console.log(`⏸ [SNIPER V2 DISARMED ALL] All user keys purged from RAM.`);
   }
-  walletNonceMap.clear();
-  console.log(`⏸ [SNIPER V2 DISARMED] Keys purged from RAM.`);
-  res.json({ success: true, message: 'Sniper Engine Disarmed & Keys Purged' });
+
+  res.json({ success: true, message: 'Sniper Engine Disarmed & Keys Purged', activeEnginesRemaining: activeSniperEngines.size });
 });
 
 // POST /api/snipe/buy
 router.post('/snipe/buy', async (req, res) => {
-  const { buyerPrivateKey, protocolData, orderHash, tokenId, gasSpeed, workerIndex } = req.body;
+  const { buyerPrivateKey, protocolData, orderHash, tokenId, gasSpeed, workerIndex, userId } = req.body;
 
   let signer = null;
   let buyerAddress = '';
   const provider = seaportExecutor.providers[0];
 
-  if (activeSniperEngine.workerPool && activeSniperEngine.workerPool.length > 0) {
-    const idx = (typeof workerIndex === 'number' && workerIndex < activeSniperEngine.workerPool.length) ? workerIndex : 0;
-    const worker = activeSniperEngine.workerPool[idx];
+  const userKey = String(userId || '');
+  const userEngine = (userKey && activeSniperEngines.has(userKey)) ? activeSniperEngines.get(userKey) : activeSniperEngine;
+
+  if (userEngine && userEngine.workerPool && userEngine.workerPool.length > 0) {
+    const idx = (typeof workerIndex === 'number' && workerIndex < userEngine.workerPool.length) ? workerIndex : 0;
+    const worker = userEngine.workerPool[idx];
     if (worker && worker.signer) {
       signer = worker.signer;
       buyerAddress = worker.address || signer.address;
