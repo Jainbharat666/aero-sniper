@@ -10,7 +10,17 @@ import {
 import { fetchOpenSeaWithFallback, formatEthPrecise } from './openSeaClient.js';
 import { subscribeSlugToOpenSea } from './routes/stream.js';
 import { resolveClosestCollectionSlug } from './routes/scan.js';
-import { dbGetUserByEmail, dbGetUsers, dbUpdateUser } from './db.js';
+import { 
+  dbGetUserByEmail, 
+  dbGetUsers, 
+  dbUpdateUser, 
+  dbGetUserConfig, 
+  dbSaveUserConfig, 
+  dbGetUserById, 
+  SUPABASE_URL, 
+  supabaseHeaders, 
+  OWNER_EMAIL 
+} from './db.js';
 
 // Environment Bindings
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8849256750:AAGL6tEK_2tatSxgS-RjWp2ngE7B6lh29RI';
@@ -26,6 +36,144 @@ let isPollingActive = false;
 let botActiveDiscountPercent = 20;
 let botActiveGasPreset = 'turbo';
 let botPaperSnipeMode = false;
+
+/**
+ * 🔒 GET LINKED USER & CLOUD CONFIG FOR TELEGRAM CHAT ID
+ */
+export async function getLinkedUserForChat(chatId) {
+  if (!chatId) return null;
+  const strId = String(chatId);
+
+  try {
+    // 1. Search sniper_user_configs for matching telegram_chat_id
+    const res = await axios.get(`${SUPABASE_URL}/rest/v1/sniper_user_configs?select=user_id,config&config->>telegram_chat_id=eq.${encodeURIComponent(strId)}`, {
+      headers: supabaseHeaders,
+      timeout: 5000
+    });
+
+    if (res.data && res.data.length > 0) {
+      const userId = res.data[0].user_id;
+      const config = res.data[0].config || {};
+      const user = await dbGetUserById(userId);
+
+      if (user) {
+        const isOwner = user.email?.toLowerCase() === OWNER_EMAIL || user.role === 'admin';
+        const isBanned = !!user.is_banned;
+        let isExpired = false;
+        if (!isOwner && user.valid_until) {
+          isExpired = new Date(user.valid_until) < new Date();
+        }
+        return { user, config, isOwner, isBanned, isExpired };
+      }
+    }
+
+    // 2. Admin Chat ID Fallback: If chatId matches TELEGRAM_ADMIN_CHAT_ID, auto-link to owner user
+    if (strId === TELEGRAM_ADMIN_CHAT_ID) {
+      const ownerUser = (await dbGetUserById('owner-sniper-master-001')) || (await dbGetUsers())[0];
+      if (ownerUser) {
+        const config = (await dbGetUserConfig(ownerUser.id)) || {};
+        return { user: ownerUser, config, isOwner: true, isBanned: false, isExpired: false };
+      }
+    }
+
+    return null;
+  } catch (e) {
+    console.error('[TELEGRAM AUTH CHECK ERROR]:', e.message);
+    return null;
+  }
+}
+
+/**
+ * 🔑 VERIFY & BIND ONE-TIME LINK TOKEN (BURN-AFTER-READING)
+ */
+export async function verifyAndLinkTelegramToken(chatId, rawToken, senderInfo = {}) {
+  if (!chatId || !rawToken) {
+    return { success: false, error: 'Empty token input.' };
+  }
+  const cleanToken = rawToken.toUpperCase().replace('/START', '').replace(/\s+/g, '').trim();
+
+  try {
+    const res = await axios.get(`${SUPABASE_URL}/rest/v1/sniper_user_configs?select=user_id,config&config->>telegram_link_token=eq.${encodeURIComponent(cleanToken)}`, {
+      headers: supabaseHeaders,
+      timeout: 6000
+    });
+
+    if (!res.data || res.data.length === 0) {
+      return { success: false, error: '❌ <b>Invalid or Unrecognized Link Token.</b>\nPlease open the website dashboard, click <b>[ 📱 Telegram Sync ]</b> and generate a fresh token.' };
+    }
+
+    const userId = res.data[0].user_id;
+    const config = res.data[0].config || {};
+    const user = await dbGetUserById(userId);
+
+    if (!user) {
+      return { success: false, error: '❌ Associated user account not found.' };
+    }
+
+    // Check expiration (15-minute strict window)
+    if (config.telegram_token_expires_at && new Date(config.telegram_token_expires_at) < new Date()) {
+      return { success: false, error: '⏳ <b>Token Expired.</b>\nFor your security, link tokens expire after 15 minutes. Please generate a fresh token from your website dashboard.' };
+    }
+
+    // Check subscription validity
+    const isOwner = user.email?.toLowerCase() === OWNER_EMAIL || user.role === 'admin';
+    if (!isOwner && user.valid_until && new Date(user.valid_until) < new Date()) {
+      return { success: false, error: '⚠️ <b>Subscription Expired.</b>\nYour VIP access has ended. Please renew your plan on the website.' };
+    }
+
+    // 🔥 INSTANT TOKEN BURN (Single-Use Destruction)
+    delete config.telegram_link_token;
+    delete config.telegram_token_expires_at;
+    config.telegram_chat_id = String(chatId);
+    config.telegram_username = senderInfo.username || '';
+    config.telegram_first_name = senderInfo.first_name || '';
+    config.telegram_linked_at = new Date().toISOString();
+
+    await dbSaveUserConfig(userId, config);
+    await dbUpdateUser(userId, { telegram_chat_id: String(chatId) }).catch(() => {});
+
+    // Sync to memory engine
+    syncRulesToEngines();
+
+    return { success: true, user, config };
+  } catch (err) {
+    return { success: false, error: '❌ Server verification error: ' + err.message };
+  }
+}
+
+/**
+ * 🔒 BUILD UNLINKED GATEKEEPER SCREEN
+ */
+export function buildUnlinkedGatekeeperMenu() {
+  const text = `
+🔒 <b>AERO-SNIPER VIP • ACCESS RESTRICTED</b> 🔒
+<i>Institutional High-Frequency NFT Sniping Protocol</i>
+
+━━━━━━━━━━━━━━━━━━━━━
+⚠️ <b>Access Denied: Telegram Account Not Linked</b>
+
+This Telegram terminal is exclusively reserved for active <b>Aero-Sniper Pro</b> subscribers.
+
+<b>How to Connect Your Account:</b>
+1️⃣ Log in to your dashboard: <a href="${WEBAPP_URL}">${WEBAPP_URL.replace('https://', '')}</a>
+2️⃣ Click <b>[ 📱 Telegram Sync ]</b> in the top navbar.
+3️⃣ Tap <b>"1-Click Open in Telegram"</b> or copy your <b>Secret Link Token</b> and send it into this chat.
+
+━━━━━━━━━━━━━━━━━━━━━
+🛡️ <i>Your token is private, one-time use, and burns immediately upon connection.</i>
+`.trim();
+
+  const keyboard = [
+    [
+      { text: '🌐 Open Website Dashboard', web_app: { url: WEBAPP_URL } }
+    ],
+    [
+      { text: '❓ How to Connect Account', callback_data: 'gate_help' }
+    ]
+  ];
+
+  return { text, keyboard };
+}
 
 // 4 Sniper Strategies State (Synchronized with active engine)
 export const botRuleConfig = {
@@ -196,42 +344,63 @@ export function syncRulesToEngines(slug = null, contract = null) {
 /**
  * 🎨 1. MAIN DASHBOARD MENU (Hub)
  */
-export function buildMainMenu(chatId = null) {
+/**
+ * 🎨 1. MAIN DASHBOARD MENU (Hub with Gatekeeper Protection)
+ */
+export async function buildMainMenu(chatId = null) {
+  const authInfo = await getLinkedUserForChat(chatId);
+  if (!authInfo || authInfo.isBanned) {
+    return buildUnlinkedGatekeeperMenu();
+  }
+
+  const { user, config, isOwner, isExpired } = authInfo;
+  if (isExpired) {
+    const expiredText = `
+⚠️ <b>VIP SUBSCRIPTION EXPIRED</b> ⚠️
+
+👤 <b>Account:</b> <code>${user.email}</code>
+⏳ <b>Status:</b> <b>Access Ended</b>
+
+Your cloud sniper engine has been paused because your subscription validity expired. Please log in to <a href="${WEBAPP_URL}">Aero-Sniper Dashboard</a> and top up your plan.
+`.trim();
+    const keyboard = [[{ text: '🌐 Top Up Subscription', web_app: { url: WEBAPP_URL } }]];
+    return { text: expiredText, keyboard };
+  }
+
+  const wallets = config.walletFleet || config.wallets || [];
   const isArmed = Array.from(activeSniperEngines.values()).some(e => e.isArmed) || activeSniperEngine.isArmed;
   const stats = activeCollectionStats;
   const hasTarget = !!(stats && stats.slug);
-  const activeEngines = activeSniperEngines.size || (isArmed ? 1 : 0);
 
-  let text = '';
-  let keyboard = [];
+  const roleTag = isOwner ? '👑 Master Lifetime' : '⚡ VIP Subscriber (Active)';
+  const currentSlug = stats?.name || stats?.slug || '🔍 Standby (No Target)';
+  const floorEthDisp = formatDisplayEth(stats?.floorEth || 0);
+  const usdFloor = ((stats?.floorEth || 0) * cachedEthPrice).toFixed(2);
 
-  if (hasTarget) {
-    const currentSlug = stats.name || stats.slug;
-    const floorEthNum = parseFloat(stats.floorEth) || 0;
-    const floorEthDisp = formatDisplayEth(floorEthNum);
-    const usdFloor = (floorEthNum * cachedEthPrice).toFixed(2);
+  // Rule Summary Lines
+  const r1State = botRuleConfig.ruleStates.floor ? '🟢 ON' : '⚪ OFF';
+  const r1Val = botRuleConfig.floor.maxEth > 0 ? `${formatDisplayEth(botRuleConfig.floor.maxEth)} ETH` : `-${botRuleConfig.floor.discountPercent}%`;
 
-    // Rule Summary Lines
-    const r1State = botRuleConfig.ruleStates.floor ? '🟢 ON' : '⚪ OFF';
-    const r1Val = botRuleConfig.floor.maxEth > 0 ? `${formatDisplayEth(botRuleConfig.floor.maxEth)} ETH` : `-${botRuleConfig.floor.discountPercent}%`;
+  const r2State = botRuleConfig.ruleStates.rarity ? '🟢 ON' : '⚪ OFF';
+  const r2Val = `Top #${botRuleConfig.rarity.maxRank} (Cap: ${formatDisplayEth(botRuleConfig.rarity.maxEth)} ETH)`;
 
-    const r2State = botRuleConfig.ruleStates.rarity ? '🟢 ON' : '⚪ OFF';
-    const r2Val = `Top #${botRuleConfig.rarity.maxRank} (Cap: ${formatDisplayEth(botRuleConfig.rarity.maxEth)} ETH)`;
+  const r3State = botRuleConfig.ruleStates.trait ? '🟢 ON' : '⚪ OFF';
+  const r3Val = `${botRuleConfig.trait.filters.length} traits (Cap: ${formatDisplayEth(botRuleConfig.trait.maxEth)} ETH)`;
 
-    const r3State = botRuleConfig.ruleStates.trait ? '🟢 ON' : '⚪ OFF';
-    const r3Val = `${botRuleConfig.trait.filters.length} traits (Cap: ${formatDisplayEth(botRuleConfig.trait.maxEth)} ETH)`;
+  const r4State = botRuleConfig.ruleStates.tokenId ? '🟢 ON' : '⚪ OFF';
+  const r4Val = `${botRuleConfig.tokenId.tokens.length} token IDs (Cap: ${formatDisplayEth(botRuleConfig.tokenId.maxEth)} ETH)`;
 
-    const r4State = botRuleConfig.ruleStates.tokenId ? '🟢 ON' : '⚪ OFF';
-    const r4Val = `${botRuleConfig.tokenId.tokens.length} token IDs (Cap: ${formatDisplayEth(botRuleConfig.tokenId.maxEth)} ETH)`;
-
-    text = `
-⚡ <b>AERO-SNIPER PRO • TELEGRAM TERMINAL</b> ⚡
+  const text = `
+⚡ <b>AERO-SNIPER PRO • SUBSCRIBER TERMINAL</b> ⚡
 <i>Institutional High-Frequency NFT Sniping Protocol</i>
 
 ━━━━━━━━━━━━━━━━━━━━━
+👤 <b>Subscriber:</b> <code>${user.email}</code>
+👑 <b>Tier:</b> <b>${roleTag}</b>
+💼 <b>Fleet:</b> <b>${wallets.length} active wallet(s)</b>
 🎯 <b>Active Target:</b> <code>${currentSlug}</code>
 💎 <b>Current Floor:</b> <b>${floorEthDisp} ETH</b> (~$${usdFloor} USD)
-🛡️ <b>Engine Status:</b> ${isArmed ? '🟢 <b>ARMED & HUNTING (24/7)</b>' : '🔴 <b>DISARMED / STANDBY</b>'}
+🛡️ <b>Engine Status:</b> ${isArmed ? '🟢 <b>ARMED & HUNTING (24/7 Cloud)</b>' : '🔴 <b>STANDBY / DISARMED</b>'}
 🧪 <b>Mode:</b> ${botPaperSnipeMode ? '🧪 <b>PAPER SNIPE (SIMULATION)</b>' : '⚡ <b>100% REAL ON-CHAIN MAINNET</b>'}
 🚀 <b>Gas Speed:</b> <b>${botActiveGasPreset.toUpperCase()}</b> (Auto-Surge)
 
@@ -241,76 +410,36 @@ export function buildMainMenu(chatId = null) {
 • 3️⃣ <b>Rare Traits:</b> [${r3State}] <code>${r3Val}</code>
 • 4️⃣ <b>Token Trap:</b> [${r4State}] <code>${r4Val}</code>
 ━━━━━━━━━━━━━━━━━━━━━
-<i>💡 Tap buttons below to Arm, adjust 4 rules, or clear target:</i>
+<i>💡 PC band hone ke baad bhi cloud sniper 24/7 hunting karta rahega:</i>
 `.trim();
 
-    keyboard = [
-      [
-        isArmed
-          ? { text: '⏸ Pause Sniper', callback_data: 'action_pause' }
-          : { text: '⚡ ARM AUTO-SNIPER (24/7)', callback_data: 'action_arm' }
-      ],
-      [
-        { text: '⚙️ Configure 4 Sniper Rules', callback_data: 'menu_rules_hub' }
-      ],
-      [
-        { text: '🎯 Change Target', callback_data: 'menu_target' },
-        { text: '🗑️ Clear Target', callback_data: 'action_clear_target' }
-      ],
-      [
-        { text: `🚀 Gas: ${botActiveGasPreset.toUpperCase()}`, callback_data: 'menu_gas' },
-        { text: botPaperSnipeMode ? '🧪 Mode: Paper' : '⚡ Mode: Real', callback_data: 'action_toggle_sim' }
-      ],
-      [
-        { text: '👛 Wallet Fleet Holdings', callback_data: 'menu_wallets' },
-        { text: '📊 Live Telemetry', callback_data: 'menu_stats' }
-      ],
-      [
-        { text: '🔄 Refresh', callback_data: 'menu_refresh' },
-        { text: '❓ Guide', callback_data: 'menu_help' },
-        { text: '🌐 Launch WebApp', web_app: { url: WEBAPP_URL } }
-      ]
-    ];
-  } else {
-    // 🛡️ CLEAN FRESH STANDBY STATE
-    text = `
-⚡ <b>AERO-SNIPER PRO • TELEGRAM TERMINAL</b> ⚡
-<i>Institutional High-Frequency NFT Sniping Protocol</i>
-
-━━━━━━━━━━━━━━━━━━━━━
-🎯 <b>Target:</b> <code>🔍 No Collection Loaded (Standby)</code>
-💎 <b>Floor Price:</b> <code>-- ETH</code>
-🛡️ <b>Engine Status:</b> 🔴 <b>STANDBY (Awaiting Target)</b>
-🧪 <b>Mode:</b> ${botPaperSnipeMode ? '🧪 <b>PAPER SNIPE (SIMULATION)</b>' : '⚡ <b>100% REAL ON-CHAIN MAINNET</b>'}
-🚀 <b>Gas Speed:</b> <b>${botActiveGasPreset.toUpperCase()}</b> (Auto-Surge)
-👥 <b>Cloud Engines:</b> <code>${activeEngines} user(s) online</code>
-🌐 <b>Robinhood Sequencer:</b> 🟢 <b>Sub-15ms Active</b>
-━━━━━━━━━━━━━━━━━━━━━
-<i>💡 Send any OpenSea link/slug in chat or tap below to set target:</i>
-`.trim();
-
-    keyboard = [
-      [
-        { text: '🔍 Search & Set Target NFT', callback_data: 'menu_target' }
-      ],
-      [
-        { text: '⚙️ Configure 4 Sniper Rules', callback_data: 'menu_rules_hub' },
-        { text: `🚀 Gas: ${botActiveGasPreset.toUpperCase()}`, callback_data: 'menu_gas' }
-      ],
-      [
-        { text: botPaperSnipeMode ? '🧪 Mode: Paper' : '⚡ Mode: Real', callback_data: 'action_toggle_sim' },
-        { text: '👛 Wallet Fleet', callback_data: 'menu_wallets' }
-      ],
-      [
-        { text: '📊 Telemetry & Health', callback_data: 'menu_stats' },
-        { text: '🔄 Refresh', callback_data: 'menu_refresh' }
-      ],
-      [
-        { text: '❓ Command Guide', callback_data: 'menu_help' },
-        { text: '🌐 Launch WebApp', web_app: { url: WEBAPP_URL } }
-      ]
-    ];
-  }
+  const keyboard = [
+    [
+      isArmed
+        ? { text: '⏸ Pause Sniper', callback_data: 'action_pause' }
+        : { text: '⚡ ARM AUTO-SNIPER (24/7)', callback_data: 'action_arm' }
+    ],
+    [
+      { text: '⚙️ Configure 4 Sniper Rules', callback_data: 'menu_rules_hub' }
+    ],
+    [
+      { text: '🎯 Set Target Collection', callback_data: 'menu_target' },
+      { text: '🗑️ Clear Target', callback_data: 'action_clear_target' }
+    ],
+    [
+      { text: `🚀 Gas: ${botActiveGasPreset.toUpperCase()}`, callback_data: 'menu_gas' },
+      { text: botPaperSnipeMode ? '🧪 Mode: Paper' : '⚡ Mode: Real', callback_data: 'action_toggle_sim' }
+    ],
+    [
+      { text: `👛 Wallet Fleet (${wallets.length})`, callback_data: 'menu_wallets' },
+      { text: '📊 Telemetry & Health', callback_data: 'menu_stats' }
+    ],
+    [
+      { text: '🔄 Refresh Status', callback_data: 'menu_refresh' },
+      { text: '❓ Command Guide', callback_data: 'menu_help' },
+      { text: '🌐 Launch WebApp', web_app: { url: WEBAPP_URL } }
+    ]
+  ];
 
   return { text, keyboard };
 }
@@ -599,11 +728,14 @@ Choose your Robinhood Chain mempool racing multiplier:
  * 👛 BUILD WALLETS FLEET STATUS MENU
  */
 export async function buildWalletsMenu(chatId = null) {
-  const users = await dbGetUsers().catch(() => []);
-  const primaryUser = users[0];
-  const wallets = primaryUser?.vault?.wallets || [];
+  const authInfo = await getLinkedUserForChat(chatId);
+  if (!authInfo) return buildUnlinkedGatekeeperMenu();
 
-  // Live RPC Balance refresh from Robinhood Chain
+  const { user, config } = authInfo;
+  const wallets = config.walletFleet || config.wallets || [];
+  const masterWallet = wallets.find(w => w.role === 'master' || w.name?.includes('Master')) || wallets[0];
+
+  // Live RPC Balance refresh from Robinhood Chain in parallel
   if (wallets.length > 0) {
     await Promise.all(wallets.map(async (w) => {
       try {
@@ -622,8 +754,6 @@ export async function buildWalletsMenu(chatId = null) {
     }));
   }
 
-  const masterWallet = wallets.find(w => w.role === 'master') || wallets[0];
-
   let totalEth = 0;
   wallets.forEach(w => {
     totalEth += parseFloat(w.balance || 0);
@@ -632,21 +762,23 @@ export async function buildWalletsMenu(chatId = null) {
 
   let walletLines = '';
   if (wallets.length === 0) {
-    walletLines = '<i>No wallets configured yet. Tap "➕ Add Private Key" or "⚡ Generate 5 Workers" below!</i>';
+    walletLines = '<i>No wallets configured yet. Add wallets on website or import below.</i>';
   } else {
-    walletLines = wallets.slice(0, 8).map((w, idx) => {
+    walletLines = wallets.slice(0, 10).map((w, idx) => {
       const shortAddr = w.address ? `${w.address.slice(0, 6)}...${w.address.slice(-4)}` : '0x...';
-      const roleTag = w.role === 'master' ? '👑 Master' : '⚡ Worker';
+      const isMaster = w.role === 'master' || w.name?.includes('Master') || idx === 0;
+      const roleTag = isMaster ? '👑 Master' : '⚡ Worker';
       const bal = formatDisplayEth(w.balance || 0);
       return `• <b>${roleTag} (${w.name || '#' + (idx + 1)}):</b> <code>${shortAddr}</code> — <b>${bal} ETH</b>`;
     }).join('\n');
-    if (wallets.length > 8) {
-      walletLines += `\n<i>...and ${wallets.length - 8} more worker sub-wallets</i>`;
+    if (wallets.length > 10) {
+      walletLines += `\n<i>...and ${wallets.length - 10} more worker sub-wallets</i>`;
     }
   }
 
   const text = `
 👛 <b>MAINNET WALLET FLEET STATUS</b> 👛
+👤 <b>Subscriber:</b> <code>${user.email}</code>
 
 💰 <b>Total Fleet Value:</b> <b>${formatDisplayEth(totalEth)} ETH</b> (~$${totalUsd} USD)
 👥 <b>Total Active Wallets:</b> <b>${wallets.length} wallet(s)</b>
@@ -655,19 +787,16 @@ export async function buildWalletsMenu(chatId = null) {
 <b>Active Fleet List:</b>
 ${walletLines}
 
-🛡️ <i>Auto-Rotation & Anti-Scam Architecture Active</i>
+🛡️ <i>Zero Private Key Exposure Policy Active. Only public addresses & balances are visible.</i>
 `.trim();
 
   const keyboard = [
     [
-      { text: '➕ Add Private Key', callback_data: 'prompt_add_wallet' },
-      { text: '⚡ Auto-Generate 5 Workers', callback_data: 'action_generate_workers' }
+      { text: '➕ Import Private Key', callback_data: 'prompt_add_wallet' },
+      { text: '⚡ Generate 5 Workers', callback_data: 'action_generate_workers' }
     ],
     [
       { text: '🔄 Refresh Balances', callback_data: 'menu_wallets' },
-      { text: '🗑️ Clear All Wallets', callback_data: 'action_clear_wallets' }
-    ],
-    [
       { text: '🔙 Back to Main Dashboard', callback_data: 'menu_main' }
     ]
   ];
@@ -868,6 +997,9 @@ export async function dispatchGlobalMasterFeedAlert(snipeData) {
 /**
  * 🔘 INTERACTIVE CALLBACK QUERY ROUTER (Handle Button Taps)
  */
+/**
+ * 🔘 INTERACTIVE CALLBACK QUERY ROUTER (Handle Button Taps)
+ */
 async function handleCallbackQuery(callbackQuery) {
   const data = callbackQuery.data;
   const message = callbackQuery.message;
@@ -875,6 +1007,34 @@ async function handleCallbackQuery(callbackQuery) {
   const messageId = message?.message_id;
 
   if (!chatId || !messageId) return;
+
+  // 🔒 Gatekeeper Help Callback
+  if (data === 'gate_help') {
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const helpMsg = `
+ℹ️ <b>HOW TO CONNECT YOUR ACCOUNT</b>
+
+1️⃣ Open <a href="${WEBAPP_URL}">${WEBAPP_URL.replace('https://', '')}</a> in your browser.
+2️⃣ Log in to your subscriber account.
+3️⃣ Click <b>[ 📱 Telegram Sync ]</b> at the top of the dashboard.
+4️⃣ Click <b>"1-Click Open in Telegram"</b> or copy your secret token and paste it here.
+
+🔒 <i>Tokens burn immediately after single use for maximum security.</i>
+`.trim();
+    const keyboard = [
+      [{ text: '🌐 Open Website', web_app: { url: WEBAPP_URL } }],
+      [{ text: '🔙 Back', callback_data: 'menu_main' }]
+    ];
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, helpMsg, keyboard);
+  }
+
+  // 🔒 Subscriber Authentication & Gatekeeper Check
+  const authInfo = await getLinkedUserForChat(chatId);
+  if (!authInfo || authInfo.isBanned || authInfo.isExpired) {
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '🔒 VIP Subscription Required');
+    const gateMenu = await buildMainMenu(chatId);
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, gateMenu.text, gateMenu.keyboard);
+  }
 
   // 1. Arm Action
   if (data === 'action_arm' || data === 'arm') {
@@ -889,7 +1049,7 @@ async function handleCallbackQuery(callbackQuery) {
     }
     activeSniperEngine.isArmed = true;
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '⚡ Sniper ARMED in Cloud 24/7!');
-    const menu = buildMainMenu(chatId);
+    const menu = await buildMainMenu(chatId);
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
@@ -900,7 +1060,7 @@ async function handleCallbackQuery(callbackQuery) {
     }
     activeSniperEngine.isArmed = false;
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '⏸ Sniper PAUSED!');
-    const menu = buildMainMenu(chatId);
+    const menu = await buildMainMenu(chatId);
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
@@ -908,7 +1068,7 @@ async function handleCallbackQuery(callbackQuery) {
   if (data === 'action_clear_target' || data === 'clear_target') {
     clearBotTarget();
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '🗑️ Target Cleared! Engine in Standby.');
-    const menu = buildMainMenu(chatId);
+    const menu = await buildMainMenu(chatId);
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
@@ -917,7 +1077,7 @@ async function handleCallbackQuery(callbackQuery) {
     botPaperSnipeMode = !botPaperSnipeMode;
     syncRulesToEngines();
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, botPaperSnipeMode ? '🧪 Paper Snipe Activated (0 ETH spent)' : '⚡ Real Mainnet Activated!');
-    const menu = buildMainMenu(chatId);
+    const menu = await buildMainMenu(chatId);
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
@@ -1172,7 +1332,7 @@ Please type the maximum ETH price (e.g. <code>0.1</code>):
     if (stats) {
       await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, `✅ Target: ${stats.name}`);
     }
-    const menu = buildMainMenu(chatId);
+    const menu = await buildMainMenu(chatId);
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
@@ -1202,7 +1362,7 @@ Please type the OpenSea URL or collection slug in your next message (e.g. <code>
     botActiveGasPreset = preset;
     syncRulesToEngines();
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, `🚀 Gas set to: ${preset.toUpperCase()}`);
-    const menu = buildMainMenu(chatId);
+    const menu = await buildMainMenu(chatId);
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
@@ -1231,24 +1391,22 @@ Please type or paste your <b>Private Key</b> (64-hex starting with <code>0x...</
   // Generate 5 Worker Wallets
   if (data === 'action_generate_workers') {
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '⚡ Generating 5 Worker Wallets...');
-    const users = await dbGetUsers().catch(() => []);
-    const primaryUser = users[0];
-    if (primaryUser) {
-      if (!primaryUser.vault) primaryUser.vault = {};
-      if (!Array.isArray(primaryUser.vault.wallets)) primaryUser.vault.wallets = [];
+    if (authInfo?.user?.id) {
+      const userConfig = (await dbGetUserConfig(authInfo.user.id)) || {};
+      if (!Array.isArray(userConfig.walletFleet)) userConfig.walletFleet = [];
 
       for (let i = 0; i < 5; i++) {
         const randWallet = ethers.Wallet.createRandom();
-        primaryUser.vault.wallets.push({
+        userConfig.walletFleet.push({
           address: randWallet.address,
           privateKey: randWallet.privateKey,
-          name: `Worker #${primaryUser.vault.wallets.length + 1}`,
+          name: `Worker #${userConfig.walletFleet.length + 1}`,
           role: 'worker',
           balance: '0'
         });
       }
 
-      await dbUpdateUser(primaryUser.id, { vault: primaryUser.vault });
+      await dbSaveUserConfig(authInfo.user.id, userConfig);
       syncRulesToEngines();
       await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '✅ 5 Worker Wallets Generated!');
     }
@@ -1256,25 +1414,10 @@ Please type or paste your <b>Private Key</b> (64-hex starting with <code>0x...</
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
-  // Clear All Wallets
-  if (data === 'action_clear_wallets') {
-    const users = await dbGetUsers().catch(() => []);
-    const primaryUser = users[0];
-    if (primaryUser) {
-      if (!primaryUser.vault) primaryUser.vault = {};
-      primaryUser.vault.wallets = [];
-      await dbUpdateUser(primaryUser.id, { vault: primaryUser.vault });
-      syncRulesToEngines();
-    }
-    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '🗑️ Wallet fleet cleared.');
-    const menu = await buildWalletsMenu(chatId);
-    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
-  }
-
   // 13. Stats / Telemetry
   if (data === 'menu_stats' || data === 'menu_refresh' || data === 'bot_refresh') {
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '🔄 Refreshed');
-    const menu = buildMainMenu(chatId);
+    const menu = await buildMainMenu(chatId);
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
@@ -1282,7 +1425,7 @@ Please type or paste your <b>Private Key</b> (64-hex starting with <code>0x...</
   if (data === 'menu_main') {
     userPromptState.delete(chatId);
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
-    const menu = buildMainMenu(chatId);
+    const menu = await buildMainMenu(chatId);
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
@@ -1325,14 +1468,46 @@ async function handleTextMessage(message) {
   const text = message.text?.trim();
   if (!chatId || !text) return;
 
-  // Auto-sync telegramChatId
-  if (chatId) {
-    dbGetUsers().then(users => {
-      if (users && users.length > 0) {
-        users[0].telegramChatId = String(chatId);
-        dbUpdateUser(users[0].id, { telegram_chat_id: String(chatId) }).catch(() => {});
-      }
-    }).catch(() => {});
+  // 🔑 1. DETECT ONE-TIME WEB-TO-TELEGRAM LINK TOKEN
+  const isTokenInput = text.startsWith('/start AERO') || 
+                       text.startsWith('AERO-TG-') || 
+                       text.startsWith('AERO_TG_') || 
+                       /AERO[-_]TG[-_][A-Z0-9_-]+/i.test(text);
+
+  if (isTokenInput) {
+    sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '🔐 <b>Verifying Secret Subscriber Token...</b>');
+    const linkRes = await verifyAndLinkTelegramToken(chatId, text, message.from);
+
+    if (linkRes.success) {
+      const user = linkRes.user;
+      const config = linkRes.config;
+      const walletCount = (config.walletFleet || config.wallets || []).length;
+
+      const welcomeText = `
+🎉 <b>TELEGRAM SUBSCRIBER SYNC SUCCESSFUL!</b> 🎉
+━━━━━━━━━━━━━━━━━━━━━
+👤 <b>Account:</b> <code>${user.email}</code>
+💼 <b>Fleet Connected:</b> <b>${walletCount} wallet(s)</b>
+⚡ <b>Cloud Sniper Engine:</b> <b>24/7 Active</b>
+
+🛡️ <i>Your one-time link token has burned for security. Your phone is now securely bound to your private cloud sniper!</i>
+`.trim();
+
+      await sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, welcomeText);
+      const menu = await buildMainMenu(chatId);
+      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard);
+    } else {
+      const failText = linkRes.error || '❌ Invalid token.';
+      const gateMenu = buildUnlinkedGatekeeperMenu();
+      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `${failText}\n\n` + gateMenu.text, gateMenu.keyboard);
+    }
+  }
+
+  // 🔒 2. SUBSCRIBER AUTHENTICATION CHECK
+  const authInfo = await getLinkedUserForChat(chatId);
+  if (!authInfo || authInfo.isBanned || authInfo.isExpired) {
+    const gateMenu = await buildMainMenu(chatId);
+    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, gateMenu.text, gateMenu.keyboard);
   }
 
   const prompt = userPromptState.get(chatId);
@@ -1347,7 +1522,7 @@ async function handleTextMessage(message) {
       const keyboard = [[{ text: '🔙 Main Menu', callback_data: 'menu_main' }]];
       return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, errText, keyboard);
     }
-    const menu = buildMainMenu(chatId);
+    const menu = await buildMainMenu(chatId);
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Target Set:</b> <code>${stats.name}</code>\nFloor: <b>${formatDisplayEth(stats.floorEth)} ETH</b>\n\n` + menu.text, menu.keyboard);
   }
 
@@ -1468,27 +1643,25 @@ async function handleTextMessage(message) {
     const cleanKey = text.trim();
     try {
       const walletObj = new ethers.Wallet(cleanKey);
-      const users = await dbGetUsers().catch(() => []);
-      const primaryUser = users[0];
-      if (primaryUser) {
-        if (!primaryUser.vault) primaryUser.vault = {};
-        if (!Array.isArray(primaryUser.vault.wallets)) primaryUser.vault.wallets = [];
+      if (authInfo?.user?.id) {
+        const userConfig = (await dbGetUserConfig(authInfo.user.id)) || {};
+        if (!Array.isArray(userConfig.walletFleet)) userConfig.walletFleet = [];
 
-        const isMaster = primaryUser.vault.wallets.length === 0 || !primaryUser.vault.wallets.some(w => w.role === 'master');
-        primaryUser.vault.wallets.push({
+        const isMaster = userConfig.walletFleet.length === 0 || !userConfig.walletFleet.some(w => w.role === 'master');
+        userConfig.walletFleet.push({
           address: walletObj.address,
           privateKey: walletObj.privateKey,
-          name: isMaster ? 'Master Holding' : `Worker #${primaryUser.vault.wallets.length + 1}`,
+          name: isMaster ? 'Master Holding' : `Worker #${userConfig.walletFleet.length + 1}`,
           role: isMaster ? 'master' : 'worker',
           balance: '0'
         });
 
-        await dbUpdateUser(primaryUser.id, { vault: primaryUser.vault });
+        await dbSaveUserConfig(authInfo.user.id, userConfig);
         syncRulesToEngines();
       }
 
       const menu = await buildWalletsMenu(chatId);
-      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Wallet Imported Successfully!</b>\nAddress: <code>${walletObj.address}</code>\nRole: <b>${primaryUser?.vault?.wallets?.length === 1 ? '👑 Master Holding' : '⚡ Worker'}</b>\n\n` + menu.text, menu.keyboard);
+      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Wallet Imported Successfully!</b>\nAddress: <code>${walletObj.address}</code>\nRole: <b>Worker</b>\n\n` + menu.text, menu.keyboard);
     } catch (e) {
       const menu = await buildWalletsMenu(chatId);
       return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `❌ <b>Invalid Private Key!</b>\nPlease ensure you send a valid 64-character hex private key starting with <code>0x...</code>\n\n` + menu.text, menu.keyboard);
@@ -1497,7 +1670,7 @@ async function handleTextMessage(message) {
 
   // Standard Commands
   if (text.startsWith('/start') || text === '/menu') {
-    const menu = buildMainMenu(chatId);
+    const menu = await buildMainMenu(chatId);
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard);
   }
 
@@ -1508,7 +1681,7 @@ async function handleTextMessage(message) {
 
   if (text === '/clear' || text === '/reset') {
     clearBotTarget();
-    const menu = buildMainMenu(chatId);
+    const menu = await buildMainMenu(chatId);
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '🗑️ <b>Target Cleared! Reset to Fresh Standby.</b>\n\n' + menu.text, menu.keyboard);
   }
 
@@ -1522,7 +1695,7 @@ async function handleTextMessage(message) {
       engine.isArmed = true;
     }
     activeSniperEngine.isArmed = true;
-    const menu = buildMainMenu(chatId);
+    const menu = await buildMainMenu(chatId);
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚡ <b>SNIPER ARMED (24/7 Live Cloud Engine)!</b>\n\n' + menu.text, menu.keyboard);
   }
 
@@ -1531,7 +1704,7 @@ async function handleTextMessage(message) {
       engine.isArmed = false;
     }
     activeSniperEngine.isArmed = false;
-    const menu = buildMainMenu(chatId);
+    const menu = await buildMainMenu(chatId);
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⏸ <b>SNIPER PAUSED!</b>\n\n' + menu.text, menu.keyboard);
   }
 
@@ -1592,7 +1765,7 @@ async function handleTextMessage(message) {
       if (!stats) {
         return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `❌ Could not find collection <code>${slugInput}</code> on OpenSea.`);
       }
-      const menu = buildMainMenu(chatId);
+      const menu = await buildMainMenu(chatId);
       return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Target Changed to:</b> <code>${stats.name}</code>\nFloor: <b>${formatDisplayEth(stats.floorEth)} ETH</b>\n\n` + menu.text, menu.keyboard);
     } else {
       const menu = buildTargetMenu();
@@ -1602,7 +1775,7 @@ async function handleTextMessage(message) {
 
   // /wallets
   if (text === '/wallets') {
-    const menu = await buildWalletsMenu();
+    const menu = await buildWalletsMenu(chatId);
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard);
   }
 
@@ -1649,7 +1822,7 @@ async function handleTextMessage(message) {
   }
 
   // Default fallback
-  const menu = buildMainMenu(chatId);
+  const menu = await buildMainMenu(chatId);
   return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard);
 }
 

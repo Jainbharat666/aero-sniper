@@ -464,10 +464,12 @@ router.post('/user/generate-telegram-token', userAuthMiddleware, async (req, res
     const user = req.authenticatedUser;
     if (!user) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
-    // Generate random 6-hex token e.g. TG-A8F291
-    const randomHex = crypto.randomBytes(3).toString('hex').toUpperCase();
-    const token = `TG-${randomHex}`;
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24h expiration
+    // Generate high-entropy 16-character cryptographic token (e.g. AERO-TG-84F9-C10A-37D2)
+    const p1 = crypto.randomBytes(2).toString('hex').toUpperCase();
+    const p2 = crypto.randomBytes(2).toString('hex').toUpperCase();
+    const p3 = crypto.randomBytes(2).toString('hex').toUpperCase();
+    const token = `AERO-TG-${p1}-${p2}-${p3}`;
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15-minute strict TTL
 
     // Load existing user config
     const currentConfig = (await dbGetUserConfig(user.id)) || {};
