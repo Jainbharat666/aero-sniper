@@ -20,6 +20,7 @@ import {
 } from '../state.js';
 import { apiClient, fetchOpenSeaWithFallback, formatEthPrecise } from '../openSeaClient.js';
 import { dbGetUserById, dbRecordUserSnipe, dbGetUserConfig, OWNER_EMAIL } from '../db.js';
+import { subscribeSlugToOpenSea } from './stream.js';
 import { 
   dispatchPrivateSnipeAlert, 
   dispatchGlobalMasterFeedAlert,
