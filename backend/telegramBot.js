@@ -326,11 +326,18 @@ export function syncRulesToEngines(slug = null, contract = null) {
   const targetContract = contract || activeCollectionStats?.contract;
   const tokenSet = new Set((botRuleConfig.tokenId.tokens || []).map(t => String(t).replace(/[^0-9]/g, '')).filter(Boolean));
 
+  let floorCap = botRuleConfig.floor.maxEth;
+  if (floorCap === 0 && activeCollectionStats?.floorEth > 0) {
+    floorCap = activeCollectionStats.floorEth * (1 - (botRuleConfig.floor.discountPercent || 20) / 100);
+  }
+
   for (const [k, engine] of activeSniperEngines.entries()) {
     if (targetSlug) engine.slug = targetSlug;
     if (targetContract) engine.contractAddress = targetContract;
     engine.ruleStates = { ...botRuleConfig.ruleStates };
-    engine.maxFloorEth = botRuleConfig.floor.maxEth;
+    engine.discountPercent = botRuleConfig.floor.discountPercent || 20;
+    engine.maxFloorEth = floorCap;
+    engine.baseFloorEth = activeCollectionStats?.floorEth || 0;
     engine.maxRareRank = botRuleConfig.rarity.maxRank;
     engine.maxRareEth = botRuleConfig.rarity.maxEth;
     engine.traitFilters = [...botRuleConfig.trait.filters];
@@ -339,12 +346,15 @@ export function syncRulesToEngines(slug = null, contract = null) {
     engine.specificTokenMaxEth = botRuleConfig.tokenId.maxEth;
     engine.gasSpeed = botActiveGasPreset;
     engine.isDryRun = botPaperSnipeMode;
+    engine.dryRun = botPaperSnipeMode;
   }
 
   if (targetSlug) activeSniperEngine.slug = targetSlug;
   if (targetContract) activeSniperEngine.contractAddress = targetContract;
   activeSniperEngine.ruleStates = { ...botRuleConfig.ruleStates };
-  activeSniperEngine.maxFloorEth = botRuleConfig.floor.maxEth;
+  activeSniperEngine.discountPercent = botRuleConfig.floor.discountPercent || 20;
+  activeSniperEngine.maxFloorEth = floorCap;
+  activeSniperEngine.baseFloorEth = activeCollectionStats?.floorEth || 0;
   activeSniperEngine.maxRareRank = botRuleConfig.rarity.maxRank;
   activeSniperEngine.maxRareEth = botRuleConfig.rarity.maxEth;
   activeSniperEngine.traitFilters = [...botRuleConfig.trait.filters];
@@ -353,6 +363,7 @@ export function syncRulesToEngines(slug = null, contract = null) {
   activeSniperEngine.specificTokenMaxEth = botRuleConfig.tokenId.maxEth;
   activeSniperEngine.gasSpeed = botActiveGasPreset;
   activeSniperEngine.isDryRun = botPaperSnipeMode;
+  activeSniperEngine.dryRun = botPaperSnipeMode;
 }
 
 /**

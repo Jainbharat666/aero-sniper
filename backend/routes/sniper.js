@@ -574,10 +574,18 @@ export async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = per
       }
 
       // ⚡ RULE 1: FLOOR UNDERPRICE TRAP (PRIORITY 3)
-      if (!triggered && engine.ruleStates?.floor && engine.maxFloorEth > 0) {
-        if (parsed.price <= engine.maxFloorEth) {
+      const colFloor = (activeCollectionStats && (activeCollectionStats.slug === itemSlug || activeCollectionStats.slug === incomingSlug) && activeCollectionStats.floorEth > 0)
+        ? activeCollectionStats.floorEth
+        : (engine.baseFloorEth || 0);
+      const discountPct = engine.discountPercent !== undefined ? engine.discountPercent : 20;
+      const targetFloorCap = engine.maxFloorEth > 0
+        ? engine.maxFloorEth
+        : (colFloor > 0 ? colFloor * (1 - discountPct / 100) : 0);
+
+      if (!triggered && engine.ruleStates?.floor && targetFloorCap > 0) {
+        if (parsed.price <= targetFloorCap) {
           triggered = true;
-          reason = `⚡ Floor Fat-Finger: ${parsed.price} ETH <= Target ${engine.maxFloorEth} ETH`;
+          reason = `⚡ Floor Fat-Finger: ${parsed.price} ETH <= Target ${formatEthPrecise(targetFloorCap)} ETH (-${discountPct}%)`;
         }
       }
 
@@ -727,6 +735,13 @@ export async function armEngineForUser(userId, userConfig = {}, targetSlug = '*'
     ? (ruleConfig.trait?.filters || ruleConfig.traitFilters || options.traitFilters)
     : (ruleConfig.traitFilter ? [ruleConfig.traitFilter] : []);
 
+  const colFloor = (activeCollectionStats && activeCollectionStats.floorEth > 0) ? activeCollectionStats.floorEth : 0;
+  const discountPct = parseFloat(ruleConfig.floor?.discountPercent !== undefined ? ruleConfig.floor.discountPercent : (ruleConfig.discountPercent || 20));
+  let computedFloorEth = parseFloat(ruleConfig.floor?.maxEth !== undefined ? ruleConfig.floor.maxEth : ruleConfig.maxFloorEth) || 0;
+  if (computedFloorEth === 0 && colFloor > 0) {
+    computedFloorEth = colFloor * (1 - discountPct / 100);
+  }
+
   const userEngine = {
     userId: userKey,
     telegramChatId: options.telegramChatId || userConfig?.telegram_chat_id || null,
@@ -734,7 +749,9 @@ export async function armEngineForUser(userId, userConfig = {}, targetSlug = '*'
     armedTimestamp: Date.now(),
     slug: slug,
     triggerMode: options.triggerMode || 'both',
-    maxFloorEth: parseFloat(ruleConfig.floor?.maxEth !== undefined ? ruleConfig.floor.maxEth : ruleConfig.maxFloorEth) || 0,
+    baseFloorEth: colFloor,
+    discountPercent: discountPct,
+    maxFloorEth: computedFloorEth,
     maxRareRank: parseInt(ruleConfig.rarity?.maxRank !== undefined ? ruleConfig.rarity.maxRank : ruleConfig.maxRareRank, 10) || 1200,
     maxRareEth: parseFloat(ruleConfig.rarity?.maxEth !== undefined ? ruleConfig.rarity.maxEth : ruleConfig.maxRareEth) || 0,
     gasSpeed: options.gasSpeed || ruleConfig.gasSpeed || 'turbo',
