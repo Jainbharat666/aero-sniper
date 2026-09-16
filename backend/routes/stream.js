@@ -283,26 +283,17 @@ router.get('/listings/live', async (req, res) => {
           contractAddress: asset.asset_contract?.address || (activeCollectionStats?.contractAddress || ''),
           chain: 'robinhood',
           slug: slug,
-          sniped: activeSniperEngine.snipedTokenIds.has(String(tokenId))
+          sniped: Boolean(Array.from(activeSniperEngines.values()).some(e => e?.snipedTokenIds?.has(String(tokenId))) || activeSniperEngine?.snipedTokenIds?.has(String(tokenId)))
         };
       }).filter(item => item.price > 0 && item.tokenId && item.tokenId !== '0');
 
-      if (activeSniperEngine.isArmed) {
-        const minArmedTime = activeSniperEngine.armedTimestamp ? (activeSniperEngine.armedTimestamp - 5000) : Date.now();
+      const isAnyArmed = Array.from(activeSniperEngines.values()).some(e => e && e.isArmed) || Boolean(activeSniperEngine && activeSniperEngine.isArmed);
+      if (isAnyArmed) {
         for (const item of listings) {
           const hasHash = Boolean(item.orderHash && item.orderHash.length > 10);
           const hasParams = Boolean(item.protocolData?.parameters && item.protocolData?.signature);
           if (!hasHash && !hasParams) continue;
-
-          const isAfterArm = item.eventTimestamp >= minArmedTime;
-          const isFresh = item.ageSeconds <= 30;
-          if (isAfterArm && isFresh) {
-            const tokStr = String(item.tokenId);
-            const isDead = item.orderHash && activeSniperEngine.invalidOrderHashes && activeSniperEngine.invalidOrderHashes.has(item.orderHash);
-            if (!activeSniperEngine.snipedTokenIds.has(tokStr) && !isDead) {
-              evaluateAndSnipe(item, slug);
-            }
-          }
+          evaluateAndSnipe(item, slug).catch(() => {});
         }
       }
     }
