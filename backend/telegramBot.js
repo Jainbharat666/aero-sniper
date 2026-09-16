@@ -5,7 +5,8 @@ import {
   activeSniperEngines,
   activeCollectionStats,
   setActiveCollectionStats,
-  cachedEthPrice
+  cachedEthPrice,
+  userLogBuffers
 } from './state.js';
 import { fetchOpenSeaWithFallback, formatEthPrecise } from './openSeaClient.js';
 import { subscribeSlugToOpenSea } from './routes/stream.js';
@@ -233,21 +234,37 @@ export function formatDisplayEth(val) {
 }
 
 /**
- * 🗑️ CLEAR ACTIVE TARGET (RESET ENGINE TO FRESH STANDBY)
+ * 🗑️ CLEAR ACTIVE TARGET & PURGE SESSION LOGS (Strictly User-Isolated)
  */
-export function clearBotTarget() {
-  setActiveCollectionStats(null);
-  for (const [k, engine] of activeSniperEngines.entries()) {
-    engine.slug = null;
-    engine.contractAddress = null;
-    engine.isArmed = false;
-    engine.maxFloorEth = 0;
+export async function clearBotTarget(chatId = null) {
+  let targetUserId = null;
+  if (chatId) {
+    const authInfo = await getLinkedUserForChat(chatId);
+    if (authInfo?.user?.id) {
+      targetUserId = String(authInfo.user.id);
+    }
   }
-  activeSniperEngine.slug = null;
-  activeSniperEngine.contractAddress = null;
-  activeSniperEngine.isArmed = false;
-  activeSniperEngine.maxFloorEth = 0;
-  console.log('🗑️ [TELEGRAM] Active sniper target cleared. Reset to Standby.');
+
+  if (targetUserId) {
+    if (activeSniperEngines.has(targetUserId)) {
+      const engine = activeSniperEngines.get(targetUserId);
+      engine.slug = null;
+      engine.contractAddress = null;
+      engine.isArmed = false;
+      engine.maxFloorEth = 0;
+      if (engine.snipedTokenIds) engine.snipedTokenIds.clear();
+      if (engine.pendingSnipes) engine.pendingSnipes.clear();
+      activeSniperEngines.delete(targetUserId);
+    }
+    userLogBuffers.delete(targetUserId);
+    console.log(`🗑️ [TELEGRAM] User [${targetUserId}] target and session logs cleared.`);
+  } else {
+    activeSniperEngine.slug = null;
+    activeSniperEngine.contractAddress = null;
+    activeSniperEngine.isArmed = false;
+    activeSniperEngine.maxFloorEth = 0;
+    console.log('🗑️ [TELEGRAM] Global active sniper target cleared. Reset to Standby.');
+  }
 }
 
 /**
@@ -1145,10 +1162,11 @@ async function handleCallbackQuery(callbackQuery) {
 
   // 3. Clear Target Action
   if (data === 'action_clear_target' || data === 'clear_target') {
-    clearBotTarget();
-    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '🗑️ Target Cleared! Engine in Standby.');
+    await clearBotTarget(chatId);
+    userPromptState.delete(chatId);
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '🗑️ Target & Session Cleared! Reset to Fresh Standby.');
     const menu = await buildMainMenu(chatId);
-    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, '🗑️ <b>Target & Session Cleared!</b>\n\nAll session logs and active feeds have been wiped clean.\n\n' + menu.text, menu.keyboard);
   }
 
   // 4. Toggle Simulation (Paper Snipe)
@@ -1812,9 +1830,10 @@ async function handleTextMessage(message) {
   }
 
   if (text === '/clear' || text === '/reset') {
-    clearBotTarget();
+    await clearBotTarget(chatId);
+    userPromptState.delete(chatId);
     const menu = await buildMainMenu(chatId);
-    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '🗑️ <b>Target Cleared! Reset to Fresh Standby.</b>\n\n' + menu.text, menu.keyboard);
+    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '🗑️ <b>Target & Session Cleared!</b>\n\nAll session logs and active feeds have been wiped clean. Reset to Fresh Standby.\n\n' + menu.text, menu.keyboard);
   }
 
   if (text === '/arm' || text === '/start_sniper') {

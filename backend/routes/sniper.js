@@ -984,6 +984,73 @@ router.get('/snipe/logs', (req, res) => {
   });
 });
 
+// POST /api/sniper/clear-session (High-Power User-Isolated Session & Feed Wipe)
+router.post('/sniper/clear-session', (req, res) => {
+  const { userId, buyerAddress } = req.body || {};
+  const userKey = String(userId || buyerAddress || req.query.userId || '');
+
+  if (userKey) {
+    if (activeSniperEngines.has(userKey)) {
+      const engine = activeSniperEngines.get(userKey);
+      engine.isArmed = false;
+      engine.slug = '';
+      engine.contractAddress = '';
+      engine.walletSigner = null;
+      engine.buyerPrivateKey = '';
+      if (engine.workerPool && engine.workerPool.length > 0) {
+        engine.workerPool.forEach(w => { delete w.privateKey; w.signer = null; });
+      }
+      if (engine.snipedTokenIds) engine.snipedTokenIds.clear();
+      if (engine.pendingSnipes) engine.pendingSnipes.clear();
+      if (engine.invalidOrderHashes) engine.invalidOrderHashes.clear();
+      activeSniperEngines.delete(userKey);
+
+      if (engine.slug && engine.slug !== '*') {
+        const isAnyOtherWatching = Array.from(activeSniperEngines.values()).some(e => e.isArmed && (e.slug === engine.slug || e.slug === '*'));
+        if (!isAnyOtherWatching) streamListener.unsubscribe(engine.slug);
+      }
+
+      // 📱 Push updated Standby menu to user's Telegram if linked
+      if (engine.telegramChatId) {
+        buildMainMenu(engine.telegramChatId).then(menu => {
+          sendTelegramMessage(
+            TELEGRAM_BOT_TOKEN,
+            engine.telegramChatId,
+            `🗑️ <b>TARGET & SESSION CLEARED (Via Web Dashboard)</b>\n\nAll active feeds and sniper tasks have been wiped clean.\n\n` + menu.text,
+            menu.keyboard
+          ).catch(() => {});
+        }).catch(() => {});
+      }
+    }
+
+    // 🛡️ Wipe user-specific log buffer in RAM
+    userLogBuffers.delete(userKey);
+
+    // Push clear event to client SSE
+    broadcastToClients({ type: 'session_cleared' }, userKey);
+    console.log(`🗑️ [USER SESSION CLEARED] User [${userKey}] engine, keys, feeds, and logs completely purged from RAM.`);
+  } else {
+    // Global fallback
+    for (const [k, engine] of activeSniperEngines.entries()) {
+      engine.isArmed = false;
+      engine.slug = '';
+      engine.walletSigner = null;
+      engine.buyerPrivateKey = '';
+      if (engine.workerPool) engine.workerPool.forEach(w => { delete w.privateKey; w.signer = null; });
+    }
+    activeSniperEngines.clear();
+    activeSniperEngine.isArmed = false;
+    activeSniperEngine.slug = '';
+    activeSniperEngine.walletSigner = null;
+    activeSniperEngine.buyerPrivateKey = '';
+    userLogBuffers.clear();
+    walletNonceMap.clear();
+    console.log(`🗑️ [GLOBAL PURGE] All user sessions, engines, and logs cleared.`);
+  }
+
+  res.json({ success: true, message: 'Target, engine, and logs completely wiped clean.' });
+});
+
 // POST /api/snipe/disarm
 router.post('/snipe/disarm', (req, res) => {
   const { userId, buyerAddress } = req.body || {};

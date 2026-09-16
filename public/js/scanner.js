@@ -477,7 +477,7 @@
       const oldSlug = currentScannedProject ? currentScannedProject.slug : null;
       currentScannedProject = null;
       liveListingsStore = [];
-      if (window.rarityRegistry) window.rarityRegistry.clear();
+      if (window.rarityRegistry && typeof window.rarityRegistry.clear === 'function') window.rarityRegistry.clear();
       window.dynamicRarityCalc = null;
 
       try {
@@ -485,24 +485,31 @@
         localStorage.removeItem('sniper_last_collection_slug');
       } catch(e) {}
 
-      if (oldSlug) {
-        fetch('/api/stream/clear', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slug: oldSlug })
-        }).catch(() => {});
-      }
-
-      if (typeof isArmed !== 'undefined' && isArmed) {
+      if (typeof isArmed !== 'undefined') {
         isArmed = false;
         window.sniperArmed = false;
       }
 
-      fetch('/api/snipe/disarm', {
+      // 🛡️ High-Power Backend Wipe: Purges engine, private keys, feeds, and log ring buffer in RAM
+      const userId = (typeof currentUser !== 'undefined' && currentUser?.id) ? currentUser.id : '';
+      fetch('/api/sniper/clear-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: (typeof currentUser !== 'undefined' && currentUser?.id) ? currentUser.id : '' })
+        body: JSON.stringify({ userId: userId, slug: oldSlug })
       }).catch(() => {});
+
+      // Wipe UI Console Logs Completely
+      if (typeof clearConsoleLogs === 'function') {
+        clearConsoleLogs();
+      } else {
+        const c = document.getElementById('console-logs');
+        if (c) c.innerHTML = '';
+      }
+
+      // Wipe Traits filter UI if available
+      if (typeof clearAllTraits === 'function') {
+        try { clearAllTraits(); } catch(_) {}
+      }
 
       document.getElementById('scan-input').value = '';
       document.getElementById('proj-name').innerText = 'No Collection Loaded';
@@ -539,8 +546,10 @@
       document.getElementById('count-rare').innerText = '0';
       document.getElementById('count-sniped').innerText = '0';
       document.getElementById('stream-status-pill').innerText = '⏱️ Standby';
-      logConsole('Target cleared. Bot is in clean standby mode (Old stream disconnected).');
-      showToast('Collection target cleared');
+      if (typeof logConsole === 'function') {
+        logConsole('✨ [CLEAN STANDBY] Target and session completely reset. All feeds & logs wiped.');
+      }
+      showToast('Target & session completely cleared');
     }
 
     // ─── 🔄 AUTO-RESTORE SCANNED COLLECTION ON TAB REOPEN / REFRESH ───
