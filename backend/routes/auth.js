@@ -543,7 +543,7 @@ router.post('/user/unlink-telegram', userAuthMiddleware, async (req, res) => {
     delete currentConfig.telegram_link_token;
     delete currentConfig.telegram_token_expires_at;
 
-    await dbSaveUserConfig(user.id, currentConfig);
+    await dbSaveUserConfig(user.id, currentConfig, true);
     await dbUpdateUser(user.id, { telegram_chat_id: null }).catch(() => {});
 
     return res.json({

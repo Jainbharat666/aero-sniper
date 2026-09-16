@@ -199,11 +199,17 @@ export async function dbGetUserConfig(userId) {
   }
 }
 
-export async function dbSaveUserConfig(userId, newConfig) {
+export async function dbSaveUserConfig(userId, newConfig, overwrite = false) {
   try {
     const existing = await dbGetUserConfig(userId);
-    if (existing !== null && existing !== undefined) {
+    if (existing !== null && existing !== undefined && !overwrite) {
       const merged = { ...existing, ...newConfig };
+
+      for (const key of Object.keys(newConfig)) {
+        if (newConfig[key] === null || newConfig[key] === undefined) {
+          delete merged[key];
+        }
+      }
 
       const existingWallets = existing.walletFleet || existing.wallets;
       const incomingWallets = newConfig.walletFleet !== undefined ? newConfig.walletFleet : newConfig.wallets;
@@ -239,21 +245,34 @@ export async function dbSaveUserConfig(userId, newConfig) {
       return merged;
     } else {
       const merged = { ...newConfig };
+      for (const key of Object.keys(merged)) {
+        if (merged[key] === null || merged[key] === undefined) {
+          delete merged[key];
+        }
+      }
       if (merged.walletFleet && !merged.wallets) merged.wallets = merged.walletFleet;
       if (merged.wallets && !merged.walletFleet) merged.walletFleet = merged.wallets;
-      await axios.post(`${SUPABASE_URL}/rest/v1/sniper_user_configs?on_conflict=user_id`, {
-        user_id: userId,
-        config: merged,
-        updated_at: new Date().toISOString()
-      }, {
-        headers: { ...supabaseHeaders, Prefer: 'resolution=merge-duplicates,return=representation' },
-        timeout: 8000
-      });
+
+      if (existing !== null && existing !== undefined) {
+        await axios.patch(`${SUPABASE_URL}/rest/v1/sniper_user_configs?user_id=eq.${encodeURIComponent(userId)}`, {
+          config: merged,
+          updated_at: new Date().toISOString()
+        }, { headers: supabaseHeaders, timeout: 8000 });
+      } else {
+        await axios.post(`${SUPABASE_URL}/rest/v1/sniper_user_configs?on_conflict=user_id`, {
+          user_id: userId,
+          config: merged,
+          updated_at: new Date().toISOString()
+        }, {
+          headers: { ...supabaseHeaders, Prefer: 'resolution=merge-duplicates,return=representation' },
+          timeout: 8000
+        });
+      }
       return merged;
     }
   } catch (e) {
-    console.error('[Sniper DB - SaveUserConfig]:', e.response?.data || e.message);
-    return null;
+    console.error(`[DB CONFIG SAVE ERROR]:`, e.message);
+    return newConfig;
   }
 }
 

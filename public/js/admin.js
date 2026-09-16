@@ -236,7 +236,12 @@
             <td class="py-2.5 px-3">${tgDisplay}</td>
             <td class="py-2.5 px-3">${statusBadge}</td>
             <td class="py-2.5 px-3 text-right">
-              ${isOwner ? `<span class="text-[10px] text-slate-500 font-bold italic">Master Owner</span>` : `
+              ${isOwner ? `
+                <div class="flex items-center justify-end gap-1">
+                  <button onclick="adminResetTelegram('${u.id}', '${u.email}')" title="Reset / Unlink Telegram Bot Access" class="px-2 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-lg text-[10px] font-black border border-sky-200 shadow-sm transition-colors cursor-pointer"><i class="fa-brands fa-telegram"></i> Reset TG</button>
+                  <span class="text-[10px] text-slate-500 font-bold italic ml-1">Master Owner</span>
+                </div>
+              ` : `
                 <div class="flex items-center justify-end gap-1">
                   <button onclick="adminAdjustTime('${u.id}', { days: 1 })" title="Add +1 Day (+24 Hours)" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-black border border-indigo-200 shadow-sm transition-colors cursor-pointer">+1d</button>
                   <button onclick="adminAdjustTime('${u.id}', { hours: 1 })" title="Add +1 Hour" class="px-2 py-1 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 rounded-lg text-[10px] font-black border border-cyan-200 shadow-sm transition-colors cursor-pointer">+1h</button>

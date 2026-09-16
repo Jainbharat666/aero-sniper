@@ -106,7 +106,7 @@ router.post('/users/reset-telegram', adminAuthMiddleware, async (req, res) => {
     delete currentConfig.telegram_link_token;
     delete currentConfig.telegram_token_expires_at;
 
-    await dbSaveUserConfig(user.id, currentConfig);
+    await dbSaveUserConfig(user.id, currentConfig, true);
     await dbUpdateUser(user.id, { telegram_chat_id: null }).catch(() => {});
 
     console.log(`[Sniper Admin] Telegram link reset by Admin for user: ${user.email} (${user.id})`);

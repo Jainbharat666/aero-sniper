@@ -67,15 +67,6 @@ export async function getLinkedUserForChat(chatId) {
       }
     }
 
-    // 2. Admin Chat ID Fallback: If chatId matches TELEGRAM_ADMIN_CHAT_ID, auto-link to owner user
-    if (strId === TELEGRAM_ADMIN_CHAT_ID) {
-      const ownerUser = (await dbGetUserById('owner-sniper-master-001')) || (await dbGetUsers())[0];
-      if (ownerUser) {
-        const config = (await dbGetUserConfig(ownerUser.id)) || {};
-        return { user: ownerUser, config, isOwner: true, isBanned: false, isExpired: false };
-      }
-    }
-
     return null;
   } catch (e) {
     console.error('[TELEGRAM AUTH CHECK ERROR]:', e.message);
@@ -129,7 +120,7 @@ export async function verifyAndLinkTelegramToken(chatId, rawToken, senderInfo = 
     config.telegram_first_name = senderInfo.first_name || '';
     config.telegram_linked_at = new Date().toISOString();
 
-    await dbSaveUserConfig(userId, config);
+    await dbSaveUserConfig(userId, config, true);
     await dbUpdateUser(userId, { telegram_chat_id: String(chatId) }).catch(() => {});
 
     // Sync to memory engine
@@ -164,9 +155,6 @@ This Telegram terminal is exclusively reserved for active <b>Aero-Sniper Pro</b>
 `.trim();
 
   const keyboard = [
-    [
-      { text: '🌐 Open Website Dashboard', web_app: { url: WEBAPP_URL } }
-    ],
     [
       { text: '❓ How to Connect Account', callback_data: 'gate_help' }
     ]
@@ -363,7 +351,7 @@ export async function buildMainMenu(chatId = null) {
 
 Your cloud sniper engine has been paused because your subscription validity expired. Please log in to <a href="${WEBAPP_URL}">Aero-Sniper Dashboard</a> and top up your plan.
 `.trim();
-    const keyboard = [[{ text: '🌐 Top Up Subscription', web_app: { url: WEBAPP_URL } }]];
+    const keyboard = [[{ text: '❓ How to Connect / Renew', callback_data: 'gate_help' }]];
     return { text: expiredText, keyboard };
   }
 
@@ -436,8 +424,7 @@ Your cloud sniper engine has been paused because your subscription validity expi
     ],
     [
       { text: '🔄 Refresh Status', callback_data: 'menu_refresh' },
-      { text: '❓ Command Guide', callback_data: 'menu_help' },
-      { text: '🌐 Launch WebApp', web_app: { url: WEBAPP_URL } }
+      { text: '❓ Command Guide', callback_data: 'menu_help' }
     ]
   ];
 
@@ -1007,9 +994,6 @@ ${isSim ? '<i>Simulation Mode — Zero funds spent</i>' : '<i>Successfully secur
     [
       { text: '🔍 View on Explorer', url: explorerUrl },
       { text: '⛵ View on OpenSea', url: openseaUrl }
-    ],
-    [
-      { text: '🌐 Open WebApp', web_app: { url: WEBAPP_URL } }
     ]
   ];
 
@@ -1053,9 +1037,6 @@ export async function dispatchGlobalMasterFeedAlert(snipeData) {
 /**
  * 🔘 INTERACTIVE CALLBACK QUERY ROUTER (Handle Button Taps)
  */
-/**
- * 🔘 INTERACTIVE CALLBACK QUERY ROUTER (Handle Button Taps)
- */
 async function handleCallbackQuery(callbackQuery) {
   const data = callbackQuery.data;
   const message = callbackQuery.message;
@@ -1078,7 +1059,6 @@ async function handleCallbackQuery(callbackQuery) {
 🔒 <i>Tokens burn immediately after single use for maximum security.</i>
 `.trim();
     const keyboard = [
-      [{ text: '🌐 Open Website', web_app: { url: WEBAPP_URL } }],
       [{ text: '🔙 Back', callback_data: 'menu_main' }]
     ];
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, helpMsg, keyboard);
