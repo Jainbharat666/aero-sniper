@@ -142,17 +142,20 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart, userEng
     let buyerAddress = engine.buyerAddress;
     let buyerName = engine.buyerName;
 
+    // 🛡️ Auto-exclude seller from being buyer (when seller is testing from their own fleet)
+    const sellerLower = (parsed.seller || '').toLowerCase();
     if (engine.workerPool && engine.workerPool.length > 0) {
-      if (engine.workerStrategy === 'round_robin') {
+      const eligible = engine.workerPool.find(w => w.address && w.address.toLowerCase() !== sellerLower);
+      if (eligible) {
+        currentWorker = eligible.signer;
+        buyerAddress = eligible.address;
+        buyerName = eligible.name;
+      } else if (engine.workerStrategy === 'round_robin') {
         const w = engine.workerPool[engine.workerIndex % engine.workerPool.length];
         engine.workerIndex++;
         currentWorker = w.signer;
         buyerAddress = w.address;
         buyerName = w.name;
-      } else if (!currentWorker) {
-        currentWorker = engine.workerPool[0].signer;
-        buyerAddress = engine.workerPool[0].address;
-        buyerName = engine.workerPool[0].name;
       }
     }
 
