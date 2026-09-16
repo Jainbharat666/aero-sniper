@@ -813,13 +813,19 @@
       if (tokenDisplay) tokenDisplay.innerText = 'GENERATING...';
 
       try {
-        const tokenToUse = (typeof currentSessionToken !== 'undefined' && currentSessionToken) || currentUser.session_token;
+        const tokenToUse = (typeof sessionToken !== 'undefined' && sessionToken) || 
+                           localStorage.getItem('sniper_token') || 
+                           currentUser?.session_token || 
+                           currentUser?.id;
+
         const res = await fetch('/api/user/generate-telegram-token', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${tokenToUse}`
-          }
+            'Authorization': 'Bearer ' + tokenToUse,
+            'x-session-token': tokenToUse
+          },
+          body: JSON.stringify({ userId: currentUser?.id, sessionToken: tokenToUse })
         });
         const data = await res.json();
         if (data.success) {
