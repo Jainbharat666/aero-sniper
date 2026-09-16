@@ -1013,6 +1013,8 @@ export async function dispatchPrivateSnipeAlert(userEngine, snipeData) {
   const reasonStr = escapeHtml(snipeData.reason || 'Auto-Rule Trigger');
   const buyerNameStr = escapeHtml(snipeData.buyerName || 'Primary');
   const buyerAddressShort = escapeHtml(snipeData.buyerAddressShort || '');
+  const colSlug = snipeData.slug || '';
+  const openseaColUrl = colSlug ? `https://opensea.io/collection/${colSlug}` : `https://opensea.io/assets/robinhood/${snipeData.contractAddress || ''}/${snipeData.tokenId}`;
   const explorerUrl = `https://explorer.mainnet.robinhood.com/tx/${txHash}`;
   const openseaUrl = `https://opensea.io/assets/robinhood/${snipeData.contractAddress || ''}/${snipeData.tokenId}`;
 
@@ -1020,7 +1022,7 @@ export async function dispatchPrivateSnipeAlert(userEngine, snipeData) {
 🏆 ${modeBadge}
 
 🎯 <b>Token:</b> <code>${tokenName}</code>
-🏷️ <b>Collection:</b> <code>${colName}</code>
+🏷️ <b>Collection:</b> <a href="${openseaColUrl}"><b>${colName}</b></a>
 💎 <b>Market Floor:</b> <b>${floorDisp} ETH</b>
 💰 <b>Price Bought:</b> <b>${priceEth} ETH</b> (~$${usdPrice} USD)
 📉 <b>Advantage:</b> <b>${discountStr}</b>
@@ -1082,6 +1084,8 @@ export async function dispatchGlobalMasterFeedAlert(snipeData) {
 
   const tokenName = escapeHtml(snipeData.name || `#${snipeData.tokenId}`);
   const colName = escapeHtml(snipeData.collectionName || snipeData.slug || 'Collection');
+  const colSlug = snipeData.slug || '';
+  const openseaColUrl = colSlug ? `https://opensea.io/collection/${colSlug}` : `https://opensea.io/assets/robinhood/${snipeData.contractAddress || ''}/${snipeData.tokenId}`;
   const priceEth = formatDisplayEth(snipeData.price || 0);
   const usdPrice = (parseFloat(snipeData.price || 0) * cachedEthPrice).toFixed(2);
   const floorDisp = formatDisplayEth(snipeData.floorEth || 0);
@@ -1101,7 +1105,7 @@ export async function dispatchGlobalMasterFeedAlert(snipeData) {
 ━━━━━━━━━━━━━━━━━━━━━
 👤 <b>Subscriber:</b> <code>${userTag}</code>
 💼 <b>Fleet Wallet:</b> <code>${buyerNameStr} ${buyerAddressShort ? '(' + buyerAddressShort + ')' : ''}</code>
-🏷️ <b>Collection:</b> <code>${colName}</code>
+🏷️ <b>Collection:</b> <a href="${openseaColUrl}"><b>${colName}</b></a>
 🎯 <b>NFT Sniped:</b> <b>${tokenName}</b>
 💎 <b>Collection Floor:</b> <b>${floorDisp} ETH</b> (~$${floorUsd} USD)
 💰 <b>Price Bought:</b> <b>${priceEth} ETH</b> (~$${usdPrice} USD)
