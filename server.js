@@ -15,11 +15,15 @@ import scanRouter from './backend/routes/scan.js';
 import rarityRouter from './backend/routes/rarity.js';
 import streamRouter from './backend/routes/stream.js';
 import sniperRouter from './backend/routes/sniper.js';
+import { startTelegramBotPolling } from './backend/telegramBot.js';
 
 dotenv.config();
 
 // Start RFC 5905 UDP NTP auto-sync with Cloudflare Stratum 1 atomic clocks
 startAutoSync(30000);
+
+// Initialize 24/7 Telegram Remote Controller & Alert Polling Daemon
+startTelegramBotPolling();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

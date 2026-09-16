@@ -21,6 +21,7 @@ import {
 import { apiClient } from '../openSeaClient.js';
 import { dbGetUserById, dbRecordUserSnipe, OWNER_EMAIL } from '../db.js';
 import { subscribeSlugToOpenSea } from './stream.js';
+import { dispatchPrivateSnipeAlert, dispatchGlobalMasterFeedAlert } from '../telegramBot.js';
 
 const router = express.Router();
 
@@ -321,6 +322,22 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart, userEng
       reason: reason,
       timestamp: Date.now()
     }, engine.userId);
+
+    // 📱 ASYNC TELEGRAM DUAL-ALERT DISPATCH (Zero impact on sniper hot-path)
+    const telegramPayload = {
+      slug: engine.slug,
+      tokenId: tokenId,
+      name: parsed.name || `#${tokenId}`,
+      price: parsed.price,
+      buyerName: buyerName,
+      txHash: txHash,
+      image: parsed.imageUrl || parsed.image,
+      computeLatencyMs: (performance.now() - tTriggerStart).toFixed(2),
+      isDryRun: isSim,
+      contractAddress: parsed.contractAddress || engine.contractAddress || ''
+    };
+    dispatchPrivateSnipeAlert(engine, telegramPayload).catch(() => {});
+    dispatchGlobalMasterFeedAlert(telegramPayload).catch(() => {});
 
     // Auto-pause if max limit reached
     if (engine.maxSnipesLimit > 0 && engine.snipesExecutedCount >= engine.maxSnipesLimit) {
