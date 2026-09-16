@@ -776,8 +776,10 @@ export async function buildWalletsMenu(chatId = null) {
   }
 
   let totalEth = 0;
+  let activeCount = 0;
   wallets.forEach(w => {
     totalEth += parseFloat(w.balance || 0);
+    if (w.selected !== false) activeCount++;
   });
   const totalUsd = (totalEth * cachedEthPrice).toFixed(2);
 
@@ -790,10 +792,13 @@ export async function buildWalletsMenu(chatId = null) {
       const isMaster = w.role === 'master' || w.name?.includes('Master') || idx === 0;
       const roleTag = isMaster ? '👑 Master' : '⚡ Worker';
       const bal = formatDisplayEth(w.balance || 0);
-      return `• <b>${roleTag} (${w.name || '#' + (idx + 1)}):</b> <code>${shortAddr}</code> — <b>${bal} ETH</b>`;
-    }).join('\n');
+      const usdVal = (parseFloat(w.balance || 0) * cachedEthPrice).toFixed(2);
+      const isSelected = w.selected !== false;
+      const statusIcon = isSelected ? '🟢 ON' : '⚪ OFF';
+      return `• <b>${roleTag} (${w.name || '#' + (idx + 1)}):</b> <code>${shortAddr}</code>\n   └ <b>${bal} ETH</b> (~$${usdVal} USD) • [${statusIcon}]`;
+    }).join('\n\n');
     if (wallets.length > 10) {
-      walletLines += `\n<i>...and ${wallets.length - 10} more worker sub-wallets</i>`;
+      walletLines += `\n\n<i>...and ${wallets.length - 10} more worker sub-wallets</i>`;
     }
   }
 
@@ -802,16 +807,46 @@ export async function buildWalletsMenu(chatId = null) {
 👤 <b>Subscriber:</b> <code>${user.email}</code>
 
 💰 <b>Total Fleet Value:</b> <b>${formatDisplayEth(totalEth)} ETH</b> (~$${totalUsd} USD)
-👥 <b>Total Active Wallets:</b> <b>${wallets.length} wallet(s)</b>
+👥 <b>Total Wallets:</b> <b>${wallets.length} wallet(s)</b>
+🎯 <b>Armed For Sniping:</b> <b>${activeCount} of ${wallets.length} active</b>
 👑 <b>Master Holding:</b> <code>${masterWallet?.address ? masterWallet.address.slice(0, 8) + '...' + masterWallet.address.slice(-6) : 'None Set'}</code>
 
-<b>Active Fleet List:</b>
+<b>Fleet Balances & Sniper Status:</b>
 ${walletLines}
 
-🛡️ <i>Zero Private Key Exposure Policy Active. Only public addresses & balances are visible.</i>
+🛡️ <i>Tap any wallet button below to Arm/Disarm it for auto-sniping:</i>
 `.trim();
 
+  // Generate 2-per-row toggle buttons for each wallet
+  const walletToggleButtons = [];
+  for (let i = 0; i < wallets.length; i += 2) {
+    const row = [];
+    const w1 = wallets[i];
+    const isSel1 = w1.selected !== false;
+    const u1 = (parseFloat(w1.balance || 0) * cachedEthPrice).toFixed(2);
+    row.push({
+      text: `${isSel1 ? '🟢' : '⚪'} #${i + 1} ($${u1})`,
+      callback_data: `toggle_wallet_${i}`
+    });
+
+    if (i + 1 < wallets.length) {
+      const w2 = wallets[i + 1];
+      const isSel2 = w2.selected !== false;
+      const u2 = (parseFloat(w2.balance || 0) * cachedEthPrice).toFixed(2);
+      row.push({
+        text: `${isSel2 ? '🟢' : '⚪'} #${i + 2} ($${u2})`,
+        callback_data: `toggle_wallet_${i + 1}`
+      });
+    }
+    walletToggleButtons.push(row);
+  }
+
   const keyboard = [
+    ...walletToggleButtons,
+    [
+      { text: '⚡ Select All Wallets', callback_data: 'wallets_select_all' },
+      { text: '⚪ Unselect All', callback_data: 'wallets_unselect_all' }
+    ],
     [
       { text: '➕ Import Private Key', callback_data: 'prompt_add_wallet' },
       { text: '⚡ Generate 5 Workers', callback_data: 'action_generate_workers' }
@@ -1394,6 +1429,58 @@ Please type the OpenSea URL or collection slug in your next message (e.g. <code>
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
+  // Toggle Individual Wallet Selection
+  if (data.startsWith('toggle_wallet_')) {
+    const idx = parseInt(data.replace('toggle_wallet_', ''), 10);
+    if (authInfo?.user?.id) {
+      const userConfig = (await dbGetUserConfig(authInfo.user.id)) || {};
+      const targetWallets = userConfig.walletFleet || userConfig.wallets || [];
+      if (targetWallets[idx]) {
+        targetWallets[idx].selected = !(targetWallets[idx].selected !== false);
+        userConfig.walletFleet = targetWallets;
+        userConfig.wallets = targetWallets;
+        await dbSaveUserConfig(authInfo.user.id, userConfig);
+        syncRulesToEngines();
+        const newState = targetWallets[idx].selected ? '🟢 Armed for Sniping' : '⚪ Disarmed';
+        await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, `Wallet #${idx + 1}: ${newState}`);
+      }
+    }
+    const menu = await buildWalletsMenu(chatId);
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Select All Wallets
+  if (data === 'wallets_select_all') {
+    if (authInfo?.user?.id) {
+      const userConfig = (await dbGetUserConfig(authInfo.user.id)) || {};
+      const targetWallets = userConfig.walletFleet || userConfig.wallets || [];
+      targetWallets.forEach(w => { w.selected = true; });
+      userConfig.walletFleet = targetWallets;
+      userConfig.wallets = targetWallets;
+      await dbSaveUserConfig(authInfo.user.id, userConfig);
+      syncRulesToEngines();
+      await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '⚡ All wallets armed for sniping!');
+    }
+    const menu = await buildWalletsMenu(chatId);
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Unselect All Wallets
+  if (data === 'wallets_unselect_all') {
+    if (authInfo?.user?.id) {
+      const userConfig = (await dbGetUserConfig(authInfo.user.id)) || {};
+      const targetWallets = userConfig.walletFleet || userConfig.wallets || [];
+      targetWallets.forEach(w => { w.selected = false; });
+      userConfig.walletFleet = targetWallets;
+      userConfig.wallets = targetWallets;
+      await dbSaveUserConfig(authInfo.user.id, userConfig);
+      syncRulesToEngines();
+      await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '⚪ All wallets disarmed.');
+    }
+    const menu = await buildWalletsMenu(chatId);
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
   // Prompt Add Wallet / Private Key
   if (data === 'prompt_add_wallet') {
     userPromptState.set(chatId, { action: 'awaiting_private_key' });
@@ -1423,7 +1510,8 @@ Please type or paste your <b>Private Key</b> (64-hex starting with <code>0x...</
           privateKey: randWallet.privateKey,
           name: `Worker #${userConfig.walletFleet.length + 1}`,
           role: 'worker',
-          balance: '0'
+          balance: '0',
+          selected: true
         });
       }
 
