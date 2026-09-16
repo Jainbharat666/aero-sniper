@@ -137,9 +137,12 @@ export function recordLogToBuffer(msg, targetUserId = null) {
 }
 
 export function getRecentLogs(targetUserId = null, limit = 100) {
-  if (targetUserId && userLogBuffers.has(String(targetUserId))) {
-    const buf = userLogBuffers.get(String(targetUserId));
-    return buf.slice(-limit);
+  if (targetUserId) {
+    const key = String(targetUserId);
+    if (userLogBuffers.has(key)) {
+      return userLogBuffers.get(key).slice(-limit);
+    }
+    return []; // 🛡️ Strict multi-tenant isolation: Fresh log state for new subscribers
   }
   return globalLogBuffer.slice(-limit);
 }

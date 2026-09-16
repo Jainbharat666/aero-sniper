@@ -26,8 +26,9 @@ import {
 // Environment Bindings
 export const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8849256750:AAGL6tEK_2tatSxgS-RjWp2ngE7B6lh29RI';
 export const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || '1683360811';
-const TELEGRAM_FEED_BOT_TOKEN = process.env.TELEGRAM_FEED_BOT_TOKEN || TELEGRAM_BOT_TOKEN;
-const TELEGRAM_FEED_CHANNEL_ID = process.env.TELEGRAM_FEED_CHANNEL_ID || TELEGRAM_ADMIN_CHAT_ID;
+export const ADMIN_UPDATE_BOT_TOKEN = process.env.TELEGRAM_FEED_BOT_TOKEN || '8890886636:AAFHz6T-Yxc_1EqjTggZcg2HpepYvNC7tvY';
+export const TELEGRAM_FEED_CHANNEL_ID = process.env.TELEGRAM_FEED_CHANNEL_ID || null;
+export const adminRegisteredChatIds = new Set([TELEGRAM_ADMIN_CHAT_ID]);
 const WEBAPP_URL = process.env.RENDER_EXTERNAL_URL || 'https://aero-sniper.onrender.com';
 
 let lastUpdateId = 0;
@@ -909,11 +910,15 @@ export async function answerCallbackQuery(token, callbackQueryId, notificationTe
 }
 
 /**
- * 🖼️ Send Telegram Photo with Caption
+ * 🖼️ Send Telegram Photo with Caption (Instant text fallback if invalid URL)
  */
 export async function sendTelegramPhoto(token, chatId, photoUrl, caption, inlineKeyboard = null) {
   if (!token || !chatId) return false;
-  if (!photoUrl) return sendTelegramMessage(token, chatId, caption, inlineKeyboard);
+
+  // Instant fallback to text message if photoUrl is invalid or non-HTTP
+  if (!photoUrl || typeof photoUrl !== 'string' || (!photoUrl.startsWith('http://') && !photoUrl.startsWith('https://'))) {
+    return sendTelegramMessage(token, chatId, caption, inlineKeyboard);
+  }
 
   try {
     const payload = {
@@ -925,7 +930,7 @@ export async function sendTelegramPhoto(token, chatId, photoUrl, caption, inline
     if (inlineKeyboard) {
       payload.reply_markup = { inline_keyboard: inlineKeyboard };
     }
-    await axios.post(`https://api.telegram.org/bot${token}/sendPhoto`, payload, { timeout: 8000 });
+    await axios.post(`https://api.telegram.org/bot${token}/sendPhoto`, payload, { timeout: 6000 });
     return true;
   } catch (err) {
     return sendTelegramMessage(token, chatId, caption, inlineKeyboard);
@@ -991,21 +996,39 @@ ${isSim ? '<i>Simulation Mode — Zero funds spent</i>' : '<i>Successfully secur
 }
 
 /**
- * 📢 2. UNIVERSAL MASTER FEED ALERT (Broadcast to Global Admin / Channel)
+ * 👑 GET ADMIN RECIPIENTS FOR LIVE MASTER FEED
+ */
+export async function getAdminNotificationChatIds() {
+  const ids = new Set(adminRegisteredChatIds);
+  if (TELEGRAM_ADMIN_CHAT_ID) ids.add(String(TELEGRAM_ADMIN_CHAT_ID));
+  if (TELEGRAM_FEED_CHANNEL_ID) ids.add(String(TELEGRAM_FEED_CHANNEL_ID));
+
+  try {
+    const ownerRes = await axios.get(`${SUPABASE_URL}/rest/v1/sniper_users?email=eq.${encodeURIComponent(OWNER_EMAIL)}&select=id`, {
+      headers: supabaseHeaders,
+      timeout: 3000
+    });
+    if (ownerRes.data?.length > 0) {
+      const ownerId = ownerRes.data[0].id;
+      const cfg = await dbGetUserConfig(ownerId);
+      if (cfg?.telegram_chat_id) {
+        ids.add(String(cfg.telegram_chat_id));
+      }
+    }
+  } catch (_) {}
+
+  return Array.from(ids).filter(Boolean);
+}
+
+/**
+ * 📢 2. UNIVERSAL MASTER FEED ALERT (Broadcast to Admin via @aeroupdatebot)
  */
 export async function dispatchGlobalMasterFeedAlert(snipeData) {
-  const feedToken = process.env.TELEGRAM_FEED_BOT_TOKEN;
-  const feedChannel = process.env.TELEGRAM_FEED_CHANNEL_ID;
+  const token = ADMIN_UPDATE_BOT_TOKEN;
+  if (!token) return;
 
-  // Only post if a dedicated feed channel or separate feed bot is configured
-  // This prevents spamming the subscriber bot with duplicate messages!
-  if (!feedChannel && !feedToken) {
-    return;
-  }
-
-  const token = feedToken || TELEGRAM_BOT_TOKEN;
-  const channelId = feedChannel;
-  if (!token || !channelId) return;
+  const targetChatIds = await getAdminNotificationChatIds();
+  if (!targetChatIds || targetChatIds.length === 0) return;
 
   const tokenName = snipeData.name || `#${snipeData.tokenId}`;
   const priceEth = formatDisplayEth(snipeData.price || 0);
@@ -1013,11 +1036,12 @@ export async function dispatchGlobalMasterFeedAlert(snipeData) {
   const floorDisp = formatDisplayEth(snipeData.floorEth || 0);
   const floorUsd = (parseFloat(snipeData.floorEth || 0) * cachedEthPrice).toFixed(2);
   const explorerUrl = `https://explorer.mainnet.robinhood.com/tx/${snipeData.txHash}`;
+  const openseaUrl = `https://opensea.io/assets/robinhood/${snipeData.contractAddress || ''}/${snipeData.tokenId}`;
   const userTag = snipeData.userEmail ? `<code>${snipeData.userEmail}</code>` : (snipeData.userId ? `<code>UID: ${snipeData.userIdShort}</code>` : 'VIP Member');
 
   const text = `
-👑 <b>AERO-SNIPER V2 • MASTER MINT FEED</b> ⚡
-<i>Institutional High-Frequency NFT Sniping Protocol</i>
+👑 <b>AERO-SNIPER V2 • MASTER ADMIN FEED</b> ⚡
+<i>Institutional Real-Time Subscriber Activity</i>
 
 ━━━━━━━━━━━━━━━━━━━━━
 👤 <b>Subscriber:</b> ${userTag}
@@ -1026,19 +1050,24 @@ export async function dispatchGlobalMasterFeedAlert(snipeData) {
 🎯 <b>NFT Sniped:</b> <b>${tokenName}</b>
 💎 <b>Collection Floor:</b> <b>${floorDisp} ETH</b> (~$${floorUsd} USD)
 💰 <b>Price Bought:</b> <b>${priceEth} ETH</b> (~$${usdPrice} USD)
-📉 <b>Alpha Gain / Discount:</b> <b>${snipeData.discountStr || 'Trigger Met'}</b>
-🎯 <b>Trigger Strategy:</b> <code>${snipeData.reason || 'Auto-Rule'}</code>
-⚡ <b>Mempool Blast Latency:</b> <b>${snipeData.computeLatencyMs || '5.0'} ms</b>
-🔗 <b>Tx:</b> <a href="${explorerUrl}">Click to View On-Chain</a>
+📉 <b>Advantage:</b> <b>${snipeData.discountStr || 'Trigger Met'}</b>
+🎯 <b>Strategy:</b> <code>${snipeData.reason || 'Auto-Rule'}</code>
+⚡ <b>Compute Latency:</b> <b>${snipeData.computeLatencyMs || '5.0'} ms</b>
+🔗 <b>Tx:</b> <a href="${explorerUrl}">View Robinhood Block Receipt</a>
 ━━━━━━━━━━━━━━━━━━━━━
-🌐 <i>Aero-Sniper Institutional High-Frequency Protocol Active</i>
+🌐 <i>Aero-Sniper Pro Multi-Tenant Engine</i>
 `.trim();
 
   const keyboard = [
-    [{ text: '🚀 Verify on Robinhood Mainnet', url: explorerUrl }]
+    [
+      { text: '🚀 View on Explorer', url: explorerUrl },
+      { text: '⛵ View on OpenSea', url: openseaUrl }
+    ]
   ];
 
-  sendTelegramPhoto(token, channelId, snipeData.image || snipeData.imageUrl, text, keyboard).catch(() => {});
+  for (const cId of targetChatIds) {
+    sendTelegramPhoto(token, cId, snipeData.image || snipeData.imageUrl, text, keyboard).catch(() => {});
+  }
 }
 
 /**
@@ -1979,5 +2008,39 @@ export async function startTelegramBotPolling() {
   };
 
   pollLoop().catch(() => {});
+
+  // 👑 Admin Update Bot Poller: Auto-links anyone who sends /start to @aeroupdatebot
+  let lastAdminUpdateId = 0;
+  const adminPollLoop = async () => {
+    if (!ADMIN_UPDATE_BOT_TOKEN || ADMIN_UPDATE_BOT_TOKEN === TELEGRAM_BOT_TOKEN) return;
+    while (isPollingActive) {
+      try {
+        const res = await axios.get(`https://api.telegram.org/bot${ADMIN_UPDATE_BOT_TOKEN}/getUpdates`, {
+          params: { offset: lastAdminUpdateId + 1, timeout: 20 },
+          timeout: 25000
+        });
+
+        if (res.data?.ok && Array.isArray(res.data.result)) {
+          for (const update of res.data.result) {
+            lastAdminUpdateId = update.update_id;
+            const msg = update.message;
+            if (msg && msg.chat?.id) {
+              const cId = String(msg.chat.id);
+              adminRegisteredChatIds.add(cId);
+              sendTelegramMessage(
+                ADMIN_UPDATE_BOT_TOKEN,
+                cId,
+                `👑 <b>AERO-SNIPER MASTER ADMIN FEED ONLINE</b> ⚡\n\n✅ <b>Connected!</b> (Chat ID: <code>${cId}</code>)\n\nYou will receive real-time notifications here whenever ANY subscriber snipes an NFT across the network.`
+              ).catch(() => {});
+            }
+          }
+        }
+      } catch (err) {
+        await new Promise(r => setTimeout(r, 5000));
+      }
+    }
+  };
+
+  adminPollLoop().catch(() => {});
 }
 

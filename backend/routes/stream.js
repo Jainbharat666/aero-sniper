@@ -78,7 +78,7 @@ export function subscribeSlugToOpenSea(slug) {
         ageSeconds: Math.max(0, Math.round((getNow() - (parsed.eventTimestamp ? (typeof parsed.eventTimestamp === 'number' ? (parsed.eventTimestamp > 1e11 ? parsed.eventTimestamp : parsed.eventTimestamp * 1000) : new Date(parsed.eventTimestamp).getTime()) : (parsed.receivedAt || getNow()))) / 1000)),
         eventTimestamp: parsed.receivedAt || getNow(),
         protocolData: parsed.protocolData,
-        sniped: activeSniperEngine.snipedTokenIds.has(String(parsed.tokenId)),
+        sniped: false,
         liveListedCount: activeCollectionStats ? activeCollectionStats.listedCount : null,
         liveFloorEth: activeCollectionStats ? activeCollectionStats.floorEth : null
       };

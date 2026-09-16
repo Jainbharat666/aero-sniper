@@ -819,6 +819,7 @@ export async function armEngineForUser(userId, userConfig = {}, targetSlug = '*'
       trait: !!ruleConfig.ruleStates?.trait || traitFilters.length > 0,
       tokenId: !!ruleConfig.ruleStates?.tokenId || tokenSet.size > 0
     },
+    userEmail: options.userEmail || userConfig?.email || '',
     dryRun: !!options.dryRun
   };
 
@@ -916,7 +917,8 @@ router.post('/snipe/arm', async (req, res) => {
       dryRun,
       gasSpeed,
       customGas,
-      triggerMode
+      triggerMode,
+      userEmail: armedDbUser?.email || ''
     });
 
     res.json({
