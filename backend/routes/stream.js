@@ -38,9 +38,6 @@ export function subscribeSlugToOpenSea(slug) {
         if (isNewToken && typeof activeCollectionStats.listedCount === 'number') {
           activeCollectionStats.listedCount++;
         }
-        if (parsed.price > 0 && parsed.price < activeCollectionStats.floorEth) {
-          activeCollectionStats.floorEth = parsed.price;
-        }
       }
 
       // ⚡ MICROSECOND ZERO-HOP SNIPER TRIGGER CHECK (ALL 4 RULES ENFORCED)

@@ -372,8 +372,11 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart, userEng
     }, engine.userId);
 
     // 📱 ASYNC TELEGRAM DUAL-ALERT DISPATCH (Zero impact on sniper hot-path)
-    const floorEth = activeCollectionStats?.floorEth || 0;
     const priceNum = parseFloat(parsed.price || 0);
+    const floorEth = (engine.baseFloorEth > 0)
+      ? engine.baseFloorEth
+      : ((activeCollectionStats?.floorEth && activeCollectionStats.floorEth > priceNum) ? activeCollectionStats.floorEth : (activeCollectionStats?.floorEth || 0));
+
     let discountStr = 'Market Floor';
     let savedEth = 0;
     if (floorEth > 0 && priceNum < floorEth) {
@@ -382,6 +385,15 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart, userEng
       discountStr = `🔥 -${discountPct}% Below Floor (Saved: ${savedEth} ETH)`;
     } else if (floorEth > 0) {
       discountStr = `At Floor (${formatEthPrecise(floorEth)})`;
+    }
+
+    let tokenImage = parsed.imageUrl || parsed.image || parsed.rawEvent?.payload?.item?.metadata?.image_url || parsed.rawEvent?.payload?.item?.metadata?.display_image_url || parsed.rawEvent?.payload?.item?.display_image_url || null;
+    if (!tokenImage) {
+      const cachedToken = rarityEngine.getTokenInfoSync(tokenId);
+      if (cachedToken?.image) tokenImage = cachedToken.image;
+    }
+    if (tokenImage && tokenImage.startsWith('ipfs://')) {
+      tokenImage = tokenImage.replace('ipfs://', 'https://ipfs.io/ipfs/');
     }
 
     const shortUid = engine.userId ? (engine.userId.startsWith('sniper_u_') ? engine.userId.slice(-6) : engine.userId.slice(0, 10)) : 'User';
@@ -404,7 +416,7 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart, userEng
       userIdShort: shortUid,
       reason: reason || 'Auto-Trigger',
       txHash: txHash,
-      image: parsed.imageUrl || parsed.image,
+      image: tokenImage,
       computeLatencyMs: (performance.now() - tTriggerStart).toFixed(2),
       isDryRun: isSim,
       contractAddress: parsed.contractAddress || engine.contractAddress || ''
