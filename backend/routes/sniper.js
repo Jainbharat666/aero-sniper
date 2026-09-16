@@ -69,7 +69,9 @@ export async function fetchSeaportFulfillmentWithShop(orderHash, chain, buyerAdd
       if (status === 429) {
         config.opensea.markKeyCooldown(apiKey, 3000);
       }
-      const isDead = /not valid|not found|cancelled|expired|inactive/i.test(errDetail) || err.response?.status === 400;
+      // 🛡️ DO NOT treat temporary indexing delay ('not found', 'not valid') as permanent dead order!
+      // Only mark dead if explicitly cancelled, already filled, or expired.
+      const isDead = /cancelled|already_filled|expired/i.test(errDetail);
       throw { isDead, errDetail, status };
     }
   };
