@@ -30,6 +30,24 @@ let botPaperSnipeMode = false;
 const userPromptState = new Map();
 
 /**
+ * 🗑️ CLEAR ACTIVE TARGET (RESET ENGINE TO FRESH STANDBY)
+ */
+export function clearBotTarget() {
+  setActiveCollectionStats(null);
+  for (const [k, engine] of activeSniperEngines.entries()) {
+    engine.slug = null;
+    engine.contractAddress = null;
+    engine.isArmed = false;
+    engine.maxFloorEth = 0;
+  }
+  activeSniperEngine.slug = null;
+  activeSniperEngine.contractAddress = null;
+  activeSniperEngine.isArmed = false;
+  activeSniperEngine.maxFloorEth = 0;
+  console.log('🗑️ [TELEGRAM] Active sniper target cleared. Reset to Standby.');
+}
+
+/**
  * 🔍 SCAN & TARGET COLLECTION VIA TELEGRAM
  */
 export async function executeScanForBot(input) {
@@ -53,7 +71,7 @@ export async function executeScanForBot(input) {
 
     if (!colData) return null;
 
-    let floorEth = 0.000035;
+    let floorEth = 0;
     if (listingsRes?.listings?.length > 0) {
       const prices = listingsRes.listings
         .map(l => parseFloat(l.price?.current?.value || 0) / 1e18)
@@ -107,57 +125,104 @@ export async function executeScanForBot(input) {
 export function buildMainMenu(chatId = null) {
   const isArmed = Array.from(activeSniperEngines.values()).some(e => e.isArmed) || activeSniperEngine.isArmed;
   const stats = activeCollectionStats;
-  const currentSlug = stats?.name || stats?.slug || activeSniperEngine.slug || 'robinwoodies';
-  const floorEth = stats?.floorEth ? stats.floorEth : '0.000035';
-  const floorEthNum = parseFloat(floorEth) || 0.000035;
-  const usdFloor = (floorEthNum * cachedEthPrice).toFixed(2);
-  const targetTriggerEth = (floorEthNum * (1 - (botActiveDiscountPercent || 20) / 100)).toFixed(6);
-  const targetTriggerUsd = (parseFloat(targetTriggerEth) * cachedEthPrice).toFixed(2);
+  const hasTarget = !!(stats && stats.slug);
   const activeEngines = activeSniperEngines.size || (isArmed ? 1 : 0);
 
-  const text = `
+  let text = '';
+  let keyboard = [];
+
+  if (hasTarget) {
+    const currentSlug = stats.name || stats.slug;
+    const floorEthNum = parseFloat(stats.floorEth) || 0;
+    const usdFloor = (floorEthNum * cachedEthPrice).toFixed(2);
+    const targetTriggerEth = (floorEthNum * (1 - (botActiveDiscountPercent || 20) / 100)).toFixed(6);
+    const targetTriggerUsd = (parseFloat(targetTriggerEth) * cachedEthPrice).toFixed(2);
+
+    text = `
 ⚡ <b>AERO-SNIPER PRO • TELEGRAM TERMINAL</b> ⚡
 <i>Institutional High-Frequency NFT Sniping Protocol</i>
 
 ━━━━━━━━━━━━━━━━━━━━━
-🎯 <b>Target:</b> <code>${currentSlug}</code>
-💎 <b>Floor Price:</b> <b>${floorEth} ETH</b> (~$${usdFloor} USD)
+🎯 <b>Active Target:</b> <code>${currentSlug}</code>
+💎 <b>Floor Price:</b> <b>${floorEthNum} ETH</b> (~$${usdFloor} USD)
 🎯 <b>Snipe Trigger:</b> <b>&lt; ${targetTriggerEth} ETH</b> (~$${targetTriggerUsd})
-🛡️ <b>Engine Status:</b> ${isArmed ? '🟢 <b>ARMED & HUNTING (24/7)</b>' : '🔴 <b>DISARMED / PAUSED</b>'}
+🛡️ <b>Engine Status:</b> ${isArmed ? '🟢 <b>ARMED & HUNTING (24/7)</b>' : '🔴 <b>DISARMED / STANDBY</b>'}
 🧪 <b>Mode:</b> ${botPaperSnipeMode ? '🧪 <b>PAPER SNIPE (SIMULATION)</b>' : '⚡ <b>100% REAL ON-CHAIN MAINNET</b>'}
 🚀 <b>Gas Speed:</b> <b>${botActiveGasPreset.toUpperCase()}</b> (Auto-Surge)
 👥 <b>Cloud Engines:</b> <code>${activeEngines} user(s) online</code>
 🌐 <b>Robinhood Sequencer:</b> 🟢 <b>Sub-15ms Active</b>
 ━━━━━━━━━━━━━━━━━━━━━
-<i>💡 Tap buttons below or type any command to control your bot:</i>
+<i>💡 Tap buttons below to control sniper or clear target:</i>
 `.trim();
 
-  const keyboard = [
-    [
-      isArmed
-        ? { text: '⏸ Pause Sniper', callback_data: 'action_pause' }
-        : { text: '⚡ ARM AUTO-SNIPER (24/7)', callback_data: 'action_arm' }
-    ],
-    [
-      { text: '🎯 Change Target NFT', callback_data: 'menu_target' },
-      { text: `📉 Discount: -${botActiveDiscountPercent}%`, callback_data: 'menu_discount' }
-    ],
-    [
-      { text: `🚀 Gas: ${botActiveGasPreset.toUpperCase()}`, callback_data: 'menu_gas' },
-      { text: botPaperSnipeMode ? '🧪 Mode: Paper' : '⚡ Mode: Real Mainnet', callback_data: 'action_toggle_sim' }
-    ],
-    [
-      { text: '👛 Wallet Fleet Holdings', callback_data: 'menu_wallets' },
-      { text: '📊 Live Telemetry & Health', callback_data: 'menu_stats' }
-    ],
-    [
-      { text: '🔄 Refresh', callback_data: 'menu_refresh' },
-      { text: '❓ Command Guide', callback_data: 'menu_help' }
-    ],
-    [
-      { text: '🌐 Launch WebApp', web_app: { url: WEBAPP_URL } }
-    ]
-  ];
+    keyboard = [
+      [
+        isArmed
+          ? { text: '⏸ Pause Sniper', callback_data: 'action_pause' }
+          : { text: '⚡ ARM AUTO-SNIPER (24/7)', callback_data: 'action_arm' }
+      ],
+      [
+        { text: '🎯 Change Target', callback_data: 'menu_target' },
+        { text: '🗑️ Clear Target', callback_data: 'action_clear_target' }
+      ],
+      [
+        { text: `📉 Discount: -${botActiveDiscountPercent}%`, callback_data: 'menu_discount' },
+        { text: `🚀 Gas: ${botActiveGasPreset.toUpperCase()}`, callback_data: 'menu_gas' }
+      ],
+      [
+        { text: botPaperSnipeMode ? '🧪 Mode: Paper' : '⚡ Mode: Real Mainnet', callback_data: 'action_toggle_sim' },
+        { text: '👛 Wallet Fleet', callback_data: 'menu_wallets' }
+      ],
+      [
+        { text: '📊 Telemetry & Health', callback_data: 'menu_stats' },
+        { text: '🔄 Refresh', callback_data: 'menu_refresh' }
+      ],
+      [
+        { text: '❓ Command Guide', callback_data: 'menu_help' },
+        { text: '🌐 Launch WebApp', web_app: { url: WEBAPP_URL } }
+      ]
+    ];
+  } else {
+    // 🛡️ CLEAN FRESH STANDBY STATE (No collection targeted)
+    text = `
+⚡ <b>AERO-SNIPER PRO • TELEGRAM TERMINAL</b> ⚡
+<i>Institutional High-Frequency NFT Sniping Protocol</i>
+
+━━━━━━━━━━━━━━━━━━━━━
+🎯 <b>Target:</b> <code>🔍 No Collection Loaded (Standby)</code>
+💎 <b>Floor Price:</b> <code>-- ETH</code>
+🎯 <b>Snipe Trigger:</b> <code>-- ETH</code>
+🛡️ <b>Engine Status:</b> 🔴 <b>STANDBY (Awaiting Target)</b>
+🧪 <b>Mode:</b> ${botPaperSnipeMode ? '🧪 <b>PAPER SNIPE (SIMULATION)</b>' : '⚡ <b>100% REAL ON-CHAIN MAINNET</b>'}
+🚀 <b>Gas Speed:</b> <b>${botActiveGasPreset.toUpperCase()}</b> (Auto-Surge)
+👥 <b>Cloud Engines:</b> <code>${activeEngines} user(s) online</code>
+🌐 <b>Robinhood Sequencer:</b> 🟢 <b>Sub-15ms Active</b>
+━━━━━━━━━━━━━━━━━━━━━
+<i>💡 Send any OpenSea link/slug in chat or tap below to set target:</i>
+`.trim();
+
+    keyboard = [
+      [
+        { text: '🔍 Search & Set Target NFT', callback_data: 'menu_target' }
+      ],
+      [
+        { text: `📉 Discount: -${botActiveDiscountPercent}%`, callback_data: 'menu_discount' },
+        { text: `🚀 Gas: ${botActiveGasPreset.toUpperCase()}`, callback_data: 'menu_gas' }
+      ],
+      [
+        { text: botPaperSnipeMode ? '🧪 Mode: Paper' : '⚡ Mode: Real Mainnet', callback_data: 'action_toggle_sim' },
+        { text: '👛 Wallet Fleet Holdings', callback_data: 'menu_wallets' }
+      ],
+      [
+        { text: '📊 Telemetry & Health', callback_data: 'menu_stats' },
+        { text: '🔄 Refresh', callback_data: 'menu_refresh' }
+      ],
+      [
+        { text: '❓ Command Guide', callback_data: 'menu_help' },
+        { text: '🌐 Launch WebApp', web_app: { url: WEBAPP_URL } }
+      ]
+    ];
+  }
 
   return { text, keyboard };
 }
@@ -166,18 +231,21 @@ export function buildMainMenu(chatId = null) {
  * 🎯 BUILD TARGET COLLECTION MENU
  */
 export function buildTargetMenu() {
-  const currentSlug = activeCollectionStats?.slug || activeSniperEngine.slug || 'robinwoodies';
+  const currentSlug = activeCollectionStats?.name || activeCollectionStats?.slug || 'None (Standby)';
   const text = `
 🎯 <b>SELECT TARGET COLLECTION:</b>
 
-Choose a popular Robinhood collection below, or simply <b>send the OpenSea URL / slug directly into this chat</b>:
+Choose a collection below or <b>send any OpenSea URL / slug directly into this chat</b>:
 
 Current Active: <code>${currentSlug}</code>
 `.trim();
 
   const keyboard = [
     [
-      { text: '🌲 Woodies (robinwoodies)', callback_data: 'set_target_robinwoodies' },
+      { text: '✍️ Type / Paste Custom Slug or URL', callback_data: 'prompt_custom_target' }
+    ],
+    [
+      { text: '🌲 Woodies', callback_data: 'set_target_robinwoodies' },
       { text: '🐂 Bulls Runners', callback_data: 'set_target_bulls-runners-genesis' }
     ],
     [
@@ -185,10 +253,8 @@ Current Active: <code>${currentSlug}</code>
       { text: '⚡ NTRPY Genesis', callback_data: 'set_target_ntrpygenesis' }
     ],
     [
-      { text: '✍️ Type Custom Slug / URL', callback_data: 'prompt_custom_target' }
-    ],
-    [
-      { text: '🔙 Back to Main Menu', callback_data: 'menu_main' }
+      { text: '🗑️ Clear Target (Reset)', callback_data: 'action_clear_target' },
+      { text: '🔙 Main Menu', callback_data: 'menu_main' }
     ]
   ];
 
@@ -199,7 +265,7 @@ Current Active: <code>${currentSlug}</code>
  * 📉 BUILD DISCOUNT TARGET MENU
  */
 export function buildDiscountMenu() {
-  const floor = activeCollectionStats?.floorEth || 0.000035;
+  const floor = activeCollectionStats?.floorEth || '--';
   const text = `
 📉 <b>SELECT FLOOR DISCOUNT TARGET:</b>
 
@@ -420,7 +486,7 @@ export async function dispatchPrivateSnipeAlert(userEngine, snipeData) {
 🏆 ${modeBadge}
 
 🎯 <b>Token:</b> <code>${tokenName}</code>
-🏷️ <b>Collection:</b> <code>${userEngine?.slug || 'robinwoodies'}</code>
+🏷️ <b>Collection:</b> <code>${userEngine?.slug || 'Collection'}</code>
 💰 <b>Price Bought:</b> <b>${priceEth} ETH</b> (~$${usdPrice} USD)
 ⚡ <b>Compute Latency:</b> <b>${snipeData.computeLatencyMs || '5.0'} ms</b>
 🛡️ <b>Worker Wallet:</b> <code>${snipeData.buyerName || 'Primary'}</code>
@@ -462,7 +528,7 @@ export async function dispatchGlobalMasterFeedAlert(snipeData) {
 
 👤 <b>Trader:</b> <code>${buyerDisplay}</code>
 🎯 <b>NFT:</b> <b>${tokenName}</b>
-🏷️ <b>Collection:</b> <code>${snipeData.slug || 'robinwoodies'}</code>
+🏷️ <b>Collection:</b> <code>${snipeData.slug || 'Collection'}</code>
 💰 <b>Price Bought:</b> <b>${priceEth} ETH</b> (~$${usdPrice} USD)
 ⚡ <b>Mempool Blast Latency:</b> <b>${snipeData.computeLatencyMs || '5.0'} ms</b>
 🔗 <b>Tx:</b> <a href="${explorerUrl}">Click to View On-Chain</a>
@@ -490,6 +556,11 @@ async function handleCallbackQuery(callbackQuery) {
 
   // 1. Arm Action
   if (data === 'action_arm') {
+    if (!activeCollectionStats?.slug) {
+      await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '⚠️ Please set a target collection first!');
+      const menu = buildTargetMenu();
+      return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+    }
     for (const [k, engine] of activeSniperEngines.entries()) {
       engine.isArmed = true;
     }
@@ -510,7 +581,15 @@ async function handleCallbackQuery(callbackQuery) {
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
-  // 3. Toggle Simulation (Paper Snipe)
+  // 3. Clear Target Action
+  if (data === 'action_clear_target') {
+    clearBotTarget();
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '🗑️ Target Cleared! Engine in Standby.');
+    const menu = buildMainMenu(chatId);
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // 4. Toggle Simulation (Paper Snipe)
   if (data === 'action_toggle_sim') {
     botPaperSnipeMode = !botPaperSnipeMode;
     for (const [k, engine] of activeSniperEngines.entries()) {
@@ -522,7 +601,7 @@ async function handleCallbackQuery(callbackQuery) {
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
-  // 4. Target Sub-Menu
+  // 5. Target Sub-Menu
   if (data === 'menu_target') {
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
     const menu = buildTargetMenu();
@@ -548,13 +627,13 @@ async function handleCallbackQuery(callbackQuery) {
     const text = `
 ✍️ <b>SEND TARGET COLLECTION:</b>
 
-Please type the OpenSea URL or collection slug in your next message (e.g. <code>robinwoodies</code> or <code>https://opensea.io/collection/bulls-runners-genesis</code>).
+Please type the OpenSea URL or collection slug in your next message (e.g. <code>bulls-runners-genesis</code> or <code>rhmachines</code>).
 `.trim();
     const keyboard = [[{ text: '🔙 Cancel', callback_data: 'menu_main' }]];
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, text, keyboard);
   }
 
-  // 5. Discount Sub-Menu
+  // 6. Discount Sub-Menu
   if (data === 'menu_discount') {
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
     const menu = buildDiscountMenu();
@@ -565,7 +644,7 @@ Please type the OpenSea URL or collection slug in your next message (e.g. <code>
   if (data.startsWith('set_pct_')) {
     const pct = parseInt(data.replace('set_pct_', ''), 10);
     botActiveDiscountPercent = pct;
-    const floor = activeCollectionStats?.floorEth || 0.000035;
+    const floor = activeCollectionStats?.floorEth || 0;
     const newMaxFloor = floor * (1 - pct / 100);
 
     for (const [k, engine] of activeSniperEngines.entries()) {
@@ -578,7 +657,7 @@ Please type the OpenSea URL or collection slug in your next message (e.g. <code>
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
-  // 6. Gas Sub-Menu
+  // 7. Gas Sub-Menu
   if (data === 'menu_gas') {
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
     const menu = buildGasMenu();
@@ -598,21 +677,21 @@ Please type the OpenSea URL or collection slug in your next message (e.g. <code>
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
-  // 7. Wallets Sub-Menu
+  // 8. Wallets Sub-Menu
   if (data === 'menu_wallets') {
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
     const menu = await buildWalletsMenu();
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
-  // 8. Stats / Telemetry
+  // 9. Stats / Telemetry
   if (data === 'menu_stats' || data === 'menu_refresh') {
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '🔄 Refreshed');
     const menu = buildMainMenu(chatId);
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
-  // 9. Back to Main Menu
+  // 10. Back to Main Menu
   if (data === 'menu_main') {
     userPromptState.delete(chatId);
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
@@ -620,23 +699,26 @@ Please type the OpenSea URL or collection slug in your next message (e.g. <code>
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
-  // 10. Help Guide
+  // 11. Help Guide
   if (data === 'menu_help') {
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
     const helpText = `
 📖 <b>AERO-SNIPER TELEGRAM COMMAND GUIDE:</b>
 
-<b>Touch Commands:</b>
+<b>Touch Controls:</b>
+• <b>🔍 Search Target:</b> Scan & set any NFT collection.
+• <b>🗑️ Clear Target:</b> Reset bot to standby mode.
 • <b>⚡ Arm / ⏸ Pause:</b> Starts/stops 24/7 background sniper engine.
-• <b>🎯 Target NFT:</b> Instant 1-tap collection switcher.
-• <b>📉 Discount %:</b> Choose fat-finger discount below floor (-10% to -90%).
+• <b>📉 Discount %:</b> Set fat-finger discount below floor (-10% to -90%).
 • <b>🚀 Gas:</b> Choose racing tip (Safe, Turbo, Surge, Hyped).
 • <b>🧪 Mode:</b> Toggle between Simulation (Paper) & Real Mainnet.
 
 <b>Direct Chat Commands:</b>
+• <code>/start</code> — Open main dashboard
+• <code>/clear</code> — Clear target & reset to standby
 • <code>/arm</code> — Arm sniper immediately
 • <code>/pause</code> — Pause sniper immediately
-• <code>/target &lt;slug&gt;</code> — e.g. <code>/target robinwoodies</code>
+• <code>/target &lt;slug&gt;</code> — e.g. <code>/target bulls-runners-genesis</code>
 • <code>/discount &lt;%&gt;</code> — e.g. <code>/discount 25</code>
 • <code>/gas &lt;safe|turbo|surge|hyped&gt;</code>
 • <code>/wallets</code> — Check fleet holdings
@@ -662,7 +744,7 @@ async function handleTextMessage(message) {
     dbGetUsers().then(users => {
       if (users && users.length > 0) {
         users[0].telegramChatId = String(chatId);
-        dbSaveUser(users[0]).catch(() => {});
+        dbUpdateUser(users[0].id, { telegram_chat_id: String(chatId) }).catch(() => {});
       }
     }).catch(() => {});
   }
@@ -689,8 +771,19 @@ async function handleTextMessage(message) {
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard);
   }
 
-  // 3. /arm
+  // 3. /clear or /reset
+  if (text === '/clear' || text === '/reset') {
+    clearBotTarget();
+    const menu = buildMainMenu(chatId);
+    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '🗑️ <b>Target Cleared! Reset to Fresh Standby.</b>\n\n' + menu.text, menu.keyboard);
+  }
+
+  // 4. /arm
   if (text === '/arm') {
+    if (!activeCollectionStats?.slug) {
+      const menu = buildTargetMenu();
+      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚠️ <b>Please set a target collection before arming!</b>\n\n' + menu.text, menu.keyboard);
+    }
     for (const [k, engine] of activeSniperEngines.entries()) {
       engine.isArmed = true;
     }
@@ -699,7 +792,7 @@ async function handleTextMessage(message) {
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚡ <b>SNIPER ARMED (24/7 Live Cloud Engine)!</b>\n\n' + menu.text, menu.keyboard);
   }
 
-  // 4. /pause or /disarm
+  // 5. /pause or /disarm
   if (text === '/pause' || text === '/disarm') {
     for (const [k, engine] of activeSniperEngines.entries()) {
       engine.isArmed = false;
@@ -709,7 +802,7 @@ async function handleTextMessage(message) {
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⏸ <b>SNIPER PAUSED!</b>\n\n' + menu.text, menu.keyboard);
   }
 
-  // 5. /target <slug>
+  // 6. /target <slug>
   if (text.startsWith('/target')) {
     const parts = text.split(' ');
     if (parts.length > 1) {
@@ -727,14 +820,14 @@ async function handleTextMessage(message) {
     }
   }
 
-  // 6. /discount <num>
+  // 7. /discount <num>
   if (text.startsWith('/discount')) {
     const parts = text.split(' ');
     if (parts.length > 1) {
       const pct = parseInt(parts[1], 10);
       if (!isNaN(pct) && pct > 0 && pct < 100) {
         botActiveDiscountPercent = pct;
-        const floor = activeCollectionStats?.floorEth || 0.000035;
+        const floor = activeCollectionStats?.floorEth || 0;
         const newMaxFloor = floor * (1 - pct / 100);
         for (const [k, engine] of activeSniperEngines.entries()) {
           engine.maxFloorEth = newMaxFloor;
@@ -748,7 +841,7 @@ async function handleTextMessage(message) {
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard);
   }
 
-  // 7. /gas <preset>
+  // 8. /gas <preset>
   if (text.startsWith('/gas')) {
     const parts = text.split(' ');
     if (parts.length > 1) {
@@ -767,25 +860,25 @@ async function handleTextMessage(message) {
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard);
   }
 
-  // 8. /wallets
+  // 9. /wallets
   if (text === '/wallets') {
     const menu = await buildWalletsMenu();
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard);
   }
 
-  // 9. /status
+  // 10. /status
   if (text === '/status') {
     const menu = buildMainMenu(chatId);
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard);
   }
 
-  // 10. Direct OpenSea link or slug detection
+  // 11. Direct OpenSea link or slug detection
   if (text.includes('opensea.io/') || /^[a-zA-Z0-9_-]{3,40}$/.test(text)) {
     sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `🔍 Detected collection <code>${text}</code>. Scanning OpenSea...`);
     const stats = await executeScanForBot(text);
     if (stats) {
       const isArmed = activeSniperEngine.isArmed;
-      const floorEth = stats.floorEth || 0.000035;
+      const floorEth = stats.floorEth || 0;
       const usdFloor = (floorEth * cachedEthPrice).toFixed(2);
       const targetEth = (floorEth * (1 - (botActiveDiscountPercent || 20) / 100)).toFixed(6);
 
@@ -809,6 +902,9 @@ async function handleTextMessage(message) {
         ],
         [
           { text: `📉 Adjust Discount (-${botActiveDiscountPercent}%)`, callback_data: 'menu_discount' },
+          { text: '🗑️ Clear Target', callback_data: 'action_clear_target' }
+        ],
+        [
           { text: '🏠 Main Dashboard', callback_data: 'menu_main' }
         ]
       ];
@@ -871,3 +967,4 @@ export async function startTelegramBotPolling() {
 
   pollLoop().catch(() => {});
 }
+
