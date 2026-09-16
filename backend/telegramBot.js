@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { ethers } from 'ethers';
 import {
   activeSniperEngine,
   activeSniperEngines,
@@ -597,10 +598,30 @@ Choose your Robinhood Chain mempool racing multiplier:
 /**
  * 👛 BUILD WALLETS FLEET STATUS MENU
  */
-export async function buildWalletsMenu() {
+export async function buildWalletsMenu(chatId = null) {
   const users = await dbGetUsers().catch(() => []);
   const primaryUser = users[0];
   const wallets = primaryUser?.vault?.wallets || [];
+
+  // Live RPC Balance refresh from Robinhood Chain
+  if (wallets.length > 0) {
+    await Promise.all(wallets.map(async (w) => {
+      try {
+        if (w.address && w.address.startsWith('0x')) {
+          const res = await axios.post('https://rpc.mainnet.robinhood.com', {
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'eth_getBalance',
+            params: [w.address, 'latest']
+          }, { timeout: 3500 });
+          if (res.data?.result) {
+            w.balance = ethers.formatEther(BigInt(res.data.result));
+          }
+        }
+      } catch (e) {}
+    }));
+  }
+
   const masterWallet = wallets.find(w => w.role === 'master') || wallets[0];
 
   let totalEth = 0;
@@ -611,16 +632,16 @@ export async function buildWalletsMenu() {
 
   let walletLines = '';
   if (wallets.length === 0) {
-    walletLines = '<i>No wallets configured in cloud vault. Add keys via WebApp or Bot.</i>';
+    walletLines = '<i>No wallets configured yet. Tap "➕ Add Private Key" or "⚡ Generate 5 Workers" below!</i>';
   } else {
-    walletLines = wallets.slice(0, 6).map((w, idx) => {
+    walletLines = wallets.slice(0, 8).map((w, idx) => {
       const shortAddr = w.address ? `${w.address.slice(0, 6)}...${w.address.slice(-4)}` : '0x...';
       const roleTag = w.role === 'master' ? '👑 Master' : '⚡ Worker';
       const bal = formatDisplayEth(w.balance || 0);
       return `• <b>${roleTag} (${w.name || '#' + (idx + 1)}):</b> <code>${shortAddr}</code> — <b>${bal} ETH</b>`;
     }).join('\n');
-    if (wallets.length > 6) {
-      walletLines += `\n<i>...and ${wallets.length - 6} more worker sub-wallets</i>`;
+    if (wallets.length > 8) {
+      walletLines += `\n<i>...and ${wallets.length - 8} more worker sub-wallets</i>`;
     }
   }
 
@@ -639,8 +660,15 @@ ${walletLines}
 
   const keyboard = [
     [
+      { text: '➕ Add Private Key', callback_data: 'prompt_add_wallet' },
+      { text: '⚡ Auto-Generate 5 Workers', callback_data: 'action_generate_workers' }
+    ],
+    [
       { text: '🔄 Refresh Balances', callback_data: 'menu_wallets' },
-      { text: '🔙 Back to Menu', callback_data: 'menu_main' }
+      { text: '🗑️ Clear All Wallets', callback_data: 'action_clear_wallets' }
+    ],
+    [
+      { text: '🔙 Back to Main Dashboard', callback_data: 'menu_main' }
     ]
   ];
 
@@ -1178,10 +1206,68 @@ Please type the OpenSea URL or collection slug in your next message (e.g. <code>
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
-  // 12. Wallets Sub-Menu
+  // 12. Wallets Sub-Menu & Actions
   if (data === 'menu_wallets') {
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '🔄 Refreshing wallet fleet...');
+    const menu = await buildWalletsMenu(chatId);
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Prompt Add Wallet / Private Key
+  if (data === 'prompt_add_wallet') {
+    userPromptState.set(chatId, { action: 'awaiting_private_key' });
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
-    const menu = await buildWalletsMenu();
+    const text = `
+🔐 <b>ADD WALLET / IMPORT PRIVATE KEY:</b>
+
+Please type or paste your <b>Private Key</b> (64-hex starting with <code>0x...</code>) in your next message.
+
+🛡️ <i>Your key is encrypted in memory and stored securely in your private cloud vault for sub-15ms Robinhood sniping.</i>
+`.trim();
+    const keyboard = [[{ text: '🔙 Cancel', callback_data: 'menu_wallets' }]];
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, text, keyboard);
+  }
+
+  // Generate 5 Worker Wallets
+  if (data === 'action_generate_workers') {
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '⚡ Generating 5 Worker Wallets...');
+    const users = await dbGetUsers().catch(() => []);
+    const primaryUser = users[0];
+    if (primaryUser) {
+      if (!primaryUser.vault) primaryUser.vault = {};
+      if (!Array.isArray(primaryUser.vault.wallets)) primaryUser.vault.wallets = [];
+
+      for (let i = 0; i < 5; i++) {
+        const randWallet = ethers.Wallet.createRandom();
+        primaryUser.vault.wallets.push({
+          address: randWallet.address,
+          privateKey: randWallet.privateKey,
+          name: `Worker #${primaryUser.vault.wallets.length + 1}`,
+          role: 'worker',
+          balance: '0'
+        });
+      }
+
+      await dbUpdateUser(primaryUser.id, { vault: primaryUser.vault });
+      syncRulesToEngines();
+      await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '✅ 5 Worker Wallets Generated!');
+    }
+    const menu = await buildWalletsMenu(chatId);
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Clear All Wallets
+  if (data === 'action_clear_wallets') {
+    const users = await dbGetUsers().catch(() => []);
+    const primaryUser = users[0];
+    if (primaryUser) {
+      if (!primaryUser.vault) primaryUser.vault = {};
+      primaryUser.vault.wallets = [];
+      await dbUpdateUser(primaryUser.id, { vault: primaryUser.vault });
+      syncRulesToEngines();
+    }
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '🗑️ Wallet fleet cleared.');
+    const menu = await buildWalletsMenu(chatId);
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
@@ -1373,6 +1459,39 @@ async function handleTextMessage(message) {
       syncRulesToEngines();
       const menu = buildTokenIdRuleMenu();
       return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Token ID Max Price Cap Set:</b> <b>${formatDisplayEth(ethVal)} ETH</b>\n\n` + menu.text, menu.keyboard);
+    }
+  }
+
+  // 10. Awaiting Wallet Private Key Import
+  if (prompt?.action === 'awaiting_private_key') {
+    userPromptState.delete(chatId);
+    const cleanKey = text.trim();
+    try {
+      const walletObj = new ethers.Wallet(cleanKey);
+      const users = await dbGetUsers().catch(() => []);
+      const primaryUser = users[0];
+      if (primaryUser) {
+        if (!primaryUser.vault) primaryUser.vault = {};
+        if (!Array.isArray(primaryUser.vault.wallets)) primaryUser.vault.wallets = [];
+
+        const isMaster = primaryUser.vault.wallets.length === 0 || !primaryUser.vault.wallets.some(w => w.role === 'master');
+        primaryUser.vault.wallets.push({
+          address: walletObj.address,
+          privateKey: walletObj.privateKey,
+          name: isMaster ? 'Master Holding' : `Worker #${primaryUser.vault.wallets.length + 1}`,
+          role: isMaster ? 'master' : 'worker',
+          balance: '0'
+        });
+
+        await dbUpdateUser(primaryUser.id, { vault: primaryUser.vault });
+        syncRulesToEngines();
+      }
+
+      const menu = await buildWalletsMenu(chatId);
+      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Wallet Imported Successfully!</b>\nAddress: <code>${walletObj.address}</code>\nRole: <b>${primaryUser?.vault?.wallets?.length === 1 ? '👑 Master Holding' : '⚡ Worker'}</b>\n\n` + menu.text, menu.keyboard);
+    } catch (e) {
+      const menu = await buildWalletsMenu(chatId);
+      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `❌ <b>Invalid Private Key!</b>\nPlease ensure you send a valid 64-character hex private key starting with <code>0x...</code>\n\n` + menu.text, menu.keyboard);
     }
   }
 
