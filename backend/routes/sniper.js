@@ -33,10 +33,14 @@ const router = express.Router();
  */
 export async function fetchSeaportFulfillmentWithShop(orderHash, chain, buyerAddress, tokenId) {
   const candidateKeys = config.opensea.getCandidateKeys();
-  let lastErr = null;
+  if (!candidateKeys || candidateKeys.length === 0) {
+    return { success: false, isDeadOrder: false, error: 'No OpenSea API keys available' };
+  }
 
-  for (let i = 0; i < Math.min(candidateKeys.length, 5); i++) {
-    const apiKey = candidateKeys[i];
+  // ⚡ ULTRA-FAST PARALLEL KEY RACING:
+  // Race top 2 candidate keys simultaneously to get fastest network response (<150-250ms)
+  const raceKeys = candidateKeys.slice(0, 2);
+  const makeRequest = async (apiKey) => {
     const t0 = Date.now();
     try {
       const res = await apiClient.post(`${config.opensea.restApiBase}/listings/fulfillment_data`, {
@@ -47,34 +51,50 @@ export async function fetchSeaportFulfillmentWithShop(orderHash, chain, buyerAdd
         },
         fulfiller: { address: buyerAddress }
       }, {
-        headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json' },
-        timeout: 3500
+        headers: {
+          'X-API-KEY': apiKey,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        timeout: 2500
       });
       const latency = Date.now() - t0;
       trackKeyUse(apiKey, latency, '200 OK');
       config.opensea.clearKeyCooldown(apiKey);
       return { success: true, data: res.data, apiKey };
     } catch (err) {
-      lastErr = err;
       const status = err.response?.status || err.code || 'Timeout';
       const errDetail = err.response?.data?.errors?.join(', ') || err.response?.data?.detail || err.message;
       trackKeyUse(apiKey, Date.now() - t0, `${status}`);
-
-      const isDeadOrder = /not valid|not found|cancelled|expired|inactive/i.test(errDetail) || err.response?.status === 400;
-      if (isDeadOrder) {
-        return { success: false, isDeadOrder: true, error: errDetail };
-      }
-
       if (status === 429) {
         config.opensea.markKeyCooldown(apiKey, 3000);
-        await new Promise(r => setTimeout(r, 80));
-        continue;
+      }
+      const isDead = /not valid|not found|cancelled|expired|inactive/i.test(errDetail) || err.response?.status === 400;
+      throw { isDead, errDetail, status };
+    }
+  };
+
+  try {
+    const winner = await Promise.any(raceKeys.map(k => makeRequest(k)));
+    return winner;
+  } catch (aggErr) {
+    // If top 2 failed, fallback to sequential retry on remaining candidate keys
+    const remainingKeys = candidateKeys.slice(2, 5);
+    for (const key of remainingKeys) {
+      try {
+        const res = await makeRequest(key);
+        return res;
+      } catch (err) {
+        if (err.isDead) return { success: false, isDeadOrder: true, error: err.errDetail };
       }
     }
+    const firstErr = Array.isArray(aggErr?.errors) ? aggErr.errors[0] : null;
+    return {
+      success: false,
+      isDeadOrder: Boolean(firstErr?.isDead),
+      error: firstErr?.errDetail || 'All OpenSea fulfillment attempts failed'
+    };
   }
-
-  const finalDetail = lastErr?.response?.data?.errors?.join(', ') || lastErr?.response?.data?.detail || lastErr?.message || 'All OpenSea API keys failed';
-  return { success: false, isDeadOrder: false, error: finalDetail };
 }
 
 // ⚡ ZERO-HOP DIRECT SUB-MILLISECOND SNIPE EXECUTION (AEROMINT MULTI-RPC BLAST)
@@ -324,12 +344,37 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart, userEng
     }, engine.userId);
 
     // 📱 ASYNC TELEGRAM DUAL-ALERT DISPATCH (Zero impact on sniper hot-path)
+    const floorEth = activeCollectionStats?.floorEth || 0;
+    const priceNum = parseFloat(parsed.price || 0);
+    let discountStr = 'Market Floor';
+    let savedEth = 0;
+    if (floorEth > 0 && priceNum < floorEth) {
+      const discountPct = (((floorEth - priceNum) / floorEth) * 100).toFixed(1);
+      savedEth = (floorEth - priceNum).toFixed(6);
+      discountStr = `🔥 -${discountPct}% Below Floor (Saved: ${savedEth} ETH)`;
+    } else if (floorEth > 0) {
+      discountStr = `At Floor (${formatEthPrecise(floorEth)})`;
+    }
+
+    const shortUid = engine.userId ? (engine.userId.startsWith('sniper_u_') ? engine.userId.slice(-6) : engine.userId.slice(0, 10)) : 'User';
+    const shortAddress = buyerAddress ? `${buyerAddress.slice(0, 6)}...${buyerAddress.slice(-4)}` : '';
+
     const telegramPayload = {
       slug: engine.slug,
+      collectionName: activeCollectionStats?.name || engine.slug,
       tokenId: tokenId,
       name: parsed.name || `#${tokenId}`,
       price: parsed.price,
+      floorEth: floorEth,
+      discountStr: discountStr,
+      savedEth: savedEth,
       buyerName: buyerName,
+      buyerAddress: buyerAddress,
+      buyerAddressShort: shortAddress,
+      userEmail: engine.userEmail || (engine.userId?.includes('@') ? engine.userId : ''),
+      userId: engine.userId,
+      userIdShort: shortUid,
+      reason: reason || 'Auto-Trigger',
       txHash: txHash,
       image: parsed.imageUrl || parsed.image,
       computeLatencyMs: (performance.now() - tTriggerStart).toFixed(2),

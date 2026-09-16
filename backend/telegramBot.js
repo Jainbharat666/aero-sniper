@@ -960,11 +960,11 @@ export async function sendTelegramPhoto(token, chatId, photoUrl, caption, inline
 }
 
 /**
- * 🎯 1. PRIVATE SNIPE ALERT (Sent to the user's Telegram)
+ * 🎯 1. PRIVATE SNIPE ALERT (Sent to the specific user's Telegram)
  */
 export async function dispatchPrivateSnipeAlert(userEngine, snipeData) {
   const token = TELEGRAM_BOT_TOKEN;
-  const chatId = userEngine?.telegramChatId || userEngine?.chatId || TELEGRAM_ADMIN_CHAT_ID;
+  const chatId = userEngine?.telegramChatId || userEngine?.chatId;
   if (!token || !chatId) return;
 
   const isSim = !!snipeData.isDryRun;
@@ -972,6 +972,7 @@ export async function dispatchPrivateSnipeAlert(userEngine, snipeData) {
   const tokenName = snipeData.name || `#${snipeData.tokenId}`;
   const priceEth = formatDisplayEth(snipeData.price || 0);
   const usdPrice = (parseFloat(snipeData.price || 0) * cachedEthPrice).toFixed(2);
+  const floorDisp = formatDisplayEth(snipeData.floorEth || 0);
   const txHash = snipeData.txHash || '';
   const txShort = txHash.length > 18 ? `${txHash.slice(0, 10)}...${txHash.slice(-8)}` : txHash;
   const blockNum = snipeData.blockNumber ? `#${snipeData.blockNumber}` : 'Mined';
@@ -982,10 +983,13 @@ export async function dispatchPrivateSnipeAlert(userEngine, snipeData) {
 🏆 ${modeBadge}
 
 🎯 <b>Token:</b> <code>${tokenName}</code>
-🏷️ <b>Collection:</b> <code>${userEngine?.slug || 'Collection'}</code>
+🏷️ <b>Collection:</b> <code>${snipeData.collectionName || userEngine?.slug || 'Collection'}</code>
+💎 <b>Market Floor:</b> <b>${floorDisp} ETH</b>
 💰 <b>Price Bought:</b> <b>${priceEth} ETH</b> (~$${usdPrice} USD)
+📉 <b>Advantage:</b> <b>${snipeData.discountStr || 'Target Price Met'}</b>
+🎯 <b>Strategy:</b> <code>${snipeData.reason || 'Auto-Rule Trigger'}</code>
 ⚡ <b>Compute Latency:</b> <b>${snipeData.computeLatencyMs || '5.0'} ms</b>
-🛡️ <b>Worker Wallet:</b> <code>${snipeData.buyerName || 'Primary'}</code>
+🛡️ <b>Worker Wallet:</b> <code>${snipeData.buyerName || 'Primary'} ${snipeData.buyerAddressShort ? '(' + snipeData.buyerAddressShort + ')' : ''}</code>
 📦 <b>Robinhood Block:</b> <code>${blockNum}</code>
 🔗 <b>TxHash:</b> <code>${txShort}</code>
 
@@ -1006,26 +1010,43 @@ ${isSim ? '<i>Simulation Mode — Zero funds spent</i>' : '<i>Successfully secur
  * 📢 2. UNIVERSAL MASTER FEED ALERT (Broadcast to Global Admin / Channel)
  */
 export async function dispatchGlobalMasterFeedAlert(snipeData) {
-  const token = TELEGRAM_FEED_BOT_TOKEN || TELEGRAM_BOT_TOKEN;
-  const channelId = TELEGRAM_FEED_CHANNEL_ID || TELEGRAM_ADMIN_CHAT_ID;
+  const feedToken = process.env.TELEGRAM_FEED_BOT_TOKEN;
+  const feedChannel = process.env.TELEGRAM_FEED_CHANNEL_ID;
+
+  // Only post if a dedicated feed channel or separate feed bot is configured
+  // This prevents spamming the subscriber bot with duplicate messages!
+  if (!feedChannel && !feedToken) {
+    return;
+  }
+
+  const token = feedToken || TELEGRAM_BOT_TOKEN;
+  const channelId = feedChannel;
   if (!token || !channelId) return;
 
   const tokenName = snipeData.name || `#${snipeData.tokenId}`;
   const priceEth = formatDisplayEth(snipeData.price || 0);
   const usdPrice = (parseFloat(snipeData.price || 0) * cachedEthPrice).toFixed(2);
-  const buyerDisplay = snipeData.buyerName || 'VIP Member';
+  const floorDisp = formatDisplayEth(snipeData.floorEth || 0);
+  const floorUsd = (parseFloat(snipeData.floorEth || 0) * cachedEthPrice).toFixed(2);
   const explorerUrl = `https://explorer.mainnet.robinhood.com/tx/${snipeData.txHash}`;
+  const userTag = snipeData.userEmail ? `<code>${snipeData.userEmail}</code>` : (snipeData.userId ? `<code>UID: ${snipeData.userIdShort}</code>` : 'VIP Member');
 
   const text = `
 👑 <b>AERO-SNIPER V2 • MASTER MINT FEED</b> ⚡
+<i>Institutional High-Frequency NFT Sniping Protocol</i>
 
-👤 <b>Trader:</b> <code>${buyerDisplay}</code>
-🎯 <b>NFT:</b> <b>${tokenName}</b>
-🏷️ <b>Collection:</b> <code>${snipeData.slug || 'Collection'}</code>
+━━━━━━━━━━━━━━━━━━━━━
+👤 <b>Subscriber:</b> ${userTag}
+💼 <b>Fleet Wallet:</b> <code>${snipeData.buyerName || 'Worker'} ${snipeData.buyerAddressShort ? '(' + snipeData.buyerAddressShort + ')' : ''}</code>
+🏷️ <b>Collection:</b> <code>${snipeData.collectionName || snipeData.slug || 'Collection'}</code>
+🎯 <b>NFT Sniped:</b> <b>${tokenName}</b>
+💎 <b>Collection Floor:</b> <b>${floorDisp} ETH</b> (~$${floorUsd} USD)
 💰 <b>Price Bought:</b> <b>${priceEth} ETH</b> (~$${usdPrice} USD)
+📉 <b>Alpha Gain / Discount:</b> <b>${snipeData.discountStr || 'Trigger Met'}</b>
+🎯 <b>Trigger Strategy:</b> <code>${snipeData.reason || 'Auto-Rule'}</code>
 ⚡ <b>Mempool Blast Latency:</b> <b>${snipeData.computeLatencyMs || '5.0'} ms</b>
 🔗 <b>Tx:</b> <a href="${explorerUrl}">Click to View On-Chain</a>
-
+━━━━━━━━━━━━━━━━━━━━━
 🌐 <i>Aero-Sniper Institutional High-Frequency Protocol Active</i>
 `.trim();
 
