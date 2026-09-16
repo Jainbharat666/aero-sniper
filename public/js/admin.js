@@ -185,7 +185,7 @@
       if (!tbody) return;
 
       if (users.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500 font-sans">No users matching filter found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500 font-sans">No users matching filter found.</td></tr>`;
         return;
       }
 
@@ -197,6 +197,26 @@
         const statusBadge = isBanned 
           ? `<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-rose-50 text-rose-700 border border-rose-200">SUSPENDED</span>`
           : `<span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">ACTIVE</span>`;
+
+        let tgDisplay = '';
+        if (u.is_telegram_linked) {
+          const userTag = u.telegram_username ? `@${u.telegram_username}` : `ID: ${u.telegram_chat_id}`;
+          tgDisplay = `
+            <div class="font-bold text-sky-700 flex items-center gap-1">
+              <i class="fa-brands fa-telegram text-sky-500"></i> ${userTag}
+            </div>
+            <div class="text-[9px] text-emerald-600 font-bold flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> BOUND / LOCKED
+            </div>
+          `;
+        } else if (u.telegram_link_token) {
+          tgDisplay = `
+            <div class="font-mono-code text-[10px] text-amber-700 font-bold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 truncate max-w-[130px]" title="${u.telegram_link_token}">${u.telegram_link_token}</div>
+            <div class="text-[9px] text-amber-600">⏳ Pending Link</div>
+          `;
+        } else {
+          tgDisplay = `<span class="text-slate-400 text-[10px] font-sans">⚪ Not Linked</span>`;
+        }
 
         return `
           <tr class="hover:bg-slate-50 transition-colors">
@@ -213,14 +233,15 @@
               <div class="font-black text-emerald-700">⚡ Unlimited</div>
               <div class="text-[10px] text-slate-500">Real-Time Sniping</div>
             </td>
+            <td class="py-2.5 px-3">${tgDisplay}</td>
             <td class="py-2.5 px-3">${statusBadge}</td>
             <td class="py-2.5 px-3 text-right">
               ${isOwner ? `<span class="text-[10px] text-slate-500 font-bold italic">Master Owner</span>` : `
                 <div class="flex items-center justify-end gap-1">
                   <button onclick="adminAdjustTime('${u.id}', { days: 1 })" title="Add +1 Day (+24 Hours)" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[10px] font-black border border-indigo-200 shadow-sm transition-colors cursor-pointer">+1d</button>
                   <button onclick="adminAdjustTime('${u.id}', { hours: 1 })" title="Add +1 Hour" class="px-2 py-1 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 rounded-lg text-[10px] font-black border border-cyan-200 shadow-sm transition-colors cursor-pointer">+1h</button>
-                  <button onclick="adminAdjustTime('${u.id}', { minutes: 10 })" title="Add +10 Minutes (Test/Trial)" class="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-[10px] font-black border border-purple-200 shadow-sm transition-colors cursor-pointer">+10m</button>
                   <button onclick="openAdminTimeModal('${u.id}', '${u.email}')" title="Adjust VIP Subscription (Presets, Hours, Days, Lifetime)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-black border border-slate-300 shadow-sm transition-colors cursor-pointer">⏱️ +/-</button>
+                  <button onclick="adminResetTelegram('${u.id}', '${u.email}')" title="Reset / Unlink Telegram Bot Access" class="px-2 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-lg text-[10px] font-black border border-sky-200 shadow-sm transition-colors cursor-pointer"><i class="fa-brands fa-telegram"></i> Reset TG</button>
                   <button onclick="adminToggleBan('${u.id}')" title="${isBanned ? 'Unban' : 'Suspend'}" class="px-2 py-1 ${isBanned ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200'} rounded-lg text-[10px] font-black border shadow-sm transition-colors cursor-pointer">
                     ${isBanned ? 'Unban' : 'Suspend'}
                   </button>
@@ -231,6 +252,31 @@
           </tr>
         `;
       }).join('');
+    }
+
+    async function adminResetTelegram(userId, email) {
+      const ok = await showCustomConfirm(`Are you sure you want to revoke & reset Telegram Bot access for ${email || 'this user'}? Their existing Telegram link will be disconnected, allowing a fresh single-use link to be generated.`, 'Reset Telegram Bot Access', { isDanger: false, confirmText: 'Reset Telegram' });
+      if (!ok) return;
+
+      try {
+        const res = await fetch('/api/users/reset-telegram', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({ userId, user_id: userId })
+        });
+        const d = await res.json();
+        if (d.success) {
+          showToast(d.message || 'Telegram access reset successfully!');
+          refreshAdminData();
+        } else {
+          showToast(d.error || 'Failed to reset Telegram access', true);
+        }
+      } catch(e) {
+        showToast(e.message, true);
+      }
     }
 
     function renderAdminInvites(invites) {

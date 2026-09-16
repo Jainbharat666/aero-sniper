@@ -464,19 +464,33 @@ router.post('/user/generate-telegram-token', userAuthMiddleware, async (req, res
     const user = req.authenticatedUser;
     if (!user) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
-    // Generate high-entropy 16-character cryptographic token (e.g. AERO-TG-84F9-C10A-37D2)
-    const p1 = crypto.randomBytes(2).toString('hex').toUpperCase();
-    const p2 = crypto.randomBytes(2).toString('hex').toUpperCase();
-    const p3 = crypto.randomBytes(2).toString('hex').toUpperCase();
-    const token = `AERO-TG-${p1}-${p2}-${p3}`;
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15-minute strict TTL
-
     // Load existing user config
     const currentConfig = (await dbGetUserConfig(user.id)) || {};
-    currentConfig.telegram_link_token = token;
-    currentConfig.telegram_token_expires_at = expiresAt;
 
-    await dbSaveUserConfig(user.id, currentConfig);
+    // If user is already linked, do not generate a new token
+    if (currentConfig.telegram_chat_id) {
+      return res.json({
+        success: true,
+        isLinked: true,
+        telegramChatId: currentConfig.telegram_chat_id,
+        telegramUsername: currentConfig.telegram_username || '',
+        telegramFirstName: currentConfig.telegram_first_name || '',
+        linkedAt: currentConfig.telegram_linked_at || '',
+        message: 'Account is already securely bound to Telegram.'
+      });
+    }
+
+    // If an unlinked token already exists for this user, reuse their exact unique token
+    let token = currentConfig.telegram_link_token;
+    if (!token) {
+      // Generate high-entropy 16-character unique cryptographic token (e.g. AERO-TG-84F9-C10A-37D2)
+      const p1 = crypto.randomBytes(2).toString('hex').toUpperCase();
+      const p2 = crypto.randomBytes(2).toString('hex').toUpperCase();
+      const p3 = crypto.randomBytes(2).toString('hex').toUpperCase();
+      token = `AERO-TG-${p1}-${p2}-${p3}`;
+      currentConfig.telegram_link_token = token;
+      await dbSaveUserConfig(user.id, currentConfig);
+    }
 
     const botUsername = 'AeroSniperProBot';
     const deepLink = `https://t.me/${botUsername}?start=${token}`;
@@ -484,10 +498,9 @@ router.post('/user/generate-telegram-token', userAuthMiddleware, async (req, res
     return res.json({
       success: true,
       token,
-      expiresAt,
       deepLink,
-      isLinked: !!currentConfig.telegram_chat_id,
-      telegramChatId: currentConfig.telegram_chat_id || null
+      isLinked: false,
+      telegramChatId: null
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -500,12 +513,16 @@ router.get('/user/telegram-status', userAuthMiddleware, async (req, res) => {
     if (!user) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const currentConfig = (await dbGetUserConfig(user.id)) || {};
+    const isLinked = !!currentConfig.telegram_chat_id;
+
     return res.json({
       success: true,
-      isLinked: !!currentConfig.telegram_chat_id,
+      isLinked,
       telegramChatId: currentConfig.telegram_chat_id || null,
+      telegramUsername: currentConfig.telegram_username || null,
+      telegramFirstName: currentConfig.telegram_first_name || null,
+      linkedAt: currentConfig.telegram_linked_at || null,
       activeToken: currentConfig.telegram_link_token || null,
-      expiresAt: currentConfig.telegram_token_expires_at || null,
       deepLink: currentConfig.telegram_link_token ? `https://t.me/AeroSniperProBot?start=${currentConfig.telegram_link_token}` : null
     });
   } catch (err) {
@@ -520,14 +537,18 @@ router.post('/user/unlink-telegram', userAuthMiddleware, async (req, res) => {
 
     const currentConfig = (await dbGetUserConfig(user.id)) || {};
     delete currentConfig.telegram_chat_id;
+    delete currentConfig.telegram_username;
+    delete currentConfig.telegram_first_name;
+    delete currentConfig.telegram_linked_at;
     delete currentConfig.telegram_link_token;
     delete currentConfig.telegram_token_expires_at;
 
     await dbSaveUserConfig(user.id, currentConfig);
+    await dbUpdateUser(user.id, { telegram_chat_id: null }).catch(() => {});
 
     return res.json({
       success: true,
-      message: 'Telegram link disconnected successfully.'
+      message: 'Telegram link disconnected successfully. You can now generate a fresh token when ready.'
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });

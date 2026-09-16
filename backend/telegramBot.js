@@ -84,13 +84,18 @@ export async function getLinkedUserForChat(chatId) {
 }
 
 /**
- * 🔑 VERIFY & BIND ONE-TIME LINK TOKEN (BURN-AFTER-READING)
+ * 🔑 VERIFY & BIND ONE-TIME LINK TOKEN (BURN-AFTER-READING & SINGLE ACCOUNT LOCK)
  */
 export async function verifyAndLinkTelegramToken(chatId, rawToken, senderInfo = {}) {
   if (!chatId || !rawToken) {
     return { success: false, error: 'Empty token input.' };
   }
-  const cleanToken = rawToken.toUpperCase().replace('/START', '').replace(/\s+/g, '').trim();
+
+  // Robust extraction: supports /start AERO-TG-XXXX-XXXX-XXXX or direct token
+  const match = rawToken.match(/AERO[-_]TG[-_][A-Z0-9]{4}[-_][A-Z0-9]{4}[-_][A-Z0-9]{4}/i) || 
+                rawToken.match(/AERO[-_]TG[-_][A-Z0-9_-]+/i) ||
+                rawToken.match(/TG[-_][A-Z0-9_-]+/i);
+  const cleanToken = match ? match[0].toUpperCase().replace(/_/g, '-') : rawToken.toUpperCase().replace('/START', '').replace(/\s+/g, '').trim();
 
   try {
     const res = await axios.get(`${SUPABASE_URL}/rest/v1/sniper_user_configs?select=user_id,config&config->>telegram_link_token=eq.${encodeURIComponent(cleanToken)}`, {
@@ -99,7 +104,7 @@ export async function verifyAndLinkTelegramToken(chatId, rawToken, senderInfo = 
     });
 
     if (!res.data || res.data.length === 0) {
-      return { success: false, error: '❌ <b>Invalid or Unrecognized Link Token.</b>\nPlease open the website dashboard, click <b>[ 📱 Telegram Sync ]</b> and generate a fresh token.' };
+      return { success: false, error: '❌ <b>Invalid or Already Used Link Token.</b>\nEach secret token can only be redeemed once to lock an account to Telegram.' };
     }
 
     const userId = res.data[0].user_id;
@@ -110,18 +115,13 @@ export async function verifyAndLinkTelegramToken(chatId, rawToken, senderInfo = 
       return { success: false, error: '❌ Associated user account not found.' };
     }
 
-    // Check expiration (15-minute strict window)
-    if (config.telegram_token_expires_at && new Date(config.telegram_token_expires_at) < new Date()) {
-      return { success: false, error: '⏳ <b>Token Expired.</b>\nFor your security, link tokens expire after 15 minutes. Please generate a fresh token from your website dashboard.' };
-    }
-
     // Check subscription validity
     const isOwner = user.email?.toLowerCase() === OWNER_EMAIL || user.role === 'admin';
     if (!isOwner && user.valid_until && new Date(user.valid_until) < new Date()) {
       return { success: false, error: '⚠️ <b>Subscription Expired.</b>\nYour VIP access has ended. Please renew your plan on the website.' };
     }
 
-    // 🔥 INSTANT TOKEN BURN (Single-Use Destruction)
+    // 🔥 INSTANT TOKEN BURN (Single-Use Destruction & Account Locking)
     delete config.telegram_link_token;
     delete config.telegram_token_expires_at;
     config.telegram_chat_id = String(chatId);

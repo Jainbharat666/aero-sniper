@@ -809,8 +809,11 @@
       const tokenDisplay = document.getElementById('tg-token-display');
       const deepLinkBtn = document.getElementById('tg-deep-link-btn');
       const badge = document.getElementById('tg-connection-badge');
+      const linkedDeck = document.getElementById('tg-linked-deck');
+      const unlinkedDeck = document.getElementById('tg-unlinked-deck');
+      const linkedUsername = document.getElementById('tg-linked-username');
 
-      if (tokenDisplay) tokenDisplay.innerText = 'GENERATING...';
+      if (tokenDisplay) tokenDisplay.innerText = 'FETCHING...';
 
       try {
         const tokenToUse = (typeof sessionToken !== 'undefined' && sessionToken) || 
@@ -829,16 +832,27 @@
         });
         const data = await res.json();
         if (data.success) {
-          currentTelegramToken = data.token;
-          currentTelegramDeepLink = data.deepLink;
-          if (tokenDisplay) tokenDisplay.innerText = data.token;
-          if (deepLinkBtn) deepLinkBtn.href = data.deepLink;
+          currentTelegramToken = data.token || '';
+          currentTelegramDeepLink = data.deepLink || '';
+          if (tokenDisplay && data.token) tokenDisplay.innerText = data.token;
+          if (deepLinkBtn && data.deepLink) deepLinkBtn.href = data.deepLink;
 
-          if (badge) {
-            if (data.isLinked) {
+          if (data.isLinked) {
+            // Already Bound & Locked
+            if (linkedDeck) linkedDeck.classList.remove('hidden');
+            if (unlinkedDeck) unlinkedDeck.classList.add('hidden');
+            if (linkedUsername) {
+              linkedUsername.innerText = data.telegramUsername ? `@${data.telegramUsername}` : (data.telegramChatId ? `ID: ${data.telegramChatId}` : 'Connected Account');
+            }
+            if (badge) {
               badge.className = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono-code flex items-center gap-1.5';
-              badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Connected to Telegram (${data.telegramChatId || 'Linked'})`;
-            } else {
+              badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Bound to Telegram (${data.telegramUsername ? '@' + data.telegramUsername : data.telegramChatId})`;
+            }
+          } else {
+            // Awaiting Link
+            if (linkedDeck) linkedDeck.classList.add('hidden');
+            if (unlinkedDeck) unlinkedDeck.classList.remove('hidden');
+            if (badge) {
               badge.className = 'bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono-code flex items-center gap-1.5';
               badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span> Awaiting Telegram Link`;
             }
@@ -849,7 +863,33 @@
         }
       } catch (err) {
         if (tokenDisplay) tokenDisplay.innerText = 'ERROR';
-        showToast('❌ Connection error while generating token', true);
+        showToast('❌ Connection error while contacting server', true);
+      }
+    };
+
+    window.handleUserDisconnectTelegram = async function() {
+      const ok = await showCustomConfirm('Are you sure you want to disconnect your Telegram Bot? You will need to link your Telegram account again to use remote commands.', 'Disconnect Telegram Bot', { isDanger: true, confirmText: 'Disconnect' });
+      if (!ok) return;
+
+      try {
+        const tokenToUse = (typeof sessionToken !== 'undefined' && sessionToken) || localStorage.getItem('sniper_token') || currentUser?.session_token || currentUser?.id;
+        const res = await fetch('/api/user/unlink-telegram', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + tokenToUse,
+            'x-session-token': tokenToUse
+          }
+        });
+        const d = await res.json();
+        if (d.success) {
+          showToast('Telegram account disconnected.');
+          openTelegramLinkModal();
+        } else {
+          showToast(d.error || 'Failed to disconnect', true);
+        }
+      } catch(e) {
+        showToast(e.message, true);
       }
     };
 

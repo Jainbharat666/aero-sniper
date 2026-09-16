@@ -2162,6 +2162,7 @@
                 <th class="py-2.5 px-3">Role / Code</th>
                 <th class="py-2.5 px-3">Validity</th>
                 <th class="py-2.5 px-3">Snipes Quota</th>
+                <th class="py-2.5 px-3">📱 Telegram Terminal</th>
                 <th class="py-2.5 px-3">Status</th>
                 <th class="py-2.5 px-3 text-right">Actions</th>
               </tr>
@@ -2485,8 +2486,26 @@
         </div>
       </div>
 
-      <!-- Token Box & Actions -->
-      <div class="space-y-4 mb-5 font-mono-code">
+      <!-- ALREADY LINKED DECK -->
+      <div id="tg-linked-deck" class="space-y-4 mb-5 font-mono-code hidden">
+        <div class="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-4 space-y-2">
+          <div class="flex items-center gap-2 text-emerald-400 font-black text-xs">
+            <i class="fa-solid fa-lock text-sm"></i>
+            <span>ACCOUNT BOUND &amp; SECURED</span>
+          </div>
+          <p class="text-[11px] text-slate-300 font-sans leading-relaxed">
+            Your subscriber account is locked to Telegram user <strong class="text-white" id="tg-linked-username">@TelegramUser</strong>. You have exclusive remote mobile control over your 24/7 cloud sniper.
+          </p>
+        </div>
+
+        <button type="button" onclick="handleUserDisconnectTelegram()" class="w-full py-2.5 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer">
+          <i class="fa-solid fa-link-slash"></i>
+          <span>Disconnect / Reset Telegram Link</span>
+        </button>
+      </div>
+
+      <!-- UNLINKED TOKEN BOX & ACTIONS -->
+      <div id="tg-unlinked-deck" class="space-y-4 mb-5 font-mono-code">
         <div>
           <label class="text-[11px] font-bold text-slate-300 block mb-1.5 uppercase tracking-wider">
             Your Secret Link Token:
@@ -2517,7 +2536,7 @@
         <ul class="space-y-1.5 text-slate-400 list-disc list-inside">
           <li><b>PC Shutdown Ready:</b> Cloud engine runs 24/7 even after you shut down your browser/PC.</li>
           <li><b>Live Fleet Sync:</b> Access all your configured wallets, target collections, and 4 sniper rules.</li>
-          <li><b>Zero-Risk Vault:</b> Private keys are never exposed in Telegram. Only public addresses & balances are visible.</li>
+          <li><b>Zero-Risk Vault:</b> Private keys are never exposed in Telegram. Only public addresses &amp; balances are visible.</li>
         </ul>
       </div>
 

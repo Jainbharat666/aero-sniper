@@ -1,11 +1,16 @@
 import express from 'express';
+import axios from 'axios';
 import {
   OWNER_EMAIL,
+  SUPABASE_URL,
+  supabaseHeaders,
   dbGetUsers,
   dbGetUserById,
   dbGetUserByEmail,
   dbUpdateUser,
   dbDeleteUser,
+  dbGetUserConfig,
+  dbSaveUserConfig,
   dbDeleteUserConfig,
   dbRecordUserSnipe,
   dbGetInvites,
@@ -18,9 +23,25 @@ import {
 
 const router = express.Router();
 
-// ─── 1. FETCH ALL REGISTERED USERS ───────────────────────────────────────────
+// ─── 1. FETCH ALL REGISTERED USERS WITH TELEGRAM STATUS ─────────────────────
 router.get('/users', adminAuthMiddleware, async (req, res) => {
   const users = await dbGetUsers();
+
+  // Enrich with user configs for live Telegram account status
+  let configMap = new Map();
+  try {
+    const configRes = await axios.get(`${SUPABASE_URL}/rest/v1/sniper_user_configs?select=user_id,config`, {
+      headers: supabaseHeaders,
+      timeout: 6000
+    });
+    if (configRes.data && Array.isArray(configRes.data)) {
+      configRes.data.forEach(item => {
+        if (item.user_id) configMap.set(item.user_id, item.config || {});
+      });
+    }
+  } catch (e) {
+    console.warn('[ADMIN GET USERS] Configs fetch failed:', e.message);
+  }
   
   if (!users.some(u => u.email === OWNER_EMAIL)) {
     users.unshift({
@@ -37,20 +58,65 @@ router.get('/users', adminAuthMiddleware, async (req, res) => {
     });
   }
 
-  const safeList = users.map(u => ({
-    id: u.id,
-    user_id: u.id,
-    email: u.email,
-    role: u.email === OWNER_EMAIL ? 'admin' : (u.role || 'vip_member'),
-    invite_code_used: u.invite_code_used || '—',
-    valid_until: u.valid_until,
-    max_snipes_allowed: u.max_snipes_allowed || 0,
-    total_snipes: u.total_snipes || 0,
-    is_banned: Boolean(u.is_banned),
-    created_at: u.created_at,
-    last_active_at: u.last_active_at
-  }));
+  const safeList = users.map(u => {
+    const cfg = configMap.get(u.id) || {};
+    const tgChatId = cfg.telegram_chat_id || u.telegram_chat_id || null;
+    const isTgLinked = !!tgChatId;
+
+    return {
+      id: u.id,
+      user_id: u.id,
+      email: u.email,
+      role: u.email === OWNER_EMAIL ? 'admin' : (u.role || 'vip_member'),
+      invite_code_used: u.invite_code_used || '—',
+      valid_until: u.valid_until,
+      max_snipes_allowed: u.max_snipes_allowed || 0,
+      total_snipes: u.total_snipes || 0,
+      is_banned: Boolean(u.is_banned),
+      created_at: u.created_at,
+      last_active_at: u.last_active_at,
+      // 📱 Telegram Remote Terminal Details
+      is_telegram_linked: isTgLinked,
+      telegram_chat_id: tgChatId,
+      telegram_username: cfg.telegram_username || null,
+      telegram_first_name: cfg.telegram_first_name || null,
+      telegram_linked_at: cfg.telegram_linked_at || null,
+      telegram_link_token: cfg.telegram_link_token || null
+    };
+  });
+
   res.json({ success: true, users: safeList });
+});
+
+// ─── 1B. ADMIN RESET / UNLINK TELEGRAM ACCESS ───────────────────────────────
+router.post('/users/reset-telegram', adminAuthMiddleware, async (req, res) => {
+  try {
+    const userId = req.body.userId || req.body.user_id || req.body.id;
+    if (!userId) return res.status(400).json({ success: false, error: 'User ID is required' });
+
+    const user = await dbGetUserById(userId);
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+
+    // Clear config
+    const currentConfig = (await dbGetUserConfig(user.id)) || {};
+    delete currentConfig.telegram_chat_id;
+    delete currentConfig.telegram_username;
+    delete currentConfig.telegram_first_name;
+    delete currentConfig.telegram_linked_at;
+    delete currentConfig.telegram_link_token;
+    delete currentConfig.telegram_token_expires_at;
+
+    await dbSaveUserConfig(user.id, currentConfig);
+    await dbUpdateUser(user.id, { telegram_chat_id: null }).catch(() => {});
+
+    console.log(`[Sniper Admin] Telegram link reset by Admin for user: ${user.email} (${user.id})`);
+    return res.json({
+      success: true,
+      message: `Telegram access revoked & reset for ${user.email}. User can now generate a fresh link.`
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // ─── 2. ADJUST VALIDITY (DAYS, HOURS, MINUTES OR LIFETIME) ───────────────────
