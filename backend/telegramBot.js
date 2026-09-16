@@ -671,10 +671,13 @@ export async function sendTelegramMessage(token, chatId, text, inlineKeyboard = 
 }
 
 /**
- * 🔄 Edit Message Text (Instant Dynamic Menu Refresh)
+ * 🔄 Edit Message Text (Instant Dynamic Menu Refresh with Photo & Fallback Support)
  */
 export async function editTelegramMessage(token, chatId, messageId, text, inlineKeyboard = null) {
   if (!token || !chatId || !messageId) return false;
+  const replyMarkup = inlineKeyboard ? { inline_keyboard: inlineKeyboard } : undefined;
+
+  // 1. Try editMessageText (Normal text messages)
   try {
     const payload = {
       chat_id: chatId,
@@ -683,13 +686,36 @@ export async function editTelegramMessage(token, chatId, messageId, text, inline
       parse_mode: 'HTML',
       disable_web_page_preview: true
     };
-    if (inlineKeyboard) {
-      payload.reply_markup = { inline_keyboard: inlineKeyboard };
-    }
+    if (replyMarkup) payload.reply_markup = replyMarkup;
     await axios.post(`https://api.telegram.org/bot${token}/editMessageText`, payload, { timeout: 6000 });
     return true;
   } catch (err) {
-    return false;
+    const desc = err.response?.data?.description || '';
+    if (desc.includes('message is not modified')) return true;
+
+    // 2. Try editMessageCaption (For messages sent with photo / preview banner)
+    try {
+      const payloadCap = {
+        chat_id: chatId,
+        message_id: messageId,
+        caption: text,
+        parse_mode: 'HTML'
+      };
+      if (replyMarkup) payloadCap.reply_markup = replyMarkup;
+      await axios.post(`https://api.telegram.org/bot${token}/editMessageCaption`, payloadCap, { timeout: 6000 });
+      return true;
+    } catch (errCap) {
+      const descCap = errCap.response?.data?.description || '';
+      if (descCap.includes('message is not modified')) return true;
+
+      // 3. Fallback: Send fresh message if editing isn't allowed or fails
+      try {
+        await sendTelegramMessage(token, chatId, text, inlineKeyboard);
+        return true;
+      } catch (errSend) {
+        return false;
+      }
+    }
   }
 }
 
@@ -823,7 +849,7 @@ async function handleCallbackQuery(callbackQuery) {
   if (!chatId || !messageId) return;
 
   // 1. Arm Action
-  if (data === 'action_arm') {
+  if (data === 'action_arm' || data === 'arm') {
     if (!activeCollectionStats?.slug) {
       await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '⚠️ Please set a target collection first!');
       const menu = buildTargetMenu();
@@ -840,7 +866,7 @@ async function handleCallbackQuery(callbackQuery) {
   }
 
   // 2. Pause Action
-  if (data === 'action_pause') {
+  if (data === 'action_pause' || data === 'pause') {
     for (const [k, engine] of activeSniperEngines.entries()) {
       engine.isArmed = false;
     }
@@ -851,7 +877,7 @@ async function handleCallbackQuery(callbackQuery) {
   }
 
   // 3. Clear Target Action
-  if (data === 'action_clear_target') {
+  if (data === 'action_clear_target' || data === 'clear_target') {
     clearBotTarget();
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '🗑️ Target Cleared! Engine in Standby.');
     const menu = buildMainMenu(chatId);
@@ -868,7 +894,7 @@ async function handleCallbackQuery(callbackQuery) {
   }
 
   // 5. Rules Hub Menu
-  if (data === 'menu_rules_hub') {
+  if (data === 'menu_rules_hub' || data === 'bot_rules_hub' || data === 'rules' || data === 'rules_hub') {
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
     const menu = buildRulesHubMenu();
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
@@ -1104,7 +1130,7 @@ Please type the maximum ETH price (e.g. <code>0.1</code>):
   }
 
   // 10. Target Sub-Menu
-  if (data === 'menu_target') {
+  if (data === 'menu_target' || data === 'bot_set_target') {
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
     const menu = buildTargetMenu();
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
@@ -1160,7 +1186,7 @@ Please type the OpenSea URL or collection slug in your next message (e.g. <code>
   }
 
   // 13. Stats / Telemetry
-  if (data === 'menu_stats' || data === 'menu_refresh') {
+  if (data === 'menu_stats' || data === 'menu_refresh' || data === 'bot_refresh') {
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '🔄 Refreshed');
     const menu = buildMainMenu(chatId);
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
