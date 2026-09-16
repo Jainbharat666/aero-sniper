@@ -8,13 +8,68 @@ import {
 import { dbGetUserByEmail, dbGetUsers } from './db.js';
 
 // Environment Bindings
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8849256750:AAGL6tEK_2tatSxgS-RjWp2ngE7B6lh29RI';
 const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || '';
 const TELEGRAM_FEED_BOT_TOKEN = process.env.TELEGRAM_FEED_BOT_TOKEN || TELEGRAM_BOT_TOKEN;
 const TELEGRAM_FEED_CHANNEL_ID = process.env.TELEGRAM_FEED_CHANNEL_ID || TELEGRAM_ADMIN_CHAT_ID;
+const WEBAPP_URL = process.env.RENDER_EXTERNAL_URL || 'https://aero-sniper.onrender.com';
 
 let lastUpdateId = 0;
 let isPollingActive = false;
+
+// In-memory active user settings (for interactive menus)
+let botActiveDiscountPercent = 20;
+let botActiveGasPreset = 'turbo';
+
+/**
+ * 🎨 RENDER MAIN DASHBOARD MENU (SnipeNow / Maestro Interactive Style)
+ */
+export function buildMainMenu(chatId = null) {
+  const isArmed = Array.from(activeSniperEngines.values()).some(e => e.isArmed) || activeSniperEngine.isArmed;
+  const stats = activeCollectionStats;
+  const currentSlug = stats?.name || stats?.slug || activeSniperEngine.slug || 'robinwoodies';
+  const floorEth = stats?.floorEth ? stats.floorEth : '0.000035';
+  const usdFloor = (parseFloat(floorEth) * cachedEthPrice).toFixed(2);
+  const activeEngines = activeSniperEngines.size || (isArmed ? 1 : 0);
+
+  const text = `
+⚡ <b>AERO-SNIPER PRO • TELEGRAM TERMINAL</b> ⚡
+<i>Institutional High-Frequency NFT Sniping Protocol</i>
+
+🎯 <b>Active Target:</b> <code>${currentSlug}</code>
+💎 <b>Floor Price:</b> <b>${floorEth} ETH</b> (~$${usdFloor} USD)
+🛡️ <b>Engine Status:</b> ${isArmed ? '🟢 <b>ARMED & HUNTING (24/7)</b>' : '🔴 <b>DISARMED / STANDBY</b>'}
+🚀 <b>Gas Speed:</b> <b>${botActiveGasPreset.toUpperCase()}</b> (Auto-Surge)
+🎯 <b>Floor Discount Target:</b> <b>${botActiveDiscountPercent}% Below Floor</b>
+👥 <b>Active Cloud Engines:</b> <code>${activeEngines} user(s)</code>
+🌐 <b>Robinhood Sequencer:</b> 🟢 <b>Sub-15ms Active</b>
+`.trim();
+
+  const keyboard = [
+    [
+      isArmed
+        ? { text: '⏸ Pause / Disarm Engine', callback_data: 'action_pause' }
+        : { text: '⚡ Arm Sniper (Instant)', callback_data: 'action_arm' }
+    ],
+    [
+      { text: `🎯 Target: ${botActiveDiscountPercent}% Below Floor`, callback_data: 'menu_discount' },
+      { text: `🚀 Gas: ${botActiveGasPreset.toUpperCase()}`, callback_data: 'menu_gas' }
+    ],
+    [
+      { text: '👛 Wallet Fleet Status', callback_data: 'menu_wallets' },
+      { text: '📊 24/7 Cloud Telemetry', callback_data: 'menu_stats' }
+    ],
+    [
+      { text: '🔄 Refresh Terminal', callback_data: 'menu_refresh' },
+      { text: '❓ Bot Guide / Help', callback_data: 'menu_help' }
+    ],
+    [
+      { text: '🌐 Launch Full WebApp (Mini App)', web_app: { url: WEBAPP_URL } }
+    ]
+  ];
+
+  return { text, keyboard };
+}
 
 /**
  * 📡 Send Telegram Message with HTML formatting
@@ -40,6 +95,43 @@ export async function sendTelegramMessage(token, chatId, text, inlineKeyboard = 
 }
 
 /**
+ * 🔄 Edit Message Text (Instant Dynamic Menu Refresh without spamming new messages)
+ */
+export async function editTelegramMessage(token, chatId, messageId, text, inlineKeyboard = null) {
+  if (!token || !chatId || !messageId) return false;
+  try {
+    const payload = {
+      chat_id: chatId,
+      message_id: messageId,
+      text: text,
+      parse_mode: 'HTML'
+    };
+    if (inlineKeyboard) {
+      payload.reply_markup = { inline_keyboard: inlineKeyboard };
+    }
+    await axios.post(`https://api.telegram.org/bot${token}/editMessageText`, payload, { timeout: 6000 });
+    return true;
+  } catch (err) {
+    // If message not modified, ignore
+    return false;
+  }
+}
+
+/**
+ * 🔔 Answer Callback Query (Removes loading spinner on button tap)
+ */
+export async function answerCallbackQuery(token, callbackQueryId, notificationText = '') {
+  if (!token || !callbackQueryId) return;
+  try {
+    await axios.post(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
+      callback_query_id: callbackQueryId,
+      text: notificationText,
+      show_alert: false
+    }, { timeout: 4000 });
+  } catch (e) {}
+}
+
+/**
  * 🖼️ Send Telegram Photo with Caption
  */
 export async function sendTelegramPhoto(token, chatId, photoUrl, caption, inlineKeyboard = null) {
@@ -59,7 +151,6 @@ export async function sendTelegramPhoto(token, chatId, photoUrl, caption, inline
     await axios.post(`https://api.telegram.org/bot${token}/sendPhoto`, payload, { timeout: 8000 });
     return true;
   } catch (err) {
-    // Fallback to text message if image loading fails
     return sendTelegramMessage(token, chatId, caption, inlineKeyboard);
   }
 }
@@ -88,10 +179,10 @@ export async function dispatchPrivateSnipeAlert(userEngine, snipeData) {
 
 🎯 <b>Token:</b> <code>${tokenName}</code>
 🏷️ <b>Collection:</b> <code>${userEngine?.slug || 'robinwoodies'}</code>
-💰 <b>Price:</b> <b>${priceEth} ETH</b> (~$${usdPrice} USD)
-⚡ <b>Speed:</b> <b>${snipeData.computeLatencyMs || '5.0'} ms</b> (Ultra-Fast)
-🛡️ <b>Worker:</b> <code>${snipeData.buyerName || 'Primary'}</code>
-📦 <b>Block:</b> <code>${blockNum}</code>
+💰 <b>Price Bought:</b> <b>${priceEth} ETH</b> (~$${usdPrice} USD)
+⚡ <b>Compute Latency:</b> <b>${snipeData.computeLatencyMs || '5.0'} ms</b>
+🛡️ <b>Worker Wallet:</b> <code>${snipeData.buyerName || 'Primary'}</code>
+📦 <b>Robinhood Block:</b> <code>${blockNum}</code>
 🔗 <b>TxHash:</b> <code>${txShort}</code>
 
 ${isSim ? '<i>Simulation Mode — Zero funds spent</i>' : '<i>Successfully secured & transferred to your worker wallet!</i>'}
@@ -101,10 +192,12 @@ ${isSim ? '<i>Simulation Mode — Zero funds spent</i>' : '<i>Successfully secur
     [
       { text: '🔍 View on Explorer', url: explorerUrl },
       { text: '⛵ View on OpenSea', url: openseaUrl }
+    ],
+    [
+      { text: '🌐 Open WebApp', web_app: { url: WEBAPP_URL } }
     ]
   ];
 
-  // Non-blocking asynchronous dispatch
   sendTelegramPhoto(token, chatId, snipeData.image || snipeData.imageUrl, caption, keyboard).catch(() => {});
 }
 
@@ -143,94 +236,166 @@ export async function dispatchGlobalMasterFeedAlert(snipeData) {
 }
 
 /**
- * 🤖 COMMAND HANDLERS: Process Mobile Telegram Input
+ * 🔘 INTERACTIVE CALLBACK QUERY ROUTER (Handle Button Taps)
  */
-async function processTelegramCommand(message) {
-  const chatId = message.chat?.id;
-  const text = (message.text || '').trim();
-  const username = message.from?.username || message.from?.first_name || 'User';
+async function handleCallbackQuery(callbackQuery) {
+  const data = callbackQuery.data;
+  const message = callbackQuery.message;
+  const chatId = message?.chat?.id;
+  const messageId = message?.message_id;
 
-  if (!chatId || !text) return;
+  if (!chatId || !messageId) return;
 
-  const parts = text.split(/\s+/);
-  const cmd = parts[0].toLowerCase();
-
-  if (cmd === '/start' || cmd === '/help') {
-    const helpMsg = `
-👋 <b>Welcome to Aero-Sniper V2 Remote Control, ${username}!</b>
-
-<b>Available Commands:</b>
-📊 <code>/status</code> — Check live collection, floor price & sniper state
-⚡ <code>/arm &lt;slug&gt; [maxFloorEth]</code> — Arm cloud sniper for a collection
-⏸ <code>/pause</code> — Disarm and pause sniper engine
-💼 <code>/fleet</code> — Check active worker wallet pool & treasury
-🆔 <code>/id</code> — Get your Telegram Chat ID to link with profile
-
-<i>24/7 Autonomous High-Frequency Sniper Protocol Active.</i>
-`.trim();
-    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, helpMsg);
+  // 1. Arm Action
+  if (data === 'action_arm') {
+    for (const [k, engine] of activeSniperEngines.entries()) {
+      engine.isArmed = true;
+    }
+    activeSniperEngine.isArmed = true;
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '⚡ Sniper ARMED in Cloud!');
+    const menu = buildMainMenu(chatId);
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
-  if (cmd === '/id') {
-    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `🆔 Your Telegram Chat ID is: <code>${chatId}</code>\n\nAdd this to your Aero-Sniper profile to receive instant private snipe alerts!`);
-  }
-
-  if (cmd === '/status') {
-    const isArmed = Array.from(activeSniperEngines.values()).some(e => e.isArmed) || activeSniperEngine.isArmed;
-    const activeCount = activeSniperEngines.size;
-    const stats = activeCollectionStats;
-
-    const statusMsg = `
-📊 <b>AERO-SNIPER CLOUD TELEMETRY:</b>
-
-⚡ <b>Sniper Status:</b> ${isArmed ? '🟢 <b>ARMED & HUNTING</b>' : '🔴 <b>DISARMED / PAUSED</b>'}
-👥 <b>Active Cloud Engines:</b> <code>${activeCount} users</code>
-🏷️ <b>Current Target:</b> <code>${stats?.name || stats?.slug || 'No Collection Loaded'}</code>
-💎 <b>Live Floor:</b> <b>${stats?.floorEth ? stats.floorEth + ' ETH' : '-- ETH'}</b>
-📈 <b>Listed Count:</b> <code>${stats?.listedCount || 0} NFTs</code>
-🌐 <b>Robinhood Sequencer:</b> 🟢 <b>100% Operational (Sub-15ms)</b>
-`.trim();
-    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, statusMsg);
-  }
-
-  if (cmd === '/pause' || cmd === '/disarm') {
+  // 2. Pause Action
+  if (data === 'action_pause') {
     for (const [k, engine] of activeSniperEngines.entries()) {
       engine.isArmed = false;
     }
     activeSniperEngine.isArmed = false;
-    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `⏸ <b>Sniper Engine PAUSED remotely!</b>\nAll worker fleets disarmed.`);
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '⏸ Sniper PAUSED!');
+    const menu = buildMainMenu(chatId);
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
-  if (cmd === '/arm') {
-    const targetSlug = parts[1] ? parts[1].toLowerCase() : '';
-    const maxPrice = parts[2] ? parseFloat(parts[2]) : 0;
-
-    if (!targetSlug) {
-      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `⚠️ <b>Usage:</b> <code>/arm &lt;collection-slug&gt; [maxPriceEth]</code>\nExample: <code>/arm robinwoodies 0.00003</code>`);
-    }
-
-    // Arm user default engine
-    activeSniperEngine.isArmed = true;
-    activeSniperEngine.slug = targetSlug;
-    if (maxPrice > 0) activeSniperEngine.maxFloorEth = maxPrice;
-
-    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `⚡ <b>SNIPER ARMED REMOTELY!</b>\n\n🎯 <b>Target:</b> <code>${targetSlug}</code>\n💰 <b>Max Price:</b> <code>${maxPrice > 0 ? maxPrice + ' ETH' : 'Floor Default'}</code>\n🚀 <i>Mempool blast active in cloud!</i>`);
-  }
-
-  if (cmd === '/fleet') {
-    const fleetMsg = `
-💼 <b>MAINNET WORKER FLEET STATUS:</b>
-
-👑 <b>Multi-RPC Blast Fleet:</b> 4 Active (Alchemy + Robinhood Sequencer)
-⚡ <b>OpenSea 21-Key Laser Grid:</b> 🟢 100% Operational
-🛡️ <b>ECDSA RAM Pre-Warmed Nonces:</b> Locked in memory
+  // 3. Discount Sub-Menu
+  if (data === 'menu_discount') {
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const text = `
+🎯 <b>SELECT FLOOR DISCOUNT TARGET:</b>
+Pick the fat-finger discount percentage below floor price to trigger instant snipe:
 `.trim();
-    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, fleetMsg);
+    const keyboard = [
+      [
+        { text: '10% Below Floor', callback_data: 'set_pct_10' },
+        { text: '20% Below Floor', callback_data: 'set_pct_20' },
+        { text: '50% Half Price 🔥', callback_data: 'set_pct_50' }
+      ],
+      [
+        { text: '80% Mega Steal ⚡', callback_data: 'set_pct_80' },
+        { text: '90% God Steal 👑', callback_data: 'set_pct_90' }
+      ],
+      [
+        { text: '🔙 Back to Main Menu', callback_data: 'menu_main' }
+      ]
+    ];
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, text, keyboard);
+  }
+
+  // Set Discount %
+  if (data.startsWith('set_pct_')) {
+    const pct = parseInt(data.replace('set_pct_', ''), 10);
+    botActiveDiscountPercent = pct;
+    for (const [k, engine] of activeSniperEngines.entries()) {
+      if (activeCollectionStats?.floorEth > 0) {
+        engine.maxFloorEth = activeCollectionStats.floorEth * (1 - pct / 100);
+      }
+    }
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, `✅ Target updated: ${pct}% Below Floor`);
+    const menu = buildMainMenu(chatId);
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // 4. Gas Sub-Menu
+  if (data === 'menu_gas') {
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const text = `
+🚀 <b>SELECT GAS WAR PRESET:</b>
+Choose your Robinhood Chain mempool racing priority:
+`.trim();
+    const keyboard = [
+      [
+        { text: '🛡️ Safe (125%)', callback_data: 'set_gas_safe' },
+        { text: '🚀 Turbo (175%)', callback_data: 'set_gas_turbo' }
+      ],
+      [
+        { text: '⚡ Surge (235%)', callback_data: 'set_gas_surge' },
+        { text: '🔥 Hyped (300%)', callback_data: 'set_gas_hyped' }
+      ],
+      [
+        { text: '🔙 Back to Main Menu', callback_data: 'menu_main' }
+      ]
+    ];
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, text, keyboard);
+  }
+
+  // Set Gas
+  if (data.startsWith('set_gas_')) {
+    const preset = data.replace('set_gas_', '');
+    botActiveGasPreset = preset;
+    for (const [k, engine] of activeSniperEngines.entries()) {
+      engine.gasSpeed = preset;
+    }
+    activeSniperEngine.gasSpeed = preset;
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, `🚀 Gas set to: ${preset.toUpperCase()}`);
+    const menu = buildMainMenu(chatId);
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // 5. Wallets Sub-Menu
+  if (data === 'menu_wallets') {
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const text = `
+👛 <b>MAINNET WORKER FLEET STATUS:</b>
+
+👑 <b>Treasury Mode:</b> Multi-Worker Auto-Rotation
+⚡ <b>RPC Racing Fleet:</b> 4 Active (Alchemy + Robinhood Sequencer)
+🛡️ <b>Mempool Nonce Locking:</b> Instant RAM CPU
+🟢 <b>Laser Grid:</b> 21-Key Load Balancer 100% Operational
+`.trim();
+    const keyboard = [
+      [
+        { text: '🔄 Refresh Wallets', callback_data: 'menu_wallets' },
+        { text: '🔙 Back to Menu', callback_data: 'menu_main' }
+      ]
+    ];
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, text, keyboard);
+  }
+
+  // 6. Stats Sub-Menu
+  if (data === 'menu_stats' || data === 'menu_refresh') {
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '🔄 Telemetry Refreshed');
+    const menu = buildMainMenu(chatId);
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Back to Main Menu
+  if (data === 'menu_main') {
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const menu = buildMainMenu(chatId);
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Help
+  if (data === 'menu_help') {
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const helpText = `
+📖 <b>AERO-SNIPER V2 BOT GUIDE:</b>
+
+1. <b>1-Tap Buttons:</b> Use buttons above to Arm, Pause, adjust Floor Discount %, or change Gas speeds in real-time.
+2. <b>24/7 Cloud Engine:</b> When Armed, your sniper hunts 24/7 on Render without keeping Telegram or PC open.
+3. <b>Instant Buy Alert:</b> When an underpriced NFT is sniped, the bot sends an instant photo and on-chain TxHash.
+4. <b>Mini App:</b> Click 'Launch Full WebApp' to view live floor charts and trade manually!
+`.trim();
+    const keyboard = [
+      [{ text: '🔙 Back to Menu', callback_data: 'menu_main' }]
+    ];
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, helpText, keyboard);
   }
 }
 
 /**
- * 🔄 LONG-POLLING DAEMON: Listens for incoming Telegram commands
+ * 🔄 LONG-POLLING DAEMON: Listens for incoming Telegram commands & button taps
  */
 export async function startTelegramBotPolling() {
   if (!TELEGRAM_BOT_TOKEN) {
@@ -240,7 +405,7 @@ export async function startTelegramBotPolling() {
   if (isPollingActive) return;
   isPollingActive = true;
 
-  console.log('🤖 [TELEGRAM] Bot Command Listener & Remote Controller Activated.');
+  console.log('🤖 [TELEGRAM] Interactive Button Terminal & Remote Controller Activated.');
 
   const pollLoop = async () => {
     while (isPollingActive) {
@@ -253,8 +418,17 @@ export async function startTelegramBotPolling() {
         if (res.data?.ok && Array.isArray(res.data.result)) {
           for (const update of res.data.result) {
             lastUpdateId = update.update_id;
+
+            // 1. Handle Button Taps (Callback Queries)
+            if (update.callback_query) {
+              handleCallbackQuery(update.callback_query).catch(() => {});
+            }
+
+            // 2. Handle /start or text messages
             if (update.message) {
-              processTelegramCommand(update.message).catch(() => {});
+              const chatId = update.message.chat?.id;
+              const menu = buildMainMenu(chatId);
+              sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard).catch(() => {});
             }
           }
         }
