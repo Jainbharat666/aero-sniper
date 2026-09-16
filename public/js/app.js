@@ -147,7 +147,33 @@
       await handleCloudVaultRestore();
     }
 
+    // 📱 TELEGRAM MINI APP (WEBAPP SDK) INITIALIZATION & FULLSCREEN EXPAND
+    function initTelegramWebApp() {
+      try {
+        if (window.Telegram && window.Telegram.WebApp) {
+          const tg = window.Telegram.WebApp;
+          tg.ready();
+          tg.expand();
+          if (typeof tg.enableClosingConfirmation === 'function') {
+            tg.enableClosingConfirmation();
+          }
+          if (typeof tg.setHeaderColor === 'function') {
+            tg.setHeaderColor('#0d111c');
+          }
+          if (typeof tg.setBackgroundColor === 'function') {
+            tg.setBackgroundColor('#020408');
+          }
+          document.documentElement.classList.add('telegram-webapp');
+          document.body.classList.add('telegram-webapp');
+          console.log('[TG-WEBAPP] Telegram WebApp SDK expanded & responsive mode activated.');
+        }
+      } catch (e) {
+        console.warn('[TG-WEBAPP] Init note:', e);
+      }
+    }
+
     // 🛡️ INITIALIZE HARD AUTH GATE (IMPERMEABLE FULL-PAGE VIP ENFORCEMENT)
+    initTelegramWebApp();
     initThemeFromStorage();
     fetchRealClientIp();
     fetchRealTimeBlockNum();
@@ -162,6 +188,7 @@
     // 🔄 Auto-restore Scanned Collection, Armed State & Log History on Tab Reopen / Reload
     async function bootAutoRestoreEngine() {
       try {
+        initTelegramWebApp();
         if (typeof restoreLastCollectionIfAny === 'function') {
           await restoreLastCollectionIfAny();
         }
