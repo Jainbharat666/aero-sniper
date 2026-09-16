@@ -16,6 +16,7 @@ import rarityRouter from './backend/routes/rarity.js';
 import streamRouter from './backend/routes/stream.js';
 import sniperRouter from './backend/routes/sniper.js';
 import { startTelegramBotPolling } from './backend/telegramBot.js';
+import { sseClients } from './backend/state.js';
 
 dotenv.config();
 
@@ -106,6 +107,29 @@ if (!process.env.VERCEL) {
     console.log(` ⚡ Multi-RPC Simultaneous Mempool Blast ACTIVE`);
     console.log(` ⚡ 24/7 Keep-Alive Ping Engine ACTIVE`);
     console.log(`======================================================\n`);
+
+    // 🛡️ 24/7 MEMORY FOOTPRINT GUARD & AUTOMATED CACHE PRUNER (Protects 512MB RAM Ceiling)
+    setInterval(() => {
+      try {
+        const mem = process.memoryUsage();
+        const rssMb = Math.round(mem.rss / 1024 / 1024);
+        const heapUsedMb = Math.round(mem.heapUsed / 1024 / 1024);
+
+        // Prune stale or closed SSE socket descriptors
+        if (sseClients && sseClients.size > 0) {
+          for (const client of Array.from(sseClients)) {
+            if (!client.res || client.res.writableEnded || client.res.destroyed || client.res.closed) {
+              sseClients.delete(client);
+            }
+          }
+        }
+
+        // Proactive garbage collection trigger if near threshold
+        if (global.gc && rssMb > 180) {
+          global.gc();
+        }
+      } catch (e) {}
+    }, 2 * 60 * 1000); // Check every 2 minutes
 
     // 🛡️ 24/7 RENDER KEEP-ALIVE HEARTBEAT LOOP (Prevents Free-Tier Inactivity Sleep)
     const renderHost = process.env.RENDER_EXTERNAL_URL || 'https://aero-sniper.onrender.com';
