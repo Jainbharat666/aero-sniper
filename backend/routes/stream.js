@@ -263,7 +263,7 @@ router.get('/listings/live', async (req, res) => {
         }
 
         const resolvedImage = asset.image_url || asset.display_image_url || cachedInfo?.image || '';
-        const resolvedName = cachedInfo?.name || asset.name || `#${tokenId}`;
+        const resolvedName = asset.name || cachedInfo?.name || `#${tokenId}`;
         const tokStr = String(tokenId);
         const isSnipedByThisUser = Boolean(requestingEngine?.snipedTokenIds?.has(tokStr));
         const isSnipedByAnyOther = Boolean(Array.from(activeSniperEngines.values()).some(e => e !== requestingEngine && e?.snipedTokenIds?.has(tokStr)));

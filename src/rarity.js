@@ -176,8 +176,8 @@ export class RarityEngine {
     const targetSlug = (slug || this.collectionSlug || '').toLowerCase();
     const targetContract = (contract || this.contractAddress || '').toLowerCase();
 
-    // 🛡️ PER-COLLECTION ISOLATION: Wipe in-memory token map when switching collections
-    if (this.currentCollectionSlug && targetSlug && this.currentCollectionSlug !== targetSlug) {
+    // 🛡️ PER-COLLECTION ISOLATION: Wipe in-memory token map when loading collection
+    if (!this.currentCollectionSlug || this.currentCollectionSlug !== targetSlug) {
       this.tokenRarityMap.clear();
       this.traitIndexMap.clear();
     }
@@ -205,10 +205,6 @@ export class RarityEngine {
           const data = JSON.parse(raw);
           for (const [id, item] of Object.entries(data)) {
             if (!item) continue;
-            const existing = this.tokenRarityMap.get(String(id));
-            if (existing && existing.image && !item.image) {
-              item.image = existing.image;
-            }
             this.tokenRarityMap.set(String(id), item);
             if (item.traits && Array.isArray(item.traits) && item.traits.length > 0) {
               this.indexTokenTraits(id, item.traits);
