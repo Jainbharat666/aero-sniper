@@ -21,13 +21,53 @@ const WEBAPP_URL = process.env.RENDER_EXTERNAL_URL || 'https://aero-sniper.onren
 let lastUpdateId = 0;
 let isPollingActive = false;
 
-// In-memory active user settings (for interactive menus)
+// Default Universal Settings
 let botActiveDiscountPercent = 20;
 let botActiveGasPreset = 'turbo';
 let botPaperSnipeMode = false;
 
-// User state tracker (e.g. if user is about to type a custom discount or slug)
+// 4 Sniper Strategies State (Synchronized with active engine)
+export const botRuleConfig = {
+  ruleStates: {
+    floor: true,
+    rarity: true,
+    trait: false,
+    tokenId: false
+  },
+  floor: {
+    discountPercent: 20,
+    maxEth: 0,
+    maxUsd: 0
+  },
+  rarity: {
+    maxRank: 1200,
+    multiplier: 1.25,
+    maxEth: 0
+  },
+  trait: {
+    filters: [], // [{ traitType, traitValue, maxEth }]
+    maxEth: 0.05
+  },
+  tokenId: {
+    tokens: [], // ['7129', '8485']
+    maxEth: 0.1
+  }
+};
+
+// User interactive prompt state tracker
 const userPromptState = new Map();
+
+/**
+ * 🔢 Format ETH cleanly without scientific notation or floating point spam
+ */
+export function formatDisplayEth(val) {
+  const n = parseFloat(val);
+  if (isNaN(n) || n === 0) return '0.0000';
+  if (n < 0.000001) return n.toFixed(8).replace(/0+$/, '');
+  if (n < 0.0001) return n.toFixed(6).replace(/0+$/, '');
+  if (n < 0.01) return n.toFixed(5);
+  return n.toFixed(4);
+}
 
 /**
  * 🗑️ CLEAR ACTIVE TARGET (RESET ENGINE TO FRESH STANDBY)
@@ -97,20 +137,17 @@ export async function executeScanForBot(input) {
       subscribeSlugToOpenSea(slug);
     } catch(e) {}
 
-    // Synchronize to active engines
-    const discountFactor = 1 - (botActiveDiscountPercent || 20) / 100;
-    const triggerPrice = floorEth * discountFactor;
-
-    for (const [k, engine] of activeSniperEngines.entries()) {
-      engine.slug = slug;
-      engine.contractAddress = stats.contract;
-      engine.maxFloorEth = triggerPrice;
-      engine.isDryRun = botPaperSnipeMode;
+    // Calculate default floor rule price if not set
+    if (botRuleConfig.floor.maxEth === 0 && floorEth > 0) {
+      botRuleConfig.floor.maxEth = floorEth * (1 - (botRuleConfig.floor.discountPercent || 20) / 100);
+      botRuleConfig.floor.maxUsd = botRuleConfig.floor.maxEth * cachedEthPrice;
     }
-    activeSniperEngine.slug = slug;
-    activeSniperEngine.contractAddress = stats.contract;
-    activeSniperEngine.maxFloorEth = triggerPrice;
-    activeSniperEngine.isDryRun = botPaperSnipeMode;
+    if (botRuleConfig.rarity.maxEth === 0 && floorEth > 0) {
+      botRuleConfig.rarity.maxEth = floorEth * (botRuleConfig.rarity.multiplier || 1.25);
+    }
+
+    // Synchronize to active engines
+    syncRulesToEngines(slug, stats.contract);
 
     return stats;
   } catch (err) {
@@ -120,7 +157,43 @@ export async function executeScanForBot(input) {
 }
 
 /**
- * 🎨 RENDER MAIN DASHBOARD MENU (Maestro / Unibot Pro Style)
+ * 🔄 Synchronize 4 Rules State to all running Sniper Engines
+ */
+export function syncRulesToEngines(slug = null, contract = null) {
+  const targetSlug = slug || activeCollectionStats?.slug;
+  const targetContract = contract || activeCollectionStats?.contract;
+
+  for (const [k, engine] of activeSniperEngines.entries()) {
+    if (targetSlug) engine.slug = targetSlug;
+    if (targetContract) engine.contractAddress = targetContract;
+    engine.ruleStates = { ...botRuleConfig.ruleStates };
+    engine.maxFloorEth = botRuleConfig.floor.maxEth;
+    engine.maxRareRank = botRuleConfig.rarity.maxRank;
+    engine.maxRareEth = botRuleConfig.rarity.maxEth;
+    engine.traitFilters = [...botRuleConfig.trait.filters];
+    engine.maxTraitEth = botRuleConfig.trait.maxEth;
+    engine.targetTokenIds = [...botRuleConfig.tokenId.tokens];
+    engine.maxTokenEth = botRuleConfig.tokenId.maxEth;
+    engine.gasSpeed = botActiveGasPreset;
+    engine.isDryRun = botPaperSnipeMode;
+  }
+
+  if (targetSlug) activeSniperEngine.slug = targetSlug;
+  if (targetContract) activeSniperEngine.contractAddress = targetContract;
+  activeSniperEngine.ruleStates = { ...botRuleConfig.ruleStates };
+  activeSniperEngine.maxFloorEth = botRuleConfig.floor.maxEth;
+  activeSniperEngine.maxRareRank = botRuleConfig.rarity.maxRank;
+  activeSniperEngine.maxRareEth = botRuleConfig.rarity.maxEth;
+  activeSniperEngine.traitFilters = [...botRuleConfig.trait.filters];
+  activeSniperEngine.maxTraitEth = botRuleConfig.trait.maxEth;
+  activeSniperEngine.targetTokenIds = [...botRuleConfig.tokenId.tokens];
+  activeSniperEngine.maxTokenEth = botRuleConfig.tokenId.maxEth;
+  activeSniperEngine.gasSpeed = botActiveGasPreset;
+  activeSniperEngine.isDryRun = botPaperSnipeMode;
+}
+
+/**
+ * 🎨 1. MAIN DASHBOARD MENU (Hub)
  */
 export function buildMainMenu(chatId = null) {
   const isArmed = Array.from(activeSniperEngines.values()).some(e => e.isArmed) || activeSniperEngine.isArmed;
@@ -134,9 +207,21 @@ export function buildMainMenu(chatId = null) {
   if (hasTarget) {
     const currentSlug = stats.name || stats.slug;
     const floorEthNum = parseFloat(stats.floorEth) || 0;
+    const floorEthDisp = formatDisplayEth(floorEthNum);
     const usdFloor = (floorEthNum * cachedEthPrice).toFixed(2);
-    const targetTriggerEth = (floorEthNum * (1 - (botActiveDiscountPercent || 20) / 100)).toFixed(6);
-    const targetTriggerUsd = (parseFloat(targetTriggerEth) * cachedEthPrice).toFixed(2);
+
+    // Rule Summary Lines
+    const r1State = botRuleConfig.ruleStates.floor ? '🟢 ON' : '⚪ OFF';
+    const r1Val = botRuleConfig.floor.maxEth > 0 ? `${formatDisplayEth(botRuleConfig.floor.maxEth)} ETH` : `-${botRuleConfig.floor.discountPercent}%`;
+
+    const r2State = botRuleConfig.ruleStates.rarity ? '🟢 ON' : '⚪ OFF';
+    const r2Val = `Top #${botRuleConfig.rarity.maxRank} (Cap: ${formatDisplayEth(botRuleConfig.rarity.maxEth)} ETH)`;
+
+    const r3State = botRuleConfig.ruleStates.trait ? '🟢 ON' : '⚪ OFF';
+    const r3Val = `${botRuleConfig.trait.filters.length} traits (Cap: ${formatDisplayEth(botRuleConfig.trait.maxEth)} ETH)`;
+
+    const r4State = botRuleConfig.ruleStates.tokenId ? '🟢 ON' : '⚪ OFF';
+    const r4Val = `${botRuleConfig.tokenId.tokens.length} token IDs (Cap: ${formatDisplayEth(botRuleConfig.tokenId.maxEth)} ETH)`;
 
     text = `
 ⚡ <b>AERO-SNIPER PRO • TELEGRAM TERMINAL</b> ⚡
@@ -144,15 +229,18 @@ export function buildMainMenu(chatId = null) {
 
 ━━━━━━━━━━━━━━━━━━━━━
 🎯 <b>Active Target:</b> <code>${currentSlug}</code>
-💎 <b>Floor Price:</b> <b>${floorEthNum} ETH</b> (~$${usdFloor} USD)
-🎯 <b>Snipe Trigger:</b> <b>&lt; ${targetTriggerEth} ETH</b> (~$${targetTriggerUsd})
+💎 <b>Current Floor:</b> <b>${floorEthDisp} ETH</b> (~$${usdFloor} USD)
 🛡️ <b>Engine Status:</b> ${isArmed ? '🟢 <b>ARMED & HUNTING (24/7)</b>' : '🔴 <b>DISARMED / STANDBY</b>'}
 🧪 <b>Mode:</b> ${botPaperSnipeMode ? '🧪 <b>PAPER SNIPE (SIMULATION)</b>' : '⚡ <b>100% REAL ON-CHAIN MAINNET</b>'}
 🚀 <b>Gas Speed:</b> <b>${botActiveGasPreset.toUpperCase()}</b> (Auto-Surge)
-👥 <b>Cloud Engines:</b> <code>${activeEngines} user(s) online</code>
-🌐 <b>Robinhood Sequencer:</b> 🟢 <b>Sub-15ms Active</b>
+
+<b>Active Trigger Strategies:</b>
+• 1️⃣ <b>Floor Trap:</b> [${r1State}] <code>${r1Val}</code>
+• 2️⃣ <b>Rarity Rank:</b> [${r2State}] <code>${r2Val}</code>
+• 3️⃣ <b>Rare Traits:</b> [${r3State}] <code>${r3Val}</code>
+• 4️⃣ <b>Token Trap:</b> [${r4State}] <code>${r4Val}</code>
 ━━━━━━━━━━━━━━━━━━━━━
-<i>💡 Tap buttons below to control sniper or clear target:</i>
+<i>💡 Tap buttons below to Arm, adjust 4 rules, or clear target:</i>
 `.trim();
 
     keyboard = [
@@ -162,28 +250,28 @@ export function buildMainMenu(chatId = null) {
           : { text: '⚡ ARM AUTO-SNIPER (24/7)', callback_data: 'action_arm' }
       ],
       [
+        { text: '⚙️ Configure 4 Sniper Rules', callback_data: 'menu_rules_hub' }
+      ],
+      [
         { text: '🎯 Change Target', callback_data: 'menu_target' },
         { text: '🗑️ Clear Target', callback_data: 'action_clear_target' }
       ],
       [
-        { text: `📉 Discount: -${botActiveDiscountPercent}%`, callback_data: 'menu_discount' },
-        { text: `🚀 Gas: ${botActiveGasPreset.toUpperCase()}`, callback_data: 'menu_gas' }
+        { text: `🚀 Gas: ${botActiveGasPreset.toUpperCase()}`, callback_data: 'menu_gas' },
+        { text: botPaperSnipeMode ? '🧪 Mode: Paper' : '⚡ Mode: Real', callback_data: 'action_toggle_sim' }
       ],
       [
-        { text: botPaperSnipeMode ? '🧪 Mode: Paper' : '⚡ Mode: Real Mainnet', callback_data: 'action_toggle_sim' },
-        { text: '👛 Wallet Fleet', callback_data: 'menu_wallets' }
+        { text: '👛 Wallet Fleet Holdings', callback_data: 'menu_wallets' },
+        { text: '📊 Live Telemetry', callback_data: 'menu_stats' }
       ],
       [
-        { text: '📊 Telemetry & Health', callback_data: 'menu_stats' },
-        { text: '🔄 Refresh', callback_data: 'menu_refresh' }
-      ],
-      [
-        { text: '❓ Command Guide', callback_data: 'menu_help' },
+        { text: '🔄 Refresh', callback_data: 'menu_refresh' },
+        { text: '❓ Guide', callback_data: 'menu_help' },
         { text: '🌐 Launch WebApp', web_app: { url: WEBAPP_URL } }
       ]
     ];
   } else {
-    // 🛡️ CLEAN FRESH STANDBY STATE (No collection targeted)
+    // 🛡️ CLEAN FRESH STANDBY STATE
     text = `
 ⚡ <b>AERO-SNIPER PRO • TELEGRAM TERMINAL</b> ⚡
 <i>Institutional High-Frequency NFT Sniping Protocol</i>
@@ -191,7 +279,6 @@ export function buildMainMenu(chatId = null) {
 ━━━━━━━━━━━━━━━━━━━━━
 🎯 <b>Target:</b> <code>🔍 No Collection Loaded (Standby)</code>
 💎 <b>Floor Price:</b> <code>-- ETH</code>
-🎯 <b>Snipe Trigger:</b> <code>-- ETH</code>
 🛡️ <b>Engine Status:</b> 🔴 <b>STANDBY (Awaiting Target)</b>
 🧪 <b>Mode:</b> ${botPaperSnipeMode ? '🧪 <b>PAPER SNIPE (SIMULATION)</b>' : '⚡ <b>100% REAL ON-CHAIN MAINNET</b>'}
 🚀 <b>Gas Speed:</b> <b>${botActiveGasPreset.toUpperCase()}</b> (Auto-Surge)
@@ -206,12 +293,12 @@ export function buildMainMenu(chatId = null) {
         { text: '🔍 Search & Set Target NFT', callback_data: 'menu_target' }
       ],
       [
-        { text: `📉 Discount: -${botActiveDiscountPercent}%`, callback_data: 'menu_discount' },
+        { text: '⚙️ Configure 4 Sniper Rules', callback_data: 'menu_rules_hub' },
         { text: `🚀 Gas: ${botActiveGasPreset.toUpperCase()}`, callback_data: 'menu_gas' }
       ],
       [
-        { text: botPaperSnipeMode ? '🧪 Mode: Paper' : '⚡ Mode: Real Mainnet', callback_data: 'action_toggle_sim' },
-        { text: '👛 Wallet Fleet Holdings', callback_data: 'menu_wallets' }
+        { text: botPaperSnipeMode ? '🧪 Mode: Paper' : '⚡ Mode: Real', callback_data: 'action_toggle_sim' },
+        { text: '👛 Wallet Fleet', callback_data: 'menu_wallets' }
       ],
       [
         { text: '📊 Telemetry & Health', callback_data: 'menu_stats' },
@@ -223,6 +310,220 @@ export function buildMainMenu(chatId = null) {
       ]
     ];
   }
+
+  return { text, keyboard };
+}
+
+/**
+ * ⚙️ 2. RULES HUB MENU (Overview of all 4 strategies)
+ */
+export function buildRulesHubMenu() {
+  const floorEth = parseFloat(activeCollectionStats?.floorEth) || 0;
+  const floorDisp = formatDisplayEth(floorEth);
+
+  const r1 = botRuleConfig.ruleStates.floor ? '🟢 ACTIVE' : '⚪ PAUSED';
+  const r2 = botRuleConfig.ruleStates.rarity ? '🟢 ACTIVE' : '⚪ PAUSED';
+  const r3 = botRuleConfig.ruleStates.trait ? '🟢 ACTIVE' : '⚪ PAUSED';
+  const r4 = botRuleConfig.ruleStates.tokenId ? '🟢 ACTIVE' : '⚪ PAUSED';
+
+  const text = `
+⚙️ <b>SNIPER TRIGGER RULES DECK</b> ⚙️
+
+Collection Floor: <b>${floorDisp} ETH</b> (~$${(floorEth * cachedEthPrice).toFixed(2)})
+
+<b>1️⃣ Rule 1: Floor Underprice Trap [${r1}]</b>
+• Buy below discount or exact ETH/USD max cap.
+• Trigger: <code>${botRuleConfig.floor.maxEth > 0 ? formatDisplayEth(botRuleConfig.floor.maxEth) + ' ETH ($' + botRuleConfig.floor.maxUsd.toFixed(2) + ')' : '-' + botRuleConfig.floor.discountPercent + '%'}</code>
+
+<b>2️⃣ Rule 2: Top Rarity Rank Snipe [${r2}]</b>
+• Buy top ranked NFTs (OpenRarity instant calculation).
+• Target: <code>Rank <= #${botRuleConfig.rarity.maxRank} @ Max ${formatDisplayEth(botRuleConfig.rarity.maxEth)} ETH</code>
+
+<b>3️⃣ Rule 3: Rare Trait Hunter [${r3}]</b>
+• Snipe God traits / 1 of 1s (e.g. Laser eyes, Crown).
+• Targets: <code>${botRuleConfig.trait.filters.length} active trait(s) (Cap: ${formatDisplayEth(botRuleConfig.trait.maxEth)} ETH)</code>
+
+<b>4️⃣ Rule 4: Target Specific Token ID [${r4}]</b>
+• Priority 1 grail trap for specific token IDs.
+• Target: <code>${botRuleConfig.tokenId.tokens.length > 0 ? botRuleConfig.tokenId.tokens.map(t => '#' + t).join(', ') : 'None'} (Cap: ${formatDisplayEth(botRuleConfig.tokenId.maxEth)} ETH)</code>
+━━━━━━━━━━━━━━━━━━━━━
+<i>Select a rule below to configure its settings:</i>
+`.trim();
+
+  const keyboard = [
+    [
+      { text: `1️⃣ Floor Trap [${r1}]`, callback_data: 'menu_rule_floor' },
+      { text: `2️⃣ Rarity Rank [${r2}]`, callback_data: 'menu_rule_rarity' }
+    ],
+    [
+      { text: `3️⃣ Rare Traits [${r3}]`, callback_data: 'menu_rule_trait' },
+      { text: `4️⃣ Token IDs [${r4}]`, callback_data: 'menu_rule_token' }
+    ],
+    [
+      { text: '🔙 Back to Main Dashboard', callback_data: 'menu_main' }
+    ]
+  ];
+
+  return { text, keyboard };
+}
+
+/**
+ * ⚡ 3. RULE 1: FLOOR UNDERPRICE TRAP MENU
+ */
+export function buildFloorRuleMenu() {
+  const floorEth = parseFloat(activeCollectionStats?.floorEth) || 0;
+  const state = botRuleConfig.ruleStates.floor ? '🟢 ACTIVE' : '⚪ PAUSED';
+  const maxEth = botRuleConfig.floor.maxEth > 0 ? botRuleConfig.floor.maxEth : floorEth * (1 - botRuleConfig.floor.discountPercent / 100);
+  const maxUsd = maxEth * cachedEthPrice;
+
+  const text = `
+1️⃣ <b>RULE 1: FLOOR UNDERPRICE TRAP</b> [${state}]
+
+Current Floor: <b>${formatDisplayEth(floorEth)} ETH</b> (~$${(floorEth * cachedEthPrice).toFixed(2)})
+Max Buy Cap: <b>${formatDisplayEth(maxEth)} ETH</b> (~$${maxUsd.toFixed(2)} USD)
+Discount Mode: <b>-${botRuleConfig.floor.discountPercent}% Below Floor</b>
+
+<i>🎯 Buys any listing listed below this maximum price.</i>
+`.trim();
+
+  const keyboard = [
+    [
+      { text: botRuleConfig.ruleStates.floor ? '⏸ Pause Floor Rule' : '▶️ Activate Floor Rule', callback_data: 'toggle_rule_floor' }
+    ],
+    [
+      { text: '-10%', callback_data: 'set_r1_pct_10' },
+      { text: '-20%', callback_data: 'set_r1_pct_20' },
+      { text: '-30%', callback_data: 'set_r1_pct_30' },
+      { text: '-50% 🔥', callback_data: 'set_r1_pct_50' },
+      { text: '-80% ⚡', callback_data: 'set_r1_pct_80' }
+    ],
+    [
+      { text: '✏️ Set Custom Max Price (ETH)', callback_data: 'prompt_r1_eth' }
+    ],
+    [
+      { text: '💵 Set Custom Max Price (USD $)', callback_data: 'prompt_r1_usd' }
+    ],
+    [
+      { text: '🔙 Back to Rules Deck', callback_data: 'menu_rules_hub' }
+    ]
+  ];
+
+  return { text, keyboard };
+}
+
+/**
+ * 👑 4. RULE 2: TOP RARITY RANK SNIPE MENU
+ */
+export function buildRarityRuleMenu() {
+  const floorEth = parseFloat(activeCollectionStats?.floorEth) || 0;
+  const state = botRuleConfig.ruleStates.rarity ? '🟢 ACTIVE' : '⚪ PAUSED';
+  const maxEth = botRuleConfig.rarity.maxEth > 0 ? botRuleConfig.rarity.maxEth : floorEth * (botRuleConfig.rarity.multiplier || 1.25);
+  const maxUsd = maxEth * cachedEthPrice;
+
+  const text = `
+2️⃣ <b>RULE 2: TOP RARITY RANK SNIPE</b> [${state}]
+
+Target Rank: <b>Rank &lt;= #${botRuleConfig.rarity.maxRank}</b>
+Max Buy Cap: <b>${formatDisplayEth(maxEth)} ETH</b> (~$${maxUsd.toFixed(2)} USD)
+Price Multiplier: <b>${botRuleConfig.rarity.multiplier}x Floor</b>
+
+<i>👑 Automatically snipes high rarity NFTs using OpenRarity sub-millisecond RAM calculation.</i>
+`.trim();
+
+  const keyboard = [
+    [
+      { text: botRuleConfig.ruleStates.rarity ? '⏸ Pause Rarity Rule' : '▶️ Activate Rarity Rule', callback_data: 'toggle_rule_rarity' }
+    ],
+    [
+      { text: 'Top #100', callback_data: 'set_r2_rank_100' },
+      { text: 'Top #500', callback_data: 'set_r2_rank_500' },
+      { text: 'Top #1200', callback_data: 'set_r2_rank_1200' },
+      { text: '✏️ Custom Rank', callback_data: 'prompt_r2_rank' }
+    ],
+    [
+      { text: '1.0x Floor', callback_data: 'set_r2_mult_100' },
+      { text: '1.25x Floor', callback_data: 'set_r2_mult_125' },
+      { text: '1.50x Floor', callback_data: 'set_r2_mult_150' },
+      { text: '✏️ Custom ETH Cap', callback_data: 'prompt_r2_eth' }
+    ],
+    [
+      { text: '🔙 Back to Rules Deck', callback_data: 'menu_rules_hub' }
+    ]
+  ];
+
+  return { text, keyboard };
+}
+
+/**
+ * 💎 5. RULE 3: RARE TRAIT HUNTER MENU
+ */
+export function buildTraitRuleMenu() {
+  const state = botRuleConfig.ruleStates.trait ? '🟢 ACTIVE' : '⚪ PAUSED';
+  const traitsList = botRuleConfig.trait.filters.length > 0
+    ? botRuleConfig.trait.filters.map((f, i) => `${i + 1}. <code>${f.traitType ? f.traitType + ': ' : ''}${f.traitValue}</code>`).join('\n')
+    : '<i>No trait filters added yet.</i>';
+
+  const text = `
+3️⃣ <b>RULE 3: RARE TRAIT HUNTER</b> [${state}]
+
+Max Price Cap: <b>${formatDisplayEth(botRuleConfig.trait.maxEth)} ETH</b> (~$${(botRuleConfig.trait.maxEth * cachedEthPrice).toFixed(2)})
+
+<b>Active Targeted Traits:</b>
+${traitsList}
+
+<i>💎 Instantly snipes whenever an NFT listed with ANY of these traits is detected.</i>
+`.trim();
+
+  const keyboard = [
+    [
+      { text: botRuleConfig.ruleStates.trait ? '⏸ Pause Trait Rule' : '▶️ Activate Trait Rule', callback_data: 'toggle_rule_trait' }
+    ],
+    [
+      { text: '➕ Add Trait Filter', callback_data: 'prompt_r3_add_trait' },
+      { text: '💰 Set Max ETH Cap', callback_data: 'prompt_r3_eth' }
+    ],
+    [
+      { text: '🗑️ Clear All Traits', callback_data: 'action_r3_clear_traits' },
+      { text: '🔙 Back to Rules', callback_data: 'menu_rules_hub' }
+    ]
+  ];
+
+  return { text, keyboard };
+}
+
+/**
+ * 🎯 6. RULE 4: TARGET SPECIFIC TOKEN ID TRAP MENU
+ */
+export function buildTokenIdRuleMenu() {
+  const state = botRuleConfig.ruleStates.tokenId ? '🟢 ACTIVE' : '⚪ PAUSED';
+  const tokensList = botRuleConfig.tokenId.tokens.length > 0
+    ? botRuleConfig.tokenId.tokens.map(t => `#${t}`).join(', ')
+    : '<i>No token IDs added yet.</i>';
+
+  const text = `
+4️⃣ <b>RULE 4: TARGET TOKEN ID TRAP</b> [${state}]
+
+Max Price Cap: <b>${formatDisplayEth(botRuleConfig.tokenId.maxEth)} ETH</b> (~$${(botRuleConfig.tokenId.maxEth * cachedEthPrice).toFixed(2)})
+
+<b>Targeted Token IDs:</b>
+<code>${tokensList}</code>
+
+<i>🎯 Priority 1 grail trap: Immediately snipes these exact token IDs when listed.</i>
+`.trim();
+
+  const keyboard = [
+    [
+      { text: botRuleConfig.ruleStates.tokenId ? '⏸ Pause Token Rule' : '▶️ Activate Token Rule', callback_data: 'toggle_rule_token' }
+    ],
+    [
+      { text: '🎯 Enter Token IDs (e.g. 7129, 8485)', callback_data: 'prompt_r4_tokens' },
+      { text: '💰 Set Max ETH Cap', callback_data: 'prompt_r4_eth' }
+    ],
+    [
+      { text: '🗑️ Clear Token IDs', callback_data: 'action_r4_clear_tokens' },
+      { text: '🔙 Back to Rules', callback_data: 'menu_rules_hub' }
+    ]
+  ];
 
   return { text, keyboard };
 }
@@ -255,39 +556,6 @@ Current Active: <code>${currentSlug}</code>
     [
       { text: '🗑️ Clear Target (Reset)', callback_data: 'action_clear_target' },
       { text: '🔙 Main Menu', callback_data: 'menu_main' }
-    ]
-  ];
-
-  return { text, keyboard };
-}
-
-/**
- * 📉 BUILD DISCOUNT TARGET MENU
- */
-export function buildDiscountMenu() {
-  const floor = activeCollectionStats?.floorEth || '--';
-  const text = `
-📉 <b>SELECT FLOOR DISCOUNT TARGET:</b>
-
-Current Floor: <b>${floor} ETH</b>
-Choose the fat-finger discount percentage below floor price to trigger an instant snipe:
-`.trim();
-
-  const keyboard = [
-    [
-      { text: '-10% Below Floor', callback_data: 'set_pct_10' },
-      { text: '-20% Below Floor', callback_data: 'set_pct_20' }
-    ],
-    [
-      { text: '-30% Quick Snipe', callback_data: 'set_pct_30' },
-      { text: '-50% Half Price 🔥', callback_data: 'set_pct_50' }
-    ],
-    [
-      { text: '-80% Mega Steal ⚡', callback_data: 'set_pct_80' },
-      { text: '-90% God Steal 👑', callback_data: 'set_pct_90' }
-    ],
-    [
-      { text: '🔙 Back to Main Menu', callback_data: 'menu_main' }
     ]
   ];
 
@@ -345,21 +613,21 @@ export async function buildWalletsMenu() {
   if (wallets.length === 0) {
     walletLines = '<i>No wallets configured in cloud vault. Add keys via WebApp or Bot.</i>';
   } else {
-    walletLines = wallets.slice(0, 5).map((w, idx) => {
+    walletLines = wallets.slice(0, 6).map((w, idx) => {
       const shortAddr = w.address ? `${w.address.slice(0, 6)}...${w.address.slice(-4)}` : '0x...';
       const roleTag = w.role === 'master' ? '👑 Master' : '⚡ Worker';
-      const bal = parseFloat(w.balance || 0).toFixed(4);
+      const bal = formatDisplayEth(w.balance || 0);
       return `• <b>${roleTag} (${w.name || '#' + (idx + 1)}):</b> <code>${shortAddr}</code> — <b>${bal} ETH</b>`;
     }).join('\n');
-    if (wallets.length > 5) {
-      walletLines += `\n<i>...and ${wallets.length - 5} more worker sub-wallets</i>`;
+    if (wallets.length > 6) {
+      walletLines += `\n<i>...and ${wallets.length - 6} more worker sub-wallets</i>`;
     }
   }
 
   const text = `
 👛 <b>MAINNET WALLET FLEET STATUS</b> 👛
 
-💰 <b>Total Fleet Value:</b> <b>${totalEth.toFixed(4)} ETH</b> (~$${totalUsd} USD)
+💰 <b>Total Fleet Value:</b> <b>${formatDisplayEth(totalEth)} ETH</b> (~$${totalUsd} USD)
 👥 <b>Total Active Wallets:</b> <b>${wallets.length} wallet(s)</b>
 👑 <b>Master Holding:</b> <code>${masterWallet?.address ? masterWallet.address.slice(0, 8) + '...' + masterWallet.address.slice(-6) : 'None Set'}</code>
 
@@ -474,8 +742,8 @@ export async function dispatchPrivateSnipeAlert(userEngine, snipeData) {
   const isSim = !!snipeData.isDryRun;
   const modeBadge = isSim ? '🧪 <b>PAPER SNIPE SIMULATED</b>' : '⚡ <b>LIVE ON-CHAIN SNIPE CONFIRMED!</b>';
   const tokenName = snipeData.name || `#${snipeData.tokenId}`;
-  const priceEth = snipeData.price || 0;
-  const usdPrice = (priceEth * cachedEthPrice).toFixed(2);
+  const priceEth = formatDisplayEth(snipeData.price || 0);
+  const usdPrice = (parseFloat(snipeData.price || 0) * cachedEthPrice).toFixed(2);
   const txHash = snipeData.txHash || '';
   const txShort = txHash.length > 18 ? `${txHash.slice(0, 10)}...${txHash.slice(-8)}` : txHash;
   const blockNum = snipeData.blockNumber ? `#${snipeData.blockNumber}` : 'Mined';
@@ -518,8 +786,8 @@ export async function dispatchGlobalMasterFeedAlert(snipeData) {
   if (!token || !channelId) return;
 
   const tokenName = snipeData.name || `#${snipeData.tokenId}`;
-  const priceEth = snipeData.price || 0;
-  const usdPrice = (priceEth * cachedEthPrice).toFixed(2);
+  const priceEth = formatDisplayEth(snipeData.price || 0);
+  const usdPrice = (parseFloat(snipeData.price || 0) * cachedEthPrice).toFixed(2);
   const buyerDisplay = snipeData.buyerName || 'VIP Member';
   const explorerUrl = `https://explorer.mainnet.robinhood.com/tx/${snipeData.txHash}`;
 
@@ -561,6 +829,7 @@ async function handleCallbackQuery(callbackQuery) {
       const menu = buildTargetMenu();
       return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
     }
+    syncRulesToEngines();
     for (const [k, engine] of activeSniperEngines.entries()) {
       engine.isArmed = true;
     }
@@ -592,16 +861,249 @@ async function handleCallbackQuery(callbackQuery) {
   // 4. Toggle Simulation (Paper Snipe)
   if (data === 'action_toggle_sim') {
     botPaperSnipeMode = !botPaperSnipeMode;
-    for (const [k, engine] of activeSniperEngines.entries()) {
-      engine.isDryRun = botPaperSnipeMode;
-    }
-    activeSniperEngine.isDryRun = botPaperSnipeMode;
+    syncRulesToEngines();
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, botPaperSnipeMode ? '🧪 Paper Snipe Activated (0 ETH spent)' : '⚡ Real Mainnet Activated!');
     const menu = buildMainMenu(chatId);
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
-  // 5. Target Sub-Menu
+  // 5. Rules Hub Menu
+  if (data === 'menu_rules_hub') {
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const menu = buildRulesHubMenu();
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // 6. Rule 1: Floor Menu
+  if (data === 'menu_rule_floor') {
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const menu = buildFloorRuleMenu();
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Toggle Rule 1
+  if (data === 'toggle_rule_floor') {
+    botRuleConfig.ruleStates.floor = !botRuleConfig.ruleStates.floor;
+    syncRulesToEngines();
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, botRuleConfig.ruleStates.floor ? '🟢 Floor Rule Active' : '⚪ Floor Rule Paused');
+    const menu = buildFloorRuleMenu();
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Set R1 Discount Presets
+  if (data.startsWith('set_r1_pct_')) {
+    const pct = parseInt(data.replace('set_r1_pct_', ''), 10);
+    botRuleConfig.floor.discountPercent = pct;
+    const floor = parseFloat(activeCollectionStats?.floorEth) || 0;
+    if (floor > 0) {
+      botRuleConfig.floor.maxEth = floor * (1 - pct / 100);
+      botRuleConfig.floor.maxUsd = botRuleConfig.floor.maxEth * cachedEthPrice;
+    }
+    syncRulesToEngines();
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, `✅ Floor Target: -${pct}% (${formatDisplayEth(botRuleConfig.floor.maxEth)} ETH)`);
+    const menu = buildFloorRuleMenu();
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Prompt R1 Custom ETH
+  if (data === 'prompt_r1_eth') {
+    userPromptState.set(chatId, { action: 'awaiting_r1_eth' });
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const text = `
+✏️ <b>ENTER MAX PRICE IN ETH:</b>
+
+Current Floor: <b>${formatDisplayEth(activeCollectionStats?.floorEth || 0)} ETH</b>
+
+Please type your desired maximum trigger price in <b>ETH</b> (e.g. <code>0.025</code> or <code>0.000018</code>):
+`.trim();
+    const keyboard = [[{ text: '🔙 Cancel', callback_data: 'menu_rule_floor' }]];
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, text, keyboard);
+  }
+
+  // Prompt R1 Custom USD
+  if (data === 'prompt_r1_usd') {
+    userPromptState.set(chatId, { action: 'awaiting_r1_usd' });
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const text = `
+💵 <b>ENTER MAX PRICE IN USD ($):</b>
+
+ETH Price: <b>$${cachedEthPrice.toFixed(2)} USD</b>
+
+Please type your desired maximum trigger price in <b>USD ($)</b> (e.g. <code>50</code> or <code>100</code>):
+`.trim();
+    const keyboard = [[{ text: '🔙 Cancel', callback_data: 'menu_rule_floor' }]];
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, text, keyboard);
+  }
+
+  // 7. Rule 2: Rarity Menu
+  if (data === 'menu_rule_rarity') {
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const menu = buildRarityRuleMenu();
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Toggle Rule 2
+  if (data === 'toggle_rule_rarity') {
+    botRuleConfig.ruleStates.rarity = !botRuleConfig.ruleStates.rarity;
+    syncRulesToEngines();
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, botRuleConfig.ruleStates.rarity ? '🟢 Rarity Rule Active' : '⚪ Rarity Rule Paused');
+    const menu = buildRarityRuleMenu();
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Set R2 Rank Presets
+  if (data.startsWith('set_r2_rank_')) {
+    const rank = parseInt(data.replace('set_r2_rank_', ''), 10);
+    botRuleConfig.rarity.maxRank = rank;
+    syncRulesToEngines();
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, `✅ Max Rank: Top #${rank}`);
+    const menu = buildRarityRuleMenu();
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Prompt R2 Custom Rank
+  if (data === 'prompt_r2_rank') {
+    userPromptState.set(chatId, { action: 'awaiting_r2_rank' });
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const text = `
+👑 <b>ENTER MAX RARITY RANK:</b>
+
+Please type the maximum rarity rank number (e.g. <code>250</code> or <code>700</code>):
+`.trim();
+    const keyboard = [[{ text: '🔙 Cancel', callback_data: 'menu_rule_rarity' }]];
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, text, keyboard);
+  }
+
+  // Set R2 Multiplier Presets
+  if (data.startsWith('set_r2_mult_')) {
+    const mult = parseInt(data.replace('set_r2_mult_', ''), 10) / 100;
+    botRuleConfig.rarity.multiplier = mult;
+    const floor = parseFloat(activeCollectionStats?.floorEth) || 0;
+    if (floor > 0) {
+      botRuleConfig.rarity.maxEth = floor * mult;
+    }
+    syncRulesToEngines();
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, `✅ Price Cap: ${mult}x Floor (${formatDisplayEth(botRuleConfig.rarity.maxEth)} ETH)`);
+    const menu = buildRarityRuleMenu();
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Prompt R2 Custom ETH Cap
+  if (data === 'prompt_r2_eth') {
+    userPromptState.set(chatId, { action: 'awaiting_r2_eth' });
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const text = `
+👑 <b>ENTER MAX ETH FOR TOP RARITY:</b>
+
+Please type the maximum ETH price cap for rarity snipes (e.g. <code>0.05</code> or <code>0.1</code>):
+`.trim();
+    const keyboard = [[{ text: '🔙 Cancel', callback_data: 'menu_rule_rarity' }]];
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, text, keyboard);
+  }
+
+  // 8. Rule 3: Trait Menu
+  if (data === 'menu_rule_trait') {
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const menu = buildTraitRuleMenu();
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Toggle Rule 3
+  if (data === 'toggle_rule_trait') {
+    botRuleConfig.ruleStates.trait = !botRuleConfig.ruleStates.trait;
+    syncRulesToEngines();
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, botRuleConfig.ruleStates.trait ? '🟢 Trait Hunter Active' : '⚪ Trait Hunter Paused');
+    const menu = buildTraitRuleMenu();
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Prompt R3 Add Trait
+  if (data === 'prompt_r3_add_trait') {
+    userPromptState.set(chatId, { action: 'awaiting_r3_trait' });
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const text = `
+💎 <b>ADD TRAIT FILTER:</b>
+
+Type the trait you want to hunt (e.g. <code>Background: Red</code> or <code>Eyes: Laser</code> or <code>Golden</code>):
+`.trim();
+    const keyboard = [[{ text: '🔙 Cancel', callback_data: 'menu_rule_trait' }]];
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, text, keyboard);
+  }
+
+  // Prompt R3 ETH Cap
+  if (data === 'prompt_r3_eth') {
+    userPromptState.set(chatId, { action: 'awaiting_r3_eth' });
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const text = `
+💎 <b>ENTER MAX ETH CAP FOR TRAITS:</b>
+
+Please type the maximum ETH price for trait snipes (e.g. <code>0.08</code>):
+`.trim();
+    const keyboard = [[{ text: '🔙 Cancel', callback_data: 'menu_rule_trait' }]];
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, text, keyboard);
+  }
+
+  // Action R3 Clear Traits
+  if (data === 'action_r3_clear_traits') {
+    botRuleConfig.trait.filters = [];
+    syncRulesToEngines();
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '🗑️ All trait filters cleared.');
+    const menu = buildTraitRuleMenu();
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // 9. Rule 4: Token ID Menu
+  if (data === 'menu_rule_token') {
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const menu = buildTokenIdRuleMenu();
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Toggle Rule 4
+  if (data === 'toggle_rule_token') {
+    botRuleConfig.ruleStates.tokenId = !botRuleConfig.ruleStates.tokenId;
+    syncRulesToEngines();
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, botRuleConfig.ruleStates.tokenId ? '🟢 Token ID Trap Active' : '⚪ Token ID Trap Paused');
+    const menu = buildTokenIdRuleMenu();
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // Prompt R4 Token IDs
+  if (data === 'prompt_r4_tokens') {
+    userPromptState.set(chatId, { action: 'awaiting_r4_tokens' });
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const text = `
+🎯 <b>ENTER TARGET TOKEN IDs:</b>
+
+Type token IDs separated by commas (e.g. <code>7129, 8485, 1</code>):
+`.trim();
+    const keyboard = [[{ text: '🔙 Cancel', callback_data: 'menu_rule_token' }]];
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, text, keyboard);
+  }
+
+  // Prompt R4 ETH Cap
+  if (data === 'prompt_r4_eth') {
+    userPromptState.set(chatId, { action: 'awaiting_r4_eth' });
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
+    const text = `
+🎯 <b>ENTER MAX ETH CAP FOR TOKEN IDs:</b>
+
+Please type the maximum ETH price (e.g. <code>0.1</code>):
+`.trim();
+    const keyboard = [[{ text: '🔙 Cancel', callback_data: 'menu_rule_token' }]];
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, text, keyboard);
+  }
+
+  // Action R4 Clear Tokens
+  if (data === 'action_r4_clear_tokens') {
+    botRuleConfig.tokenId.tokens = [];
+    syncRulesToEngines();
+    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '🗑️ All token IDs cleared.');
+    const menu = buildTokenIdRuleMenu();
+    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
+  }
+
+  // 10. Target Sub-Menu
   if (data === 'menu_target') {
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
     const menu = buildTargetMenu();
@@ -633,31 +1135,7 @@ Please type the OpenSea URL or collection slug in your next message (e.g. <code>
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, text, keyboard);
   }
 
-  // 6. Discount Sub-Menu
-  if (data === 'menu_discount') {
-    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
-    const menu = buildDiscountMenu();
-    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
-  }
-
-  // Set Discount %
-  if (data.startsWith('set_pct_')) {
-    const pct = parseInt(data.replace('set_pct_', ''), 10);
-    botActiveDiscountPercent = pct;
-    const floor = activeCollectionStats?.floorEth || 0;
-    const newMaxFloor = floor * (1 - pct / 100);
-
-    for (const [k, engine] of activeSniperEngines.entries()) {
-      engine.maxFloorEth = newMaxFloor;
-    }
-    activeSniperEngine.maxFloorEth = newMaxFloor;
-
-    await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, `✅ Target updated: ${pct}% Below Floor`);
-    const menu = buildMainMenu(chatId);
-    return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
-  }
-
-  // 7. Gas Sub-Menu
+  // 11. Gas Sub-Menu
   if (data === 'menu_gas') {
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
     const menu = buildGasMenu();
@@ -668,30 +1146,27 @@ Please type the OpenSea URL or collection slug in your next message (e.g. <code>
   if (data.startsWith('set_gas_')) {
     const preset = data.replace('set_gas_', '');
     botActiveGasPreset = preset;
-    for (const [k, engine] of activeSniperEngines.entries()) {
-      engine.gasSpeed = preset;
-    }
-    activeSniperEngine.gasSpeed = preset;
+    syncRulesToEngines();
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, `🚀 Gas set to: ${preset.toUpperCase()}`);
     const menu = buildMainMenu(chatId);
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
-  // 8. Wallets Sub-Menu
+  // 12. Wallets Sub-Menu
   if (data === 'menu_wallets') {
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
     const menu = await buildWalletsMenu();
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
-  // 9. Stats / Telemetry
+  // 13. Stats / Telemetry
   if (data === 'menu_stats' || data === 'menu_refresh') {
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '🔄 Refreshed');
     const menu = buildMainMenu(chatId);
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
-  // 10. Back to Main Menu
+  // 14. Back to Main Menu
   if (data === 'menu_main') {
     userPromptState.delete(chatId);
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
@@ -699,32 +1174,31 @@ Please type the OpenSea URL or collection slug in your next message (e.g. <code>
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
   }
 
-  // 11. Help Guide
+  // 15. Help Guide
   if (data === 'menu_help') {
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id);
     const helpText = `
 📖 <b>AERO-SNIPER TELEGRAM COMMAND GUIDE:</b>
 
-<b>Touch Controls:</b>
-• <b>🔍 Search Target:</b> Scan & set any NFT collection.
-• <b>🗑️ Clear Target:</b> Reset bot to standby mode.
-• <b>⚡ Arm / ⏸ Pause:</b> Starts/stops 24/7 background sniper engine.
-• <b>📉 Discount %:</b> Set fat-finger discount below floor (-10% to -90%).
-• <b>🚀 Gas:</b> Choose racing tip (Safe, Turbo, Surge, Hyped).
-• <b>🧪 Mode:</b> Toggle between Simulation (Paper) & Real Mainnet.
+<b>4 Sniping Strategies:</b>
+• <b>1️⃣ Floor Trap:</b> Snipes underpriced fat-finger dumps by discount % or exact max ETH/USD.
+• <b>2️⃣ Rarity Rank:</b> Snipes top ranked NFTs (e.g. Rank &lt;= #500) within ETH budget.
+• <b>3️⃣ Rare Traits:</b> Snipes God traits / 1 of 1s (e.g. Laser eyes, Golden).
+• <b>4️⃣ Token IDs:</b> Snipes specific grail token IDs (e.g. #7129, #8485).
 
 <b>Direct Chat Commands:</b>
 • <code>/start</code> — Open main dashboard
-• <code>/clear</code> — Clear target & reset to standby
-• <code>/arm</code> — Arm sniper immediately
+• <code>/rules</code> — Configure 4 sniper rules
+• <code>/arm</code> — Arm sniper immediately (24/7)
 • <code>/pause</code> — Pause sniper immediately
-• <code>/target &lt;slug&gt;</code> — e.g. <code>/target bulls-runners-genesis</code>
-• <code>/discount &lt;%&gt;</code> — e.g. <code>/discount 25</code>
+• <code>/clear</code> — Clear target & reset to standby
+• <code>/price &lt;eth&gt;</code> — e.g. <code>/price 0.025</code>
+• <code>/usd &lt;$&gt;</code> — e.g. <code>/usd 50</code>
+• <code>/rank &lt;num&gt;</code> — e.g. <code>/rank 500</code>
 • <code>/gas &lt;safe|turbo|surge|hyped&gt;</code>
 • <code>/wallets</code> — Check fleet holdings
-• <code>/status</code> — Live telemetry report
 
-<i>💡 Or simply paste any OpenSea link in chat to scan & target it!</i>
+<i>💡 Or paste any OpenSea link in chat to scan & target it!</i>
 `.trim();
     const keyboard = [[{ text: '🔙 Back to Menu', callback_data: 'menu_main' }]];
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, helpText, keyboard);
@@ -739,7 +1213,7 @@ async function handleTextMessage(message) {
   const text = message.text?.trim();
   if (!chatId || !text) return;
 
-  // Auto-sync telegramChatId for admin / users
+  // Auto-sync telegramChatId
   if (chatId) {
     dbGetUsers().then(users => {
       if (users && users.length > 0) {
@@ -762,28 +1236,143 @@ async function handleTextMessage(message) {
       return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, errText, keyboard);
     }
     const menu = buildMainMenu(chatId);
-    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Target Set:</b> <code>${stats.name}</code>\nFloor: <b>${stats.floorEth} ETH</b>\n\n` + menu.text, menu.keyboard);
+    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Target Set:</b> <code>${stats.name}</code>\nFloor: <b>${formatDisplayEth(stats.floorEth)} ETH</b>\n\n` + menu.text, menu.keyboard);
   }
 
-  // 2. /start or /menu
+  // 2. Awaiting R1 Custom ETH
+  if (prompt?.action === 'awaiting_r1_eth') {
+    userPromptState.delete(chatId);
+    const ethVal = parseFloat(text);
+    if (!isNaN(ethVal) && ethVal > 0) {
+      botRuleConfig.floor.maxEth = ethVal;
+      botRuleConfig.floor.maxUsd = ethVal * cachedEthPrice;
+      botRuleConfig.ruleStates.floor = true;
+      syncRulesToEngines();
+      const menu = buildFloorRuleMenu();
+      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Floor Max Price Set:</b> <b>${formatDisplayEth(ethVal)} ETH</b> (~$${(ethVal * cachedEthPrice).toFixed(2)} USD)\n\n` + menu.text, menu.keyboard);
+    }
+  }
+
+  // 3. Awaiting R1 Custom USD
+  if (prompt?.action === 'awaiting_r1_usd') {
+    userPromptState.delete(chatId);
+    const usdVal = parseFloat(text.replace('$', ''));
+    if (!isNaN(usdVal) && usdVal > 0) {
+      botRuleConfig.floor.maxUsd = usdVal;
+      botRuleConfig.floor.maxEth = usdVal / cachedEthPrice;
+      botRuleConfig.ruleStates.floor = true;
+      syncRulesToEngines();
+      const menu = buildFloorRuleMenu();
+      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Floor Max Price Set:</b> <b>$${usdVal.toFixed(2)} USD</b> (~${formatDisplayEth(botRuleConfig.floor.maxEth)} ETH)\n\n` + menu.text, menu.keyboard);
+    }
+  }
+
+  // 4. Awaiting R2 Custom Rank
+  if (prompt?.action === 'awaiting_r2_rank') {
+    userPromptState.delete(chatId);
+    const rankVal = parseInt(text.replace('#', ''), 10);
+    if (!isNaN(rankVal) && rankVal > 0) {
+      botRuleConfig.rarity.maxRank = rankVal;
+      botRuleConfig.ruleStates.rarity = true;
+      syncRulesToEngines();
+      const menu = buildRarityRuleMenu();
+      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Rarity Max Rank Set:</b> <b>Top #${rankVal}</b>\n\n` + menu.text, menu.keyboard);
+    }
+  }
+
+  // 5. Awaiting R2 Custom ETH
+  if (prompt?.action === 'awaiting_r2_eth') {
+    userPromptState.delete(chatId);
+    const ethVal = parseFloat(text);
+    if (!isNaN(ethVal) && ethVal > 0) {
+      botRuleConfig.rarity.maxEth = ethVal;
+      botRuleConfig.ruleStates.rarity = true;
+      syncRulesToEngines();
+      const menu = buildRarityRuleMenu();
+      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Rarity Max ETH Cap Set:</b> <b>${formatDisplayEth(ethVal)} ETH</b>\n\n` + menu.text, menu.keyboard);
+    }
+  }
+
+  // 6. Awaiting R3 Add Trait
+  if (prompt?.action === 'awaiting_r3_trait') {
+    userPromptState.delete(chatId);
+    let traitType = '';
+    let traitValue = text;
+    if (text.includes(':')) {
+      const parts = text.split(':');
+      traitType = parts[0].trim();
+      traitValue = parts.slice(1).join(':').trim();
+    }
+    botRuleConfig.trait.filters.push({ traitType, traitValue, maxEth: botRuleConfig.trait.maxEth });
+    botRuleConfig.ruleStates.trait = true;
+    syncRulesToEngines();
+    const menu = buildTraitRuleMenu();
+    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Trait Filter Added:</b> <code>${traitType ? traitType + ': ' : ''}${traitValue}</code>\n\n` + menu.text, menu.keyboard);
+  }
+
+  // 7. Awaiting R3 Trait ETH Cap
+  if (prompt?.action === 'awaiting_r3_eth') {
+    userPromptState.delete(chatId);
+    const ethVal = parseFloat(text);
+    if (!isNaN(ethVal) && ethVal > 0) {
+      botRuleConfig.trait.maxEth = ethVal;
+      botRuleConfig.trait.filters.forEach(f => { f.maxEth = ethVal; });
+      botRuleConfig.ruleStates.trait = true;
+      syncRulesToEngines();
+      const menu = buildTraitRuleMenu();
+      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Trait Max Price Cap Set:</b> <b>${formatDisplayEth(ethVal)} ETH</b>\n\n` + menu.text, menu.keyboard);
+    }
+  }
+
+  // 8. Awaiting R4 Token IDs
+  if (prompt?.action === 'awaiting_r4_tokens') {
+    userPromptState.delete(chatId);
+    const rawTokens = text.split(/[, ]+/).map(t => t.replace('#', '').trim()).filter(t => t.length > 0);
+    if (rawTokens.length > 0) {
+      botRuleConfig.tokenId.tokens = rawTokens;
+      botRuleConfig.ruleStates.tokenId = true;
+      syncRulesToEngines();
+      const menu = buildTokenIdRuleMenu();
+      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Targeted Token IDs Set:</b> <code>${rawTokens.map(t => '#' + t).join(', ')}</code>\n\n` + menu.text, menu.keyboard);
+    }
+  }
+
+  // 9. Awaiting R4 Token ETH Cap
+  if (prompt?.action === 'awaiting_r4_eth') {
+    userPromptState.delete(chatId);
+    const ethVal = parseFloat(text);
+    if (!isNaN(ethVal) && ethVal > 0) {
+      botRuleConfig.tokenId.maxEth = ethVal;
+      botRuleConfig.ruleStates.tokenId = true;
+      syncRulesToEngines();
+      const menu = buildTokenIdRuleMenu();
+      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Token ID Max Price Cap Set:</b> <b>${formatDisplayEth(ethVal)} ETH</b>\n\n` + menu.text, menu.keyboard);
+    }
+  }
+
+  // Standard Commands
   if (text.startsWith('/start') || text === '/menu') {
     const menu = buildMainMenu(chatId);
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard);
   }
 
-  // 3. /clear or /reset
+  if (text === '/rules') {
+    const menu = buildRulesHubMenu();
+    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard);
+  }
+
   if (text === '/clear' || text === '/reset') {
     clearBotTarget();
     const menu = buildMainMenu(chatId);
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '🗑️ <b>Target Cleared! Reset to Fresh Standby.</b>\n\n' + menu.text, menu.keyboard);
   }
 
-  // 4. /arm
   if (text === '/arm') {
     if (!activeCollectionStats?.slug) {
       const menu = buildTargetMenu();
       return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚠️ <b>Please set a target collection before arming!</b>\n\n' + menu.text, menu.keyboard);
     }
+    syncRulesToEngines();
     for (const [k, engine] of activeSniperEngines.entries()) {
       engine.isArmed = true;
     }
@@ -792,7 +1381,6 @@ async function handleTextMessage(message) {
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚡ <b>SNIPER ARMED (24/7 Live Cloud Engine)!</b>\n\n' + menu.text, menu.keyboard);
   }
 
-  // 5. /pause or /disarm
   if (text === '/pause' || text === '/disarm') {
     for (const [k, engine] of activeSniperEngines.entries()) {
       engine.isArmed = false;
@@ -802,7 +1390,54 @@ async function handleTextMessage(message) {
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⏸ <b>SNIPER PAUSED!</b>\n\n' + menu.text, menu.keyboard);
   }
 
-  // 6. /target <slug>
+  // /price <eth>
+  if (text.startsWith('/price')) {
+    const parts = text.split(' ');
+    if (parts.length > 1) {
+      const val = parseFloat(parts[1]);
+      if (!isNaN(val) && val > 0) {
+        botRuleConfig.floor.maxEth = val;
+        botRuleConfig.floor.maxUsd = val * cachedEthPrice;
+        botRuleConfig.ruleStates.floor = true;
+        syncRulesToEngines();
+        const menu = buildFloorRuleMenu();
+        return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Floor Max Price:</b> <b>${formatDisplayEth(val)} ETH</b>\n\n` + menu.text, menu.keyboard);
+      }
+    }
+  }
+
+  // /usd <usd>
+  if (text.startsWith('/usd')) {
+    const parts = text.split(' ');
+    if (parts.length > 1) {
+      const val = parseFloat(parts[1].replace('$', ''));
+      if (!isNaN(val) && val > 0) {
+        botRuleConfig.floor.maxUsd = val;
+        botRuleConfig.floor.maxEth = val / cachedEthPrice;
+        botRuleConfig.ruleStates.floor = true;
+        syncRulesToEngines();
+        const menu = buildFloorRuleMenu();
+        return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Floor Max Price:</b> <b>$${val.toFixed(2)} USD</b> (${formatDisplayEth(botRuleConfig.floor.maxEth)} ETH)\n\n` + menu.text, menu.keyboard);
+      }
+    }
+  }
+
+  // /rank <rank>
+  if (text.startsWith('/rank')) {
+    const parts = text.split(' ');
+    if (parts.length > 1) {
+      const val = parseInt(parts[1].replace('#', ''), 10);
+      if (!isNaN(val) && val > 0) {
+        botRuleConfig.rarity.maxRank = val;
+        botRuleConfig.ruleStates.rarity = true;
+        syncRulesToEngines();
+        const menu = buildRarityRuleMenu();
+        return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Rarity Max Rank:</b> <b>Top #${val}</b>\n\n` + menu.text, menu.keyboard);
+      }
+    }
+  }
+
+  // /target <slug>
   if (text.startsWith('/target')) {
     const parts = text.split(' ');
     if (parts.length > 1) {
@@ -813,85 +1448,40 @@ async function handleTextMessage(message) {
         return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `❌ Could not find collection <code>${slugInput}</code> on OpenSea.`);
       }
       const menu = buildMainMenu(chatId);
-      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Target Changed to:</b> <code>${stats.name}</code>\nFloor: <b>${stats.floorEth} ETH</b>\n\n` + menu.text, menu.keyboard);
+      return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Target Changed to:</b> <code>${stats.name}</code>\nFloor: <b>${formatDisplayEth(stats.floorEth)} ETH</b>\n\n` + menu.text, menu.keyboard);
     } else {
       const menu = buildTargetMenu();
       return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard);
     }
   }
 
-  // 7. /discount <num>
-  if (text.startsWith('/discount')) {
-    const parts = text.split(' ');
-    if (parts.length > 1) {
-      const pct = parseInt(parts[1], 10);
-      if (!isNaN(pct) && pct > 0 && pct < 100) {
-        botActiveDiscountPercent = pct;
-        const floor = activeCollectionStats?.floorEth || 0;
-        const newMaxFloor = floor * (1 - pct / 100);
-        for (const [k, engine] of activeSniperEngines.entries()) {
-          engine.maxFloorEth = newMaxFloor;
-        }
-        activeSniperEngine.maxFloorEth = newMaxFloor;
-        const menu = buildMainMenu(chatId);
-        return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `✅ <b>Discount Target Set:</b> <b>${pct}% Below Floor</b>\n\n` + menu.text, menu.keyboard);
-      }
-    }
-    const menu = buildDiscountMenu();
-    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard);
-  }
-
-  // 8. /gas <preset>
-  if (text.startsWith('/gas')) {
-    const parts = text.split(' ');
-    if (parts.length > 1) {
-      const preset = parts[1].toLowerCase();
-      if (['safe', 'turbo', 'surge', 'hyped'].includes(preset)) {
-        botActiveGasPreset = preset;
-        for (const [k, engine] of activeSniperEngines.entries()) {
-          engine.gasSpeed = preset;
-        }
-        activeSniperEngine.gasSpeed = preset;
-        const menu = buildMainMenu(chatId);
-        return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `🚀 <b>Gas Speed Set:</b> <b>${preset.toUpperCase()}</b>\n\n` + menu.text, menu.keyboard);
-      }
-    }
-    const menu = buildGasMenu();
-    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard);
-  }
-
-  // 9. /wallets
+  // /wallets
   if (text === '/wallets') {
     const menu = await buildWalletsMenu();
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard);
   }
 
-  // 10. /status
-  if (text === '/status') {
-    const menu = buildMainMenu(chatId);
-    return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, menu.text, menu.keyboard);
-  }
-
-  // 11. Direct OpenSea link or slug detection
+  // Direct OpenSea link or slug detection
   if (text.includes('opensea.io/') || /^[a-zA-Z0-9_-]{3,40}$/.test(text)) {
     sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, `🔍 Detected collection <code>${text}</code>. Scanning OpenSea...`);
     const stats = await executeScanForBot(text);
     if (stats) {
       const isArmed = activeSniperEngine.isArmed;
       const floorEth = stats.floorEth || 0;
+      const floorDisp = formatDisplayEth(floorEth);
       const usdFloor = (floorEth * cachedEthPrice).toFixed(2);
-      const targetEth = (floorEth * (1 - (botActiveDiscountPercent || 20) / 100)).toFixed(6);
+      const targetEth = formatDisplayEth(botRuleConfig.floor.maxEth > 0 ? botRuleConfig.floor.maxEth : floorEth * 0.8);
 
       const previewText = `
 🎯 <b>COLLECTION SCANNED & TARGETED!</b>
 
 🏷️ <b>Name:</b> <b>${stats.name}</b>
-💎 <b>Floor Price:</b> <b>${floorEth} ETH</b> (~$${usdFloor} USD)
-🎯 <b>Snipe Trigger:</b> <b>&lt; ${targetEth} ETH</b> (-${botActiveDiscountPercent}%)
+💎 <b>Floor Price:</b> <b>${floorDisp} ETH</b> (~$${usdFloor} USD)
+🎯 <b>Floor Snipe Trigger:</b> <b>&lt; ${targetEth} ETH</b>
 📦 <b>Total Supply:</b> <b>${stats.totalSupply} NFTs</b>
-🛡️ <b>Engine:</b> ${isArmed ? '🟢 <b>ARMED (Ready to Snipe)</b>' : '🔴 <b>DISARMED</b>'}
+🛡️ <b>Engine:</b> ${isArmed ? '🟢 <b>ARMED (Ready to Snipe)</b>' : '🔴 <b>DISARMED / STANDBY</b>'}
 
-<i>Tap below to Arm or Adjust settings:</i>
+<i>Tap below to Arm, configure rules, or clear:</i>
 `.trim();
 
       const keyboard = [
@@ -901,7 +1491,7 @@ async function handleTextMessage(message) {
             : { text: '⚡ ARM SNIPER ON THIS COLLECTION', callback_data: 'action_arm' }
         ],
         [
-          { text: `📉 Adjust Discount (-${botActiveDiscountPercent}%)`, callback_data: 'menu_discount' },
+          { text: '⚙️ Configure 4 Rules', callback_data: 'menu_rules_hub' },
           { text: '🗑️ Clear Target', callback_data: 'action_clear_target' }
         ],
         [
