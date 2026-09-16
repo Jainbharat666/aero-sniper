@@ -337,7 +337,7 @@ Collection Floor: <b>${floorDisp} ETH</b> (~$${(floorEth * cachedEthPrice).toFix
 
 <b>2️⃣ Rule 2: Top Rarity Rank Snipe [${r2}]</b>
 • Buy top ranked NFTs (OpenRarity instant calculation).
-• Target: <code>Rank <= #${botRuleConfig.rarity.maxRank} @ Max ${formatDisplayEth(botRuleConfig.rarity.maxEth)} ETH</code>
+• Target: <code>Rank &lt;= #${botRuleConfig.rarity.maxRank} @ Max ${formatDisplayEth(botRuleConfig.rarity.maxEth)} ETH</code>
 
 <b>3️⃣ Rule 3: Rare Trait Hunter [${r3}]</b>
 • Snipe God traits / 1 of 1s (e.g. Laser eyes, Crown).
