@@ -112,7 +112,7 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart, userEng
   engine.pendingSnipes.add(tokenId);
   engine.snipedTokenIds.add(tokenId);
 
-  broadcastSnipeLog(`🎯 ⚡ [TRIGGER MATCHED] Woodie #${tokenId} at ${parsed.price} ETH [${reason}]`, engine.userId);
+  broadcastSnipeLog(`🎯 ⚡ [TRIGGER MATCHED] ${parsed.name || '#' + tokenId} at ${parsed.price} ETH [${reason}]`, engine.userId);
 
   try {
     let currentWorker = engine.walletSigner;
@@ -244,9 +244,13 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart, userEng
     }
 
     if (!txObj) {
-      broadcastSnipeLog(`❌ [SNIPER V2] Failed to construct transaction for #${tokenId}`, engine.userId);
-      engine.pendingSnipes.delete(tokenId);
-      return;
+      if (engine.dryRun) {
+        txObj = { to: '0x0000000000000068F116a894984e2DB1123eB395', data: '0x', value: 0n };
+      } else {
+        broadcastSnipeLog(`❌ [SNIPER V2] Failed to construct transaction for #${tokenId}`, engine.userId);
+        engine.pendingSnipes.delete(tokenId);
+        return;
+      }
     }
 
     const isSim = engine.dryRun;
