@@ -393,9 +393,10 @@ Please log in to <a href="${WEBAPP_URL}">Aero-Sniper Dashboard</a> and top up yo
   }
 
   const wallets = config.walletFleet || config.wallets || [];
-  const isArmed = Array.from(activeSniperEngines.values()).some(e => e.isArmed) || activeSniperEngine.isArmed;
+  const userEngine = user?.id ? (activeSniperEngines.get(user.id) || activeSniperEngines.get(String(user.id))) : null;
+  const isArmed = userEngine ? userEngine.isArmed : (activeSniperEngine ? activeSniperEngine.isArmed : false);
   const stats = activeCollectionStats;
-  const currentSlug = stats?.name || stats?.slug || 'Standby (No Target)';
+  const currentSlug = userEngine?.slug || stats?.name || stats?.slug || 'Standby (No Target)';
   const floorEthDisp = formatDisplayEth(stats?.floorEth || 0);
   const usdFloor = ((stats?.floorEth || 0) * cachedEthPrice).toFixed(2);
 
@@ -936,7 +937,18 @@ export async function sendTelegramPhoto(token, chatId, photoUrl, caption, inline
  */
 export async function dispatchPrivateSnipeAlert(userEngine, snipeData) {
   const token = TELEGRAM_BOT_TOKEN;
-  const chatId = userEngine?.telegramChatId || userEngine?.chatId;
+  let chatId = userEngine?.telegramChatId || userEngine?.chatId;
+
+  if (!chatId && userEngine?.userId) {
+    try {
+      const uConfig = await dbGetUserConfig(userEngine.userId);
+      if (uConfig?.telegram_chat_id) {
+        chatId = uConfig.telegram_chat_id;
+        userEngine.telegramChatId = chatId;
+      }
+    } catch (_) {}
+  }
+
   if (!token || !chatId) return;
 
   const isSim = !!snipeData.isDryRun;

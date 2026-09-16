@@ -311,6 +311,7 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart, userEng
       broadcastSnipeLog(`🚀 [MEMPOOL ACCEPTED via ${winningNode}] TxHash: ${txHash} (${latencyMs}ms | Blast RTT: ${blastResult.latencyMs}ms) ➔ Mining on Robinhood Chain...`, engine.userId);
 
       // Track receipt in background (non-blocking)
+      // Track receipt in background (non-blocking)
       if (provider && typeof provider.waitForTransaction === 'function') {
         provider.waitForTransaction(txHash, 1, 35000).then(receipt => {
           if (receipt) {
@@ -325,6 +326,17 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart, userEng
               blockNumber: receipt.blockNumber,
               timestamp: Date.now()
             }, engine.userId);
+
+            const targetChatId = engine.telegramChatId;
+            if (targetChatId) {
+              const explorerUrl = `https://explorer.mainnet.robinhood.com/tx/${txHash}`;
+              sendTelegramMessage(
+                TELEGRAM_BOT_TOKEN,
+                targetChatId,
+                `🎉 <b>ON-CHAIN CONFIRMED!</b>\n\n📦 <b>Block:</b> <code>#${receipt.blockNumber}</code>\n🎯 <b>Token:</b> <code>#${tokenId}</code>\n💼 <b>Wallet:</b> <code>${buyerName}</code>\n\n<i>Transaction permanently mined on Robinhood Chain!</i>`,
+                [[{ text: '🔍 View on Explorer', url: explorerUrl }]]
+              ).catch(() => {});
+            }
           }
         }).catch(e => {
           broadcastSnipeLog(`❌ [TX REVERTED] Block revert for #${tokenId}: ${e.message}`, engine.userId);
@@ -404,6 +416,18 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart, userEng
         executed: engine.snipesExecutedCount,
         limit: engine.maxSnipesLimit
       }, engine.userId);
+
+      const targetChatId = engine.telegramChatId;
+      if (targetChatId) {
+        buildMainMenu(targetChatId).then(menu => {
+          sendTelegramMessage(
+            TELEGRAM_BOT_TOKEN,
+            targetChatId,
+            `🛑 <b>CIRCUIT BREAKER TRIGGERED</b>\n\nCompleted <b>${engine.snipesExecutedCount}/${engine.maxSnipesLimit}</b> target snipes.\nCloud engine auto-paused to protect wallet balance.\n\n` + menu.text,
+            menu.keyboard
+          ).catch(() => {});
+        }).catch(() => {});
+      }
     }
 
   } catch (err) {
