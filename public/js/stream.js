@@ -863,7 +863,8 @@
       livePollerInterval = setInterval(async () => {
         if (!currentScannedProject || currentScannedProject.slug !== slug) return;
         try {
-          const res = await fetch(`/api/listings/live?slug=${slug}`);
+          const uId = (typeof currentUser !== 'undefined' && currentUser?.id) ? currentUser.id : '';
+          const res = await fetch(`/api/listings/live?slug=${encodeURIComponent(slug)}&userId=${encodeURIComponent(uId)}`);
           if (res.ok) {
             const data = await res.json();
             if (data.success && Array.isArray(data.listings) && data.listings.length > 0) {
@@ -883,6 +884,15 @@
                   hasNewItems = true;
                 } else {
                   const existing = liveListingsStore[idx];
+                  // 🛡️ Multi-tenant sniped vs sold status sync
+                  if (incoming.sniped) {
+                    existing.sniped = true;
+                    existing.sold = false;
+                  } else if (incoming.sold) {
+                    existing.sold = true;
+                    existing.sniped = false;
+                  }
+
                   // 🛡️ CRITICAL PRESERVATION: Known rank is permanent and immutable
                   const finalRank = regRank || (existing.rarityRank && Number(existing.rarityRank) > 0 ? existing.rarityRank : null) || (incoming.rarityRank && Number(incoming.rarityRank) > 0 ? incoming.rarityRank : null);
                   if (finalRank != null && Number(finalRank) > 0) {
@@ -925,6 +935,15 @@
                           }
                         }
                       }
+                    }
+                  }
+
+                  // Update action button if item became sold for other user
+                  const row = document.querySelector(`tr[data-token="${incomingTokenIdStr}"]`);
+                  if (row) {
+                    const actionCell = row.querySelector('td:last-child');
+                    if (actionCell && !existing.sniped && existing.sold) {
+                      actionCell.innerHTML = '<span class="px-2.5 py-1 rounded-xl bg-slate-200 text-slate-500 font-bold text-[10px]">SOLD</span>';
                     }
                   }
                 }

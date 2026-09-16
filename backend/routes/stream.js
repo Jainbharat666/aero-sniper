@@ -228,7 +228,10 @@ router.post('/stream/clear', (req, res) => {
 // GET /api/listings/live
 router.get('/listings/live', async (req, res) => {
   const slug = (req.query.slug || '').trim().toLowerCase();
+  const reqUserId = (req.query.userId || req.headers['x-user-id'] || '').trim();
   if (!slug) return res.json({ success: true, listings: [] });
+
+  const requestingEngine = reqUserId ? activeSniperEngines.get(reqUserId) : null;
 
   try {
     const evData = await fetchOpenSeaWithFallback(`/events/collection/${slug}?event_type=listing&limit=15`);
@@ -261,6 +264,10 @@ router.get('/listings/live', async (req, res) => {
 
         const resolvedImage = asset.image_url || asset.display_image_url || cachedInfo?.image || '';
         const resolvedName = cachedInfo?.name || asset.name || `#${tokenId}`;
+        const tokStr = String(tokenId);
+        const isSnipedByThisUser = Boolean(requestingEngine?.snipedTokenIds?.has(tokStr));
+        const isSnipedByAnyOther = Boolean(Array.from(activeSniperEngines.values()).some(e => e !== requestingEngine && e?.snipedTokenIds?.has(tokStr)));
+
         return {
           tokenId,
           name: resolvedName,
@@ -280,7 +287,8 @@ router.get('/listings/live', async (req, res) => {
           contractAddress: asset.asset_contract?.address || (activeCollectionStats?.contractAddress || ''),
           chain: 'robinhood',
           slug: slug,
-          sniped: Boolean(Array.from(activeSniperEngines.values()).some(e => e?.snipedTokenIds?.has(String(tokenId))) || activeSniperEngine?.snipedTokenIds?.has(String(tokenId)))
+          sniped: isSnipedByThisUser,
+          sold: isSnipedByAnyOther
         };
       }).filter(item => item.price > 0 && item.tokenId && item.tokenId !== '0');
 

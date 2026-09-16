@@ -331,17 +331,6 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart, userEng
               blockNumber: receipt.blockNumber,
               timestamp: Date.now()
             }, engine.userId);
-
-            const targetChatId = engine.telegramChatId;
-            if (targetChatId) {
-              const explorerUrl = `https://explorer.mainnet.robinhood.com/tx/${txHash}`;
-              sendTelegramMessage(
-                TELEGRAM_BOT_TOKEN,
-                targetChatId,
-                `🎉 <b>ON-CHAIN CONFIRMED!</b>\n\n📦 <b>Block:</b> <code>#${receipt.blockNumber}</code>\n🎯 <b>Token:</b> <code>#${tokenId}</code>\n💼 <b>Wallet:</b> <code>${buyerName}</code>\n\n<i>Transaction permanently mined on Robinhood Chain!</i>`,
-                [[{ text: '🔍 View on Explorer', url: explorerUrl }]]
-              ).catch(() => {});
-            }
           }
         }).catch(e => {
           broadcastSnipeLog(`❌ [TX REVERTED] Block revert for #${tokenId}: ${e.message}`, engine.userId);
