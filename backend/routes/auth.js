@@ -20,6 +20,7 @@ import {
   SUPABASE_URL,
   supabaseHeaders
 } from '../db.js';
+import { invalidateChatAuthCache } from '../telegramBot.js';
 
 const router = express.Router();
 
@@ -536,6 +537,7 @@ router.post('/user/unlink-telegram', userAuthMiddleware, async (req, res) => {
     if (!user) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
     const currentConfig = (await dbGetUserConfig(user.id)) || {};
+    const oldChatId = currentConfig.telegram_chat_id;
     delete currentConfig.telegram_chat_id;
     delete currentConfig.telegram_username;
     delete currentConfig.telegram_first_name;
@@ -545,6 +547,7 @@ router.post('/user/unlink-telegram', userAuthMiddleware, async (req, res) => {
 
     await dbSaveUserConfig(user.id, currentConfig, true);
     await dbUpdateUser(user.id, { telegram_chat_id: null }).catch(() => {});
+    if (oldChatId) invalidateChatAuthCache(oldChatId);
 
     return res.json({
       success: true,

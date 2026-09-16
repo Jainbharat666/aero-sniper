@@ -38,15 +38,33 @@ let botActiveDiscountPercent = 20;
 let botActiveGasPreset = 'turbo';
 let botPaperSnipeMode = false;
 
+// In-memory cache for user authorization to make button interactions instantaneous (<1ms)
+const userChatAuthCache = new Map(); // chatId -> { data, expiresAt }
+const AUTH_CACHE_TTL_MS = 30000; // 30 seconds
+
+export function invalidateChatAuthCache(chatId = null) {
+  if (chatId) {
+    userChatAuthCache.delete(String(chatId));
+  } else {
+    userChatAuthCache.clear();
+  }
+}
+
 /**
- * 🔒 GET LINKED USER & CLOUD CONFIG FOR TELEGRAM CHAT ID
+ * 🔒 GET LINKED USER & CLOUD CONFIG FOR TELEGRAM CHAT ID (Cached for ultra-fast UI)
  */
 export async function getLinkedUserForChat(chatId) {
   if (!chatId) return null;
   const strId = String(chatId);
 
+  // 1. Check in-memory cache
+  const cached = userChatAuthCache.get(strId);
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.data;
+  }
+
   try {
-    // 1. Search sniper_user_configs for matching telegram_chat_id
+    // 2. Search sniper_user_configs for matching telegram_chat_id
     const res = await axios.get(`${SUPABASE_URL}/rest/v1/sniper_user_configs?select=user_id,config&config->>telegram_chat_id=eq.${encodeURIComponent(strId)}`, {
       headers: supabaseHeaders,
       timeout: 5000
@@ -64,10 +82,13 @@ export async function getLinkedUserForChat(chatId) {
         if (!isOwner && user.valid_until) {
           isExpired = new Date(user.valid_until) < new Date();
         }
-        return { user, config, isOwner, isBanned, isExpired };
+        const authData = { user, config, isOwner, isBanned, isExpired };
+        userChatAuthCache.set(strId, { data: authData, expiresAt: Date.now() + AUTH_CACHE_TTL_MS });
+        return authData;
       }
     }
 
+    userChatAuthCache.set(strId, { data: null, expiresAt: Date.now() + 10000 });
     return null;
   } catch (e) {
     console.error('[TELEGRAM AUTH CHECK ERROR]:', e.message);
@@ -123,6 +144,9 @@ export async function verifyAndLinkTelegramToken(chatId, rawToken, senderInfo = 
 
     await dbSaveUserConfig(userId, config, true);
     await dbUpdateUser(userId, { telegram_chat_id: String(chatId) }).catch(() => {});
+
+    // Invalidate auth cache so newly linked chat is immediately recognized
+    invalidateChatAuthCache(chatId);
 
     // Sync to memory engine
     syncRulesToEngines();
@@ -351,82 +375,53 @@ export async function buildMainMenu(chatId = null) {
 👤 <b>Account:</b> <code>${user.email}</code>
 ⏳ <b>Status:</b> <b>Access Ended</b>
 
-Your cloud sniper engine has been paused because your subscription validity expired. Please log in to <a href="${WEBAPP_URL}">Aero-Sniper Dashboard</a> and top up your plan.
+Please log in to <a href="${WEBAPP_URL}">Aero-Sniper Dashboard</a> and top up your plan.
 `.trim();
-    const keyboard = [[{ text: '❓ How to Connect / Renew', callback_data: 'gate_help' }]];
+    const keyboard = [[{ text: '❓ How to Renew', callback_data: 'gate_help' }]];
     return { text: expiredText, keyboard };
   }
 
   const wallets = config.walletFleet || config.wallets || [];
   const isArmed = Array.from(activeSniperEngines.values()).some(e => e.isArmed) || activeSniperEngine.isArmed;
   const stats = activeCollectionStats;
-  const hasTarget = !!(stats && stats.slug);
-
-  const roleTag = isOwner ? '👑 Master Lifetime' : '⚡ VIP Subscriber (Active)';
-  const currentSlug = stats?.name || stats?.slug || '🔍 Standby (No Target)';
+  const currentSlug = stats?.name || stats?.slug || 'Standby (No Target)';
   const floorEthDisp = formatDisplayEth(stats?.floorEth || 0);
   const usdFloor = ((stats?.floorEth || 0) * cachedEthPrice).toFixed(2);
 
-  // Rule Summary Lines
-  const r1State = botRuleConfig.ruleStates.floor ? '🟢 ON' : '⚪ OFF';
-  const r1Val = botRuleConfig.floor.maxEth > 0 ? `${formatDisplayEth(botRuleConfig.floor.maxEth)} ETH` : `-${botRuleConfig.floor.discountPercent}%`;
-
-  const r2State = botRuleConfig.ruleStates.rarity ? '🟢 ON' : '⚪ OFF';
-  const r2Val = `Top #${botRuleConfig.rarity.maxRank} (Cap: ${formatDisplayEth(botRuleConfig.rarity.maxEth)} ETH)`;
-
-  const r3State = botRuleConfig.ruleStates.trait ? '🟢 ON' : '⚪ OFF';
-  const r3Val = `${botRuleConfig.trait.filters.length} traits (Cap: ${formatDisplayEth(botRuleConfig.trait.maxEth)} ETH)`;
-
-  const r4State = botRuleConfig.ruleStates.tokenId ? '🟢 ON' : '⚪ OFF';
-  const r4Val = `${botRuleConfig.tokenId.tokens.length} token IDs (Cap: ${formatDisplayEth(botRuleConfig.tokenId.maxEth)} ETH)`;
+  // Compact rule badges
+  const r1Badge = botRuleConfig.ruleStates.floor ? '🟢' : '⚪';
+  const r2Badge = botRuleConfig.ruleStates.rarity ? '🟢' : '⚪';
+  const r3Badge = botRuleConfig.ruleStates.trait ? '🟢' : '⚪';
+  const r4Badge = botRuleConfig.ruleStates.tokenId ? '🟢' : '⚪';
 
   const text = `
-⚡ <b>AERO-SNIPER PRO • SUBSCRIBER TERMINAL</b> ⚡
-<i>Institutional High-Frequency NFT Sniping Protocol</i>
+⚡ <b>AERO-SNIPER PRO</b>
+━━━━━━━━━━━━━━━━━━━━
+🎯 <b>Target:</b> <code>${currentSlug}</code>
+💎 <b>Floor:</b> <b>${floorEthDisp} ETH</b> (~$${usdFloor})
+🛡️ <b>Engine:</b> ${isArmed ? '🟢 <b>ARMED (24/7)</b>' : '🔴 <b>STANDBY</b>'} • ${botPaperSnipeMode ? '🧪 <i>Paper</i>' : '⚡ <i>Real</i>'}
+💼 <b>Fleet:</b> <b>${wallets.length} Wallets</b> • 🚀 <b>Gas:</b> <b>${botActiveGasPreset.toUpperCase()}</b>
 
-━━━━━━━━━━━━━━━━━━━━━
-👤 <b>Subscriber:</b> <code>${user.email}</code>
-👑 <b>Tier:</b> <b>${roleTag}</b>
-💼 <b>Fleet:</b> <b>${wallets.length} active wallet(s)</b>
-🎯 <b>Active Target:</b> <code>${currentSlug}</code>
-💎 <b>Current Floor:</b> <b>${floorEthDisp} ETH</b> (~$${usdFloor} USD)
-🛡️ <b>Engine Status:</b> ${isArmed ? '🟢 <b>ARMED & HUNTING (24/7 Cloud)</b>' : '🔴 <b>STANDBY / DISARMED</b>'}
-🧪 <b>Mode:</b> ${botPaperSnipeMode ? '🧪 <b>PAPER SNIPE (SIMULATION)</b>' : '⚡ <b>100% REAL ON-CHAIN MAINNET</b>'}
-🚀 <b>Gas Speed:</b> <b>${botActiveGasPreset.toUpperCase()}</b> (Auto-Surge)
-
-<b>Active Trigger Strategies:</b>
-• 1️⃣ <b>Floor Trap:</b> [${r1State}] <code>${r1Val}</code>
-• 2️⃣ <b>Rarity Rank:</b> [${r2State}] <code>${r2Val}</code>
-• 3️⃣ <b>Rare Traits:</b> [${r3State}] <code>${r3Val}</code>
-• 4️⃣ <b>Token Trap:</b> [${r4State}] <code>${r4Val}</code>
-━━━━━━━━━━━━━━━━━━━━━
-<i>💡 PC band hone ke baad bhi cloud sniper 24/7 hunting karta rahega:</i>
+⚙️ <b>Rules:</b> Floor [${r1Badge}] • Rank [${r2Badge}] • Trait [${r3Badge}] • ID [${r4Badge}]
 `.trim();
 
   const keyboard = [
     [
       isArmed
         ? { text: '⏸ Pause Sniper', callback_data: 'action_pause' }
-        : { text: '⚡ ARM AUTO-SNIPER (24/7)', callback_data: 'action_arm' }
+        : { text: '⚡ ARM SNIPER (24/7)', callback_data: 'action_arm' }
     ],
     [
-      { text: '⚙️ Configure 4 Sniper Rules', callback_data: 'menu_rules_hub' }
+      { text: '🎯 Target', callback_data: 'menu_target' },
+      { text: '⚙️ Rules Hub', callback_data: 'menu_rules_hub' }
     ],
     [
-      { text: '🎯 Set Target Collection', callback_data: 'menu_target' },
-      { text: '🗑️ Clear Target', callback_data: 'action_clear_target' }
+      { text: `👛 Wallets (${wallets.length})`, callback_data: 'menu_wallets' },
+      { text: `🚀 Gas: ${botActiveGasPreset.toUpperCase()}`, callback_data: 'menu_gas' }
     ],
     [
-      { text: `🚀 Gas: ${botActiveGasPreset.toUpperCase()}`, callback_data: 'menu_gas' },
-      { text: botPaperSnipeMode ? '🧪 Mode: Paper' : '⚡ Mode: Real', callback_data: 'action_toggle_sim' }
-    ],
-    [
-      { text: `👛 Wallet Fleet (${wallets.length})`, callback_data: 'menu_wallets' },
-      { text: '📊 Telemetry & Health', callback_data: 'menu_stats' }
-    ],
-    [
-      { text: '🔄 Refresh Status', callback_data: 'menu_refresh' },
-      { text: '❓ Command Guide', callback_data: 'menu_help' }
+      { text: botPaperSnipeMode ? '🧪 Mode: Paper' : '⚡ Mode: Real', callback_data: 'action_toggle_sim' },
+      { text: '🔄 Refresh', callback_data: 'menu_refresh' }
     ]
   ];
 
@@ -440,46 +435,38 @@ export function buildRulesHubMenu() {
   const floorEth = parseFloat(activeCollectionStats?.floorEth) || 0;
   const floorDisp = formatDisplayEth(floorEth);
 
-  const r1 = botRuleConfig.ruleStates.floor ? '🟢 ACTIVE' : '⚪ PAUSED';
-  const r2 = botRuleConfig.ruleStates.rarity ? '🟢 ACTIVE' : '⚪ PAUSED';
-  const r3 = botRuleConfig.ruleStates.trait ? '🟢 ACTIVE' : '⚪ PAUSED';
-  const r4 = botRuleConfig.ruleStates.tokenId ? '🟢 ACTIVE' : '⚪ PAUSED';
+  const r1 = botRuleConfig.ruleStates.floor ? '🟢 ON' : '⚪ OFF';
+  const r2 = botRuleConfig.ruleStates.rarity ? '🟢 ON' : '⚪ OFF';
+  const r3 = botRuleConfig.ruleStates.trait ? '🟢 ON' : '⚪ OFF';
+  const r4 = botRuleConfig.ruleStates.tokenId ? '🟢 ON' : '⚪ OFF';
+
+  const r1Val = botRuleConfig.floor.maxEth > 0 ? `${formatDisplayEth(botRuleConfig.floor.maxEth)} ETH` : `-${botRuleConfig.floor.discountPercent}%`;
+  const r2Val = `Top #${botRuleConfig.rarity.maxRank}`;
+  const r3Val = `${botRuleConfig.trait.filters.length} traits`;
+  const r4Val = `${botRuleConfig.tokenId.tokens.length} IDs`;
 
   const text = `
-⚙️ <b>SNIPER TRIGGER RULES DECK</b> ⚙️
+⚙️ <b>SNIPER RULES HUB</b>
+━━━━━━━━━━━━━━━━━━━━
+💎 <b>Floor:</b> <b>${floorDisp} ETH</b> (~$${(floorEth * cachedEthPrice).toFixed(2)})
 
-Collection Floor: <b>${floorDisp} ETH</b> (~$${(floorEth * cachedEthPrice).toFixed(2)})
-
-<b>1️⃣ Rule 1: Floor Underprice Trap [${r1}]</b>
-• Buy below discount or exact ETH/USD max cap.
-• Trigger: <code>${botRuleConfig.floor.maxEth > 0 ? formatDisplayEth(botRuleConfig.floor.maxEth) + ' ETH ($' + botRuleConfig.floor.maxUsd.toFixed(2) + ')' : '-' + botRuleConfig.floor.discountPercent + '%'}</code>
-
-<b>2️⃣ Rule 2: Top Rarity Rank Snipe [${r2}]</b>
-• Buy top ranked NFTs (OpenRarity instant calculation).
-• Target: <code>Rank &lt;= #${botRuleConfig.rarity.maxRank} @ Max ${formatDisplayEth(botRuleConfig.rarity.maxEth)} ETH</code>
-
-<b>3️⃣ Rule 3: Rare Trait Hunter [${r3}]</b>
-• Snipe God traits / 1 of 1s (e.g. Laser eyes, Crown).
-• Targets: <code>${botRuleConfig.trait.filters.length} active trait(s) (Cap: ${formatDisplayEth(botRuleConfig.trait.maxEth)} ETH)</code>
-
-<b>4️⃣ Rule 4: Target Specific Token ID [${r4}]</b>
-• Priority 1 grail trap for specific token IDs.
-• Target: <code>${botRuleConfig.tokenId.tokens.length > 0 ? botRuleConfig.tokenId.tokens.map(t => '#' + t).join(', ') : 'None'} (Cap: ${formatDisplayEth(botRuleConfig.tokenId.maxEth)} ETH)</code>
-━━━━━━━━━━━━━━━━━━━━━
-<i>Select a rule below to configure its settings:</i>
+1️⃣ <b>Floor Trap:</b> [${r1}] ➔ <code>${r1Val}</code>
+2️⃣ <b>Rarity Rank:</b> [${r2}] ➔ <code>${r2Val}</code>
+3️⃣ <b>Rare Traits:</b> [${r3}] ➔ <code>${r3Val}</code>
+4️⃣ <b>Token IDs:</b> [${r4}] ➔ <code>${r4Val}</code>
 `.trim();
 
   const keyboard = [
     [
-      { text: `1️⃣ Floor Trap [${r1}]`, callback_data: 'menu_rule_floor' },
-      { text: `2️⃣ Rarity Rank [${r2}]`, callback_data: 'menu_rule_rarity' }
+      { text: `1️⃣ Floor [${r1}]`, callback_data: 'menu_rule_floor' },
+      { text: `2️⃣ Rarity [${r2}]`, callback_data: 'menu_rule_rarity' }
     ],
     [
-      { text: `3️⃣ Rare Traits [${r3}]`, callback_data: 'menu_rule_trait' },
+      { text: `3️⃣ Traits [${r3}]`, callback_data: 'menu_rule_trait' },
       { text: `4️⃣ Token IDs [${r4}]`, callback_data: 'menu_rule_token' }
     ],
     [
-      { text: '🔙 Back to Main Dashboard', callback_data: 'menu_main' }
+      { text: '🔙 Back to Dashboard', callback_data: 'menu_main' }
     ]
   ];
 
@@ -496,13 +483,11 @@ export function buildFloorRuleMenu() {
   const maxUsd = maxEth * cachedEthPrice;
 
   const text = `
-1️⃣ <b>RULE 1: FLOOR UNDERPRICE TRAP</b> [${state}]
-
-Current Floor: <b>${formatDisplayEth(floorEth)} ETH</b> (~$${(floorEth * cachedEthPrice).toFixed(2)})
-Max Buy Cap: <b>${formatDisplayEth(maxEth)} ETH</b> (~$${maxUsd.toFixed(2)} USD)
-Discount Mode: <b>-${botRuleConfig.floor.discountPercent}% Below Floor</b>
-
-<i>🎯 Buys any listing listed below this maximum price.</i>
+1️⃣ <b>FLOOR UNDERPRICE TRAP</b> [${state}]
+━━━━━━━━━━━━━━━━━━━━
+💎 <b>Floor:</b> <b>${formatDisplayEth(floorEth)} ETH</b> (~$${(floorEth * cachedEthPrice).toFixed(2)})
+🎯 <b>Max Buy Cap:</b> <b>${formatDisplayEth(maxEth)} ETH</b> (~$${maxUsd.toFixed(2)})
+📉 <b>Discount Mode:</b> <b>-${botRuleConfig.floor.discountPercent}% Below Floor</b>
 `.trim();
 
   const keyboard = [
@@ -513,17 +498,14 @@ Discount Mode: <b>-${botRuleConfig.floor.discountPercent}% Below Floor</b>
       { text: '-10%', callback_data: 'set_r1_pct_10' },
       { text: '-20%', callback_data: 'set_r1_pct_20' },
       { text: '-30%', callback_data: 'set_r1_pct_30' },
-      { text: '-50% 🔥', callback_data: 'set_r1_pct_50' },
-      { text: '-80% ⚡', callback_data: 'set_r1_pct_80' }
+      { text: '-50%', callback_data: 'set_r1_pct_50' }
     ],
     [
-      { text: '✏️ Set Custom Max Price (ETH)', callback_data: 'prompt_r1_eth' }
+      { text: '✏️ Set ETH Cap', callback_data: 'prompt_r1_eth' },
+      { text: '💵 Set USD Cap', callback_data: 'prompt_r1_usd' }
     ],
     [
-      { text: '💵 Set Custom Max Price (USD $)', callback_data: 'prompt_r1_usd' }
-    ],
-    [
-      { text: '🔙 Back to Rules Deck', callback_data: 'menu_rules_hub' }
+      { text: '🔙 Back to Rules', callback_data: 'menu_rules_hub' }
     ]
   ];
 
@@ -540,13 +522,11 @@ export function buildRarityRuleMenu() {
   const maxUsd = maxEth * cachedEthPrice;
 
   const text = `
-2️⃣ <b>RULE 2: TOP RARITY RANK SNIPE</b> [${state}]
-
-Target Rank: <b>Rank &lt;= #${botRuleConfig.rarity.maxRank}</b>
-Max Buy Cap: <b>${formatDisplayEth(maxEth)} ETH</b> (~$${maxUsd.toFixed(2)} USD)
-Price Multiplier: <b>${botRuleConfig.rarity.multiplier}x Floor</b>
-
-<i>👑 Automatically snipes high rarity NFTs using OpenRarity sub-millisecond RAM calculation.</i>
+2️⃣ <b>TOP RARITY RANK SNIPE</b> [${state}]
+━━━━━━━━━━━━━━━━━━━━
+👑 <b>Target Rank:</b> <b>Rank &lt;= #${botRuleConfig.rarity.maxRank}</b>
+💰 <b>Max Buy Cap:</b> <b>${formatDisplayEth(maxEth)} ETH</b> (~$${maxUsd.toFixed(2)})
+📊 <b>Multiplier:</b> <b>${botRuleConfig.rarity.multiplier}x Floor</b>
 `.trim();
 
   const keyboard = [
@@ -557,16 +537,16 @@ Price Multiplier: <b>${botRuleConfig.rarity.multiplier}x Floor</b>
       { text: 'Top #100', callback_data: 'set_r2_rank_100' },
       { text: 'Top #500', callback_data: 'set_r2_rank_500' },
       { text: 'Top #1200', callback_data: 'set_r2_rank_1200' },
-      { text: '✏️ Custom Rank', callback_data: 'prompt_r2_rank' }
+      { text: '✏️ Rank', callback_data: 'prompt_r2_rank' }
     ],
     [
-      { text: '1.0x Floor', callback_data: 'set_r2_mult_100' },
-      { text: '1.25x Floor', callback_data: 'set_r2_mult_125' },
-      { text: '1.50x Floor', callback_data: 'set_r2_mult_150' },
-      { text: '✏️ Custom ETH Cap', callback_data: 'prompt_r2_eth' }
+      { text: '1.0x', callback_data: 'set_r2_mult_100' },
+      { text: '1.25x', callback_data: 'set_r2_mult_125' },
+      { text: '1.50x', callback_data: 'set_r2_mult_150' },
+      { text: '✏️ ETH Cap', callback_data: 'prompt_r2_eth' }
     ],
     [
-      { text: '🔙 Back to Rules Deck', callback_data: 'menu_rules_hub' }
+      { text: '🔙 Back to Rules', callback_data: 'menu_rules_hub' }
     ]
   ];
 
@@ -579,18 +559,16 @@ Price Multiplier: <b>${botRuleConfig.rarity.multiplier}x Floor</b>
 export function buildTraitRuleMenu() {
   const state = botRuleConfig.ruleStates.trait ? '🟢 ACTIVE' : '⚪ PAUSED';
   const traitsList = botRuleConfig.trait.filters.length > 0
-    ? botRuleConfig.trait.filters.map((f, i) => `${i + 1}. <code>${f.traitType ? f.traitType + ': ' : ''}${f.traitValue}</code>`).join('\n')
+    ? botRuleConfig.trait.filters.map((f, i) => `• <code>${f.traitType ? f.traitType + ': ' : ''}${f.traitValue}</code>`).join('\n')
     : '<i>No trait filters added yet.</i>';
 
   const text = `
-3️⃣ <b>RULE 3: RARE TRAIT HUNTER</b> [${state}]
-
-Max Price Cap: <b>${formatDisplayEth(botRuleConfig.trait.maxEth)} ETH</b> (~$${(botRuleConfig.trait.maxEth * cachedEthPrice).toFixed(2)})
+3️⃣ <b>RARE TRAIT HUNTER</b> [${state}]
+━━━━━━━━━━━━━━━━━━━━
+💰 <b>Max Cap:</b> <b>${formatDisplayEth(botRuleConfig.trait.maxEth)} ETH</b> (~$${(botRuleConfig.trait.maxEth * cachedEthPrice).toFixed(2)})
 
 <b>Active Targeted Traits:</b>
 ${traitsList}
-
-<i>💎 Instantly snipes whenever an NFT listed with ANY of these traits is detected.</i>
 `.trim();
 
   const keyboard = [
@@ -598,11 +576,11 @@ ${traitsList}
       { text: botRuleConfig.ruleStates.trait ? '⏸ Pause Trait Rule' : '▶️ Activate Trait Rule', callback_data: 'toggle_rule_trait' }
     ],
     [
-      { text: '➕ Add Trait Filter', callback_data: 'prompt_r3_add_trait' },
-      { text: '💰 Set Max ETH Cap', callback_data: 'prompt_r3_eth' }
+      { text: '➕ Add Trait', callback_data: 'prompt_r3_add_trait' },
+      { text: '💰 Max ETH Cap', callback_data: 'prompt_r3_eth' }
     ],
     [
-      { text: '🗑️ Clear All Traits', callback_data: 'action_r3_clear_traits' },
+      { text: '🗑️ Clear Traits', callback_data: 'action_r3_clear_traits' },
       { text: '🔙 Back to Rules', callback_data: 'menu_rules_hub' }
     ]
   ];
@@ -617,17 +595,13 @@ export function buildTokenIdRuleMenu() {
   const state = botRuleConfig.ruleStates.tokenId ? '🟢 ACTIVE' : '⚪ PAUSED';
   const tokensList = botRuleConfig.tokenId.tokens.length > 0
     ? botRuleConfig.tokenId.tokens.map(t => `#${t}`).join(', ')
-    : '<i>No token IDs added yet.</i>';
+    : 'None';
 
   const text = `
-4️⃣ <b>RULE 4: TARGET TOKEN ID TRAP</b> [${state}]
-
-Max Price Cap: <b>${formatDisplayEth(botRuleConfig.tokenId.maxEth)} ETH</b> (~$${(botRuleConfig.tokenId.maxEth * cachedEthPrice).toFixed(2)})
-
-<b>Targeted Token IDs:</b>
-<code>${tokensList}</code>
-
-<i>🎯 Priority 1 grail trap: Immediately snipes these exact token IDs when listed.</i>
+4️⃣ <b>TARGET TOKEN ID TRAP</b> [${state}]
+━━━━━━━━━━━━━━━━━━━━
+💰 <b>Max Cap:</b> <b>${formatDisplayEth(botRuleConfig.tokenId.maxEth)} ETH</b> (~$${(botRuleConfig.tokenId.maxEth * cachedEthPrice).toFixed(2)})
+🎯 <b>Targeted IDs:</b> <code>${tokensList}</code>
 `.trim();
 
   const keyboard = [
@@ -635,8 +609,8 @@ Max Price Cap: <b>${formatDisplayEth(botRuleConfig.tokenId.maxEth)} ETH</b> (~$$
       { text: botRuleConfig.ruleStates.tokenId ? '⏸ Pause Token Rule' : '▶️ Activate Token Rule', callback_data: 'toggle_rule_token' }
     ],
     [
-      { text: '🎯 Enter Token IDs (e.g. 7129, 8485)', callback_data: 'prompt_r4_tokens' },
-      { text: '💰 Set Max ETH Cap', callback_data: 'prompt_r4_eth' }
+      { text: '🎯 Enter Token IDs', callback_data: 'prompt_r4_tokens' },
+      { text: '💰 Max ETH Cap', callback_data: 'prompt_r4_eth' }
     ],
     [
       { text: '🗑️ Clear Token IDs', callback_data: 'action_r4_clear_tokens' },
@@ -651,18 +625,16 @@ Max Price Cap: <b>${formatDisplayEth(botRuleConfig.tokenId.maxEth)} ETH</b> (~$$
  * 🎯 BUILD TARGET COLLECTION MENU
  */
 export function buildTargetMenu() {
-  const currentSlug = activeCollectionStats?.name || activeCollectionStats?.slug || 'None (Standby)';
+  const currentSlug = activeCollectionStats?.name || activeCollectionStats?.slug || 'Standby (No Target)';
   const text = `
-🎯 <b>SELECT TARGET COLLECTION:</b>
-
-Choose a collection below or <b>send any OpenSea URL / slug directly into this chat</b>:
-
-Current Active: <code>${currentSlug}</code>
+🎯 <b>TARGET COLLECTION</b>
+━━━━━━━━━━━━━━━━━━━━
+Current: <code>${currentSlug}</code>
 `.trim();
 
   const keyboard = [
     [
-      { text: '✍️ Type / Paste Custom Slug or URL', callback_data: 'prompt_custom_target' }
+      { text: '✍️ Custom Slug or URL', callback_data: 'prompt_custom_target' }
     ],
     [
       { text: '🌲 Woodies', callback_data: 'set_target_robinwoodies' },
@@ -673,8 +645,8 @@ Current Active: <code>${currentSlug}</code>
       { text: '⚡ NTRPY Genesis', callback_data: 'set_target_ntrpygenesis' }
     ],
     [
-      { text: '🗑️ Clear Target (Reset)', callback_data: 'action_clear_target' },
-      { text: '🔙 Main Menu', callback_data: 'menu_main' }
+      { text: '🗑️ Clear Target', callback_data: 'action_clear_target' },
+      { text: '🔙 Dashboard', callback_data: 'menu_main' }
     ]
   ];
 
@@ -686,14 +658,9 @@ Current Active: <code>${currentSlug}</code>
  */
 export function buildGasMenu() {
   const text = `
-🚀 <b>SELECT GAS WAR ENGINE PRESET:</b>
-
-Choose your Robinhood Chain mempool racing multiplier:
-
-🛡️ <b>Safe (125%):</b> Standard tip, optimal for low-traffic drops.
-🚀 <b>Turbo (175%):</b> Institutional priority, recommended default.
-⚡ <b>Surge (235%):</b> Aggressive front-running for high-demand snipes.
-🔥 <b>Hyped (300%):</b> Maximum gas blitz for sub-10ms priority execution.
+🚀 <b>GAS SPEED SELECTOR</b>
+━━━━━━━━━━━━━━━━━━━━
+Current Preset: <b>${botActiveGasPreset.toUpperCase()}</b>
 `.trim();
 
   const keyboard = [
@@ -706,7 +673,7 @@ Choose your Robinhood Chain mempool racing multiplier:
       { text: '🔥 Hyped (300%)', callback_data: 'set_gas_hyped' }
     ],
     [
-      { text: '🔙 Back to Main Menu', callback_data: 'menu_main' }
+      { text: '🔙 Back to Dashboard', callback_data: 'menu_main' }
     ]
   ];
 
@@ -774,36 +741,30 @@ export async function buildWalletsMenu(chatId = null) {
 
   let walletLines = '';
   if (wallets.length === 0) {
-    walletLines = '<i>No wallets configured yet. Add wallets on website or import below.</i>';
+    walletLines = '<i>No wallets configured yet. Add wallets below.</i>';
   } else {
     walletLines = wallets.slice(0, 10).map((w, idx) => {
       const shortAddr = w.address ? `${w.address.slice(0, 6)}...${w.address.slice(-4)}` : '0x...';
       const isMaster = w.role === 'master' || w.name?.includes('Master') || idx === 0;
-      const roleTag = isMaster ? '👑 Master' : '⚡ Worker';
+      const roleTag = isMaster ? '👑 Master' : `⚡ Worker #${idx + 1}`;
       const bal = formatDisplayEth(w.balance || 0);
       const usdVal = (parseFloat(w.balance || 0) * cachedEthPrice).toFixed(2);
       const isSelected = w.selected !== false;
-      const statusIcon = isSelected ? '🟢 ON' : '⚪ OFF';
-      return `• <b>${roleTag} (${w.name || '#' + (idx + 1)}):</b> <code>${shortAddr}</code>\n   └ <b>${bal} ETH</b> (~$${usdVal} USD) • [${statusIcon}]`;
-    }).join('\n\n');
+      const statusIcon = isSelected ? '🟢' : '⚪';
+      return `• <b>${roleTag}:</b> <code>${shortAddr}</code>\n   ${bal} ETH (~$${usdVal}) [${statusIcon}]`;
+    }).join('\n');
     if (wallets.length > 10) {
-      walletLines += `\n\n<i>...and ${wallets.length - 10} more worker sub-wallets</i>`;
+      walletLines += `\n<i>+ ${wallets.length - 10} more sub-wallets</i>`;
     }
   }
 
   const text = `
-👛 <b>MAINNET WALLET FLEET STATUS</b> 👛
-👤 <b>Subscriber:</b> <code>${user.email}</code>
+👛 <b>WALLET FLEET STATUS</b>
+━━━━━━━━━━━━━━━━━━━━
+💰 <b>Total Value:</b> <b>${formatDisplayEth(totalEth)} ETH</b> (~$${totalUsd})
+👥 <b>Fleet:</b> <b>${activeCount}/${wallets.length} active</b>
 
-💰 <b>Total Fleet Value:</b> <b>${formatDisplayEth(totalEth)} ETH</b> (~$${totalUsd} USD)
-👥 <b>Total Wallets:</b> <b>${wallets.length} wallet(s)</b>
-🎯 <b>Armed For Sniping:</b> <b>${activeCount} of ${wallets.length} active</b>
-👑 <b>Master Holding:</b> <code>${masterWallet?.address ? masterWallet.address.slice(0, 8) + '...' + masterWallet.address.slice(-6) : 'None Set'}</code>
-
-<b>Fleet Balances & Sniper Status:</b>
 ${walletLines}
-
-🛡️ <i>Tap any wallet button below to Arm/Disarm it for auto-sniping:</i>
 `.trim();
 
   // Generate 2-per-row toggle buttons for each wallet
@@ -833,16 +794,16 @@ ${walletLines}
   const keyboard = [
     ...walletToggleButtons,
     [
-      { text: '⚡ Select All Wallets', callback_data: 'wallets_select_all' },
+      { text: '⚡ Select All', callback_data: 'wallets_select_all' },
       { text: '⚪ Unselect All', callback_data: 'wallets_unselect_all' }
     ],
     [
-      { text: '➕ Import Private Key', callback_data: 'prompt_add_wallet' },
-      { text: '⚡ Generate 5 Workers', callback_data: 'action_generate_workers' }
+      { text: '➕ Import Key', callback_data: 'prompt_add_wallet' },
+      { text: '⚡ +5 Workers', callback_data: 'action_generate_workers' }
     ],
     [
-      { text: '🔄 Refresh Balances', callback_data: 'menu_wallets' },
-      { text: '🔙 Back to Main Dashboard', callback_data: 'menu_main' }
+      { text: '🔄 Refresh', callback_data: 'menu_wallets' },
+      { text: '🔙 Dashboard', callback_data: 'menu_main' }
     ]
   ];
 
@@ -1067,6 +1028,9 @@ async function handleCallbackQuery(callbackQuery) {
   const messageId = message?.message_id;
 
   if (!chatId || !messageId) return;
+
+  // ⚡ INSTANT ACKNOWLEDGEMENT: Release Telegram UI button spinner immediately (<10ms)
+  answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id).catch(() => {});
 
   // 🔒 Gatekeeper Help Callback
   if (data === 'gate_help') {

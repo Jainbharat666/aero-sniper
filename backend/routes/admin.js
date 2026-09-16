@@ -20,6 +20,7 @@ import {
   adminAuthMiddleware,
   userAuthMiddleware
 } from '../db.js';
+import { invalidateChatAuthCache } from '../telegramBot.js';
 
 const router = express.Router();
 
@@ -99,6 +100,7 @@ router.post('/users/reset-telegram', adminAuthMiddleware, async (req, res) => {
 
     // Clear config
     const currentConfig = (await dbGetUserConfig(user.id)) || {};
+    const oldChatId = currentConfig.telegram_chat_id;
     delete currentConfig.telegram_chat_id;
     delete currentConfig.telegram_username;
     delete currentConfig.telegram_first_name;
@@ -108,6 +110,7 @@ router.post('/users/reset-telegram', adminAuthMiddleware, async (req, res) => {
 
     await dbSaveUserConfig(user.id, currentConfig, true);
     await dbUpdateUser(user.id, { telegram_chat_id: null }).catch(() => {});
+    if (oldChatId) invalidateChatAuthCache(oldChatId);
 
     console.log(`[Sniper Admin] Telegram link reset by Admin for user: ${user.email} (${user.id})`);
     return res.json({
