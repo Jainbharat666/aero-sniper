@@ -694,8 +694,13 @@ export async function armEngineForUser(userId, userConfig = {}, targetSlug = '*'
   const rawWallets = options.workers || userConfig?.walletFleet || userConfig?.wallets || [];
   const workerPool = [];
 
-  if (Array.isArray(rawWallets) && rawWallets.length > 0) {
-    rawWallets.forEach((w, idx) => {
+  // 🛡️ STRICT WALLET SELECTION ENFORCEMENT:
+  // Only load wallets that are marked selected (selected !== false).
+  const selectedWallets = rawWallets.filter(w => w.selected !== false);
+  const walletsToLoad = selectedWallets.length > 0 ? selectedWallets : rawWallets;
+
+  if (Array.isArray(walletsToLoad) && walletsToLoad.length > 0) {
+    walletsToLoad.forEach((w, idx) => {
       const pk = (w.privateKey || w.pk || w.key || '').trim();
       if (pk) {
         try {
