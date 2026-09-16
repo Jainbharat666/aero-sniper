@@ -171,6 +171,12 @@ export async function executeZeroHopSnipe(parsed, reason, tTriggerStart, userEng
       return;
     }
 
+    if (!engine.dryRun && sellerLower && buyerAddress && sellerLower === buyerAddress.toLowerCase()) {
+      broadcastSnipeLog(`⚠️ [SELF-SNIPE PREVENTED] Cannot snipe your own listing (#${tokenId}): Seller address and Armed Buyer wallet (${buyerAddress.slice(0, 6)}...) are identical. OpenSea rejects self-purchases. Please list from an alternate wallet or switch to Paper Snipe mode for testing.`, engine.userId);
+      engine.pendingSnipes.delete(tokenId);
+      return;
+    }
+
     let txObj = null;
 
     if (protocolData?.parameters && protocolData?.signature) {
@@ -485,13 +491,25 @@ setInterval(() => {
 // ⚡ MICROSECOND ZERO-HOP MULTI-USER SNIPER TRIGGER EVALUATOR (ALL 4 RULES ENFORCED)
 export async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = performance.now()) {
   if (!parsed || !parsed.tokenId) return;
-  const itemSlug = (parsed.slug || incomingSlug || '').toLowerCase();
+  const itemSlug = (parsed.slug || incomingSlug || '').trim().toLowerCase();
+  const itemContract = (parsed.contractAddress || '').trim().toLowerCase();
 
-  // Find all active user engines registered for this slug (or wildcard '*')
-  let candidateEngines = Array.from(activeSniperEngines.values()).filter(e => e && e.isArmed && (e.slug === '*' || e.slug === itemSlug));
-  if (candidateEngines.length === 0 && activeSniperEngine && activeSniperEngine.isArmed && (activeSniperEngine.slug === '*' || activeSniperEngine.slug === itemSlug)) {
-    candidateEngines = [activeSniperEngine];
+  // Find all active user engines registered for this slug, wildcard, or matching contract address
+  let candidateEngines = Array.from(activeSniperEngines.values()).filter(e => {
+    if (!e || !e.isArmed) return false;
+    const eSlug = (e.slug || '').trim().toLowerCase();
+    const eContract = (e.contractAddress || '').trim().toLowerCase();
+    return eSlug === '*' || eSlug === itemSlug || (eContract && itemContract && eContract === itemContract);
+  });
+
+  if (candidateEngines.length === 0 && activeSniperEngine && activeSniperEngine.isArmed) {
+    const eSlug = (activeSniperEngine.slug || '').trim().toLowerCase();
+    const eContract = (activeSniperEngine.contractAddress || '').trim().toLowerCase();
+    if (eSlug === '*' || eSlug === itemSlug || (eContract && itemContract && eContract === itemContract)) {
+      candidateEngines = [activeSniperEngine];
+    }
   }
+
   if (candidateEngines.length === 0) return;
 
   const tokenIdStr = String(parsed.tokenId);
@@ -504,7 +522,7 @@ export async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = per
   inFlightEvaluationTokens.add(tokenIdStr);
 
   try {
-    const orderHash = parsed.orderHash || parsed.protocolData?.orderHash;
+    const orderHash = parsed.orderHash || parsed.order_hash || parsed.protocolData?.orderHash || parsed.protocolData?.order_hash;
 
     // 🛡️ VALID SEAPORT ORDER GUARD: Skip incomplete listings that lack both orderHash and parameters
     const hasOrderHash = Boolean(orderHash && orderHash.length > 10);
@@ -613,14 +631,24 @@ export async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = per
         ? activeCollectionStats.floorEth
         : (engine.baseFloorEth || 0);
       const discountPct = engine.discountPercent !== undefined ? engine.discountPercent : 20;
-      const targetFloorCap = engine.maxFloorEth > 0
+      let targetFloorCap = engine.maxFloorEth > 0
         ? engine.maxFloorEth
         : (colFloor > 0 ? colFloor * (1 - discountPct / 100) : 0);
 
-      if (!triggered && engine.ruleStates?.floor && targetFloorCap > 0) {
-        if (parsed.price <= targetFloorCap) {
+      if (!triggered && engine.ruleStates?.floor) {
+        if (targetFloorCap > 0 && parsed.price <= targetFloorCap) {
           triggered = true;
           reason = `⚡ Floor Fat-Finger: ${parsed.price} ETH <= Target ${formatEthPrecise(targetFloorCap)} ETH (-${discountPct}%)`;
+        } else if (targetFloorCap <= 0 && colFloor <= 0 && parsed.price > 0) {
+          // Dynamic stats recovery if floor was not populated at arm time
+          fetchOpenSeaAuthoritativeStats(itemSlug).then(st => {
+            if (st && st.floorEth > 0) {
+              engine.baseFloorEth = st.floorEth;
+              if (engine.maxFloorEth <= 0) {
+                engine.maxFloorEth = st.floorEth * (1 - discountPct / 100);
+              }
+            }
+          }).catch(() => {});
         }
       }
 
@@ -820,6 +848,7 @@ export async function armEngineForUser(userId, userConfig = {}, targetSlug = '*'
       tokenId: !!ruleConfig.ruleStates?.tokenId || tokenSet.size > 0
     },
     userEmail: options.userEmail || userConfig?.email || '',
+    contractAddress: options.contractAddress || userConfig?.contractAddress || (activeCollectionStats?.slug === slug ? (activeCollectionStats.contractAddress || '') : ''),
     dryRun: !!options.dryRun
   };
 
@@ -832,6 +861,22 @@ export async function armEngineForUser(userId, userConfig = {}, targetSlug = '*'
 
   if (slug && slug !== '*') {
     subscribeSlugToOpenSea(slug);
+    // Background stats loader if floor was not available at arm time
+    if (userEngine.baseFloorEth === 0 || userEngine.maxFloorEth === 0) {
+      fetchOpenSeaAuthoritativeStats(slug).then(st => {
+        if (st) {
+          if (st.floorEth > 0) {
+            userEngine.baseFloorEth = st.floorEth;
+            if (userEngine.maxFloorEth === 0) {
+              userEngine.maxFloorEth = st.floorEth * (1 - userEngine.discountPercent / 100);
+            }
+          }
+          if (st.contractAddress && !userEngine.contractAddress) {
+            userEngine.contractAddress = st.contractAddress.toLowerCase();
+          }
+        }
+      }).catch(() => {});
+    }
   }
 
   // Pre-warm nonces in RAM
