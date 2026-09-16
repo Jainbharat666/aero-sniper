@@ -727,6 +727,35 @@ Choose your Robinhood Chain mempool racing multiplier:
 /**
  * 👛 BUILD WALLETS FLEET STATUS MENU
  */
+/**
+ * ⚡ Fetch On-Chain Live Balance with Multi-RPC Failover
+ */
+async function fetchWalletOnChainBalance(address) {
+  if (!address || !address.startsWith('0x')) return '0';
+  const rpcEndpoints = [
+    'https://rpc.mainnet.chain.robinhood.com',
+    'https://robinhood-mainnet.g.alchemy.com/v2/alch_FtrEfyyJYzEBZ0SQ3ctbJ'
+  ];
+
+  for (const rpc of rpcEndpoints) {
+    try {
+      const res = await axios.post(rpc, {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_getBalance',
+        params: [address, 'latest']
+      }, { timeout: 4000 });
+      if (res.data?.result) {
+        return ethers.formatEther(BigInt(res.data.result));
+      }
+    } catch (e) {}
+  }
+  return '0';
+}
+
+/**
+ * 👛 BUILD WALLETS FLEET STATUS MENU
+ */
 export async function buildWalletsMenu(chatId = null) {
   const authInfo = await getLinkedUserForChat(chatId);
   if (!authInfo) return buildUnlinkedGatekeeperMenu();
@@ -735,20 +764,12 @@ export async function buildWalletsMenu(chatId = null) {
   const wallets = config.walletFleet || config.wallets || [];
   const masterWallet = wallets.find(w => w.role === 'master' || w.name?.includes('Master')) || wallets[0];
 
-  // Live RPC Balance refresh from Robinhood Chain in parallel
+  // Live RPC Balance refresh from Robinhood Chain in parallel across all fleet wallets
   if (wallets.length > 0) {
     await Promise.all(wallets.map(async (w) => {
       try {
         if (w.address && w.address.startsWith('0x')) {
-          const res = await axios.post('https://rpc.mainnet.robinhood.com', {
-            jsonrpc: '2.0',
-            id: 1,
-            method: 'eth_getBalance',
-            params: [w.address, 'latest']
-          }, { timeout: 3500 });
-          if (res.data?.result) {
-            w.balance = ethers.formatEther(BigInt(res.data.result));
-          }
+          w.balance = await fetchWalletOnChainBalance(w.address);
         }
       } catch (e) {}
     }));
