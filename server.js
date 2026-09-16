@@ -57,7 +57,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.html')) {
+    if (filePath.endsWith('.html') || filePath.includes('favicon') || filePath.includes('logo')) {
       res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
     } else if (filePath.endsWith('.js') || filePath.endsWith('.css') || filePath.endsWith('.svg') || filePath.endsWith('.png')) {
       res.setHeader('Cache-Control', 'public, max-age=86400, must-revalidate');
