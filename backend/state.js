@@ -106,8 +106,10 @@ export function broadcastToClients(payload, targetUserId = null) {
   const msg = `data: ${JSON.stringify(payload)}\n\n`;
   sseClients.forEach(client => {
     // If targeted to a specific user, ensure client matches targetUserId
-    if (targetUserId && client.userId && String(client.userId) !== String(targetUserId)) {
-      return;
+    if (targetUserId) {
+      if (!client.userId || String(client.userId) !== String(targetUserId)) {
+        return;
+      }
     }
     if (!payload.slug || !client.slug || client.slug.toLowerCase() === payload.slug.toLowerCase() || client.slug === '*') {
       try {

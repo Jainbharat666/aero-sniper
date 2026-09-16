@@ -92,7 +92,11 @@
             <a href="${openSeaUrl}" target="_blank" rel="noopener noreferrer" title="Open #${item.tokenId} on OpenSea" class="w-7 h-7 rounded-xl bg-slate-100 hover:bg-sky-500 hover:text-white text-slate-600 flex items-center justify-center transition-all shadow-sm border border-slate-200/80 group/os">
               <i class="fa-solid fa-arrow-up-right-from-square text-[10px] group-hover/os:scale-110 transition-transform"></i>
             </a>
-            ${item.sniped ? '<span class="px-2.5 py-1 rounded-xl bg-emerald-500 text-white font-black text-[10px]">🚨 SNIPED</span>' : `<button onclick="executeManualBuy('${item.tokenId}', ${item.price})" class="px-3 py-1 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white font-black text-xs transition-all shadow-sm">Buy</button>`}
+            ${item.sniped 
+              ? '<span class="px-2.5 py-1 rounded-xl bg-emerald-500 text-white font-black text-[10px]">🚨 SNIPED</span>' 
+              : (item.sold 
+                  ? '<span class="px-2.5 py-1 rounded-xl bg-slate-200 text-slate-500 font-bold text-[10px]">SOLD</span>' 
+                  : `<button onclick="executeManualBuy('${item.tokenId}', ${item.price})" class="px-3 py-1 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white font-black text-xs transition-all shadow-sm">Buy</button>`)}
           </div>
         </td>
       `;
@@ -251,8 +255,8 @@
       const tokStr = String(tokenId);
       const delIdx = liveListingsStore.findIndex(i => String(i.tokenId) === tokStr);
       if (delIdx !== -1) {
-        // 🛡️ DO NOT DELETE SNIPED NFTS: Keep them visible in table with green 🚨 SNIPED badge!
-        if (liveListingsStore[delIdx].sniped || (typeof clientBoughtTokens !== 'undefined' && clientBoughtTokens.has(tokStr))) {
+        // 🛡️ IF THIS USER ACTUALLY BOUGHT IT: Show green SNIPED badge
+        if (typeof clientBoughtTokens !== 'undefined' && clientBoughtTokens.has(tokStr)) {
           liveListingsStore[delIdx].sniped = true;
           const tr = document.querySelector(`tr[data-token="${tokStr}"]`);
           if (tr) {
@@ -265,13 +269,25 @@
           return;
         }
 
+        // 🛡️ IF BOUGHT/CANCELLED BY ANOTHER USER / MARKET: Show SOLD badge and remove after brief display
+        liveListingsStore[delIdx].sold = true;
+        const tr = document.querySelector(`tr[data-token="${tokStr}"]`);
+        if (tr) {
+          tr.classList.add('opacity-50');
+          const actionCell = tr.querySelector('td:last-child');
+          if (actionCell) {
+            actionCell.innerHTML = '<span class="px-2.5 py-1 rounded-xl bg-slate-200 text-slate-500 font-bold text-[10px]">SOLD</span>';
+          }
+          setTimeout(() => {
+            if (tr && tr.parentNode) tr.remove();
+          }, 3000);
+        }
+
         const wasFloor = (liveListingsStore[delIdx].price === currentFloorEth);
         liveListingsStore.splice(delIdx, 1);
-        const tr = document.querySelector(`tr[data-token="${tokStr}"]`);
-        if (tr) tr.remove();
 
         if (wasFloor && liveListingsStore.length > 0) {
-          const newFloor = Math.min(...liveListingsStore.map(l => l.price));
+          const newFloor = Math.min(...liveListingsStore.filter(l => !l.sold).map(l => l.price));
           if (newFloor > 0) {
             currentFloorEth = newFloor;
             document.getElementById('proj-floor-eth').innerText = formatEthPrecise(currentFloorEth);
