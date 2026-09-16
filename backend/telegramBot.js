@@ -841,7 +841,18 @@ ${walletLines}
 }
 
 /**
- * 📡 Send Telegram Message with HTML formatting
+ * 🛡️ HTML ESCAPE HELPER (Prevents Telegram HTML parse error 400 when strings contain <, >, &)
+ */
+export function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * 📡 Send Telegram Message with HTML formatting & Fail-Safe Plaintext Fallback
  */
 export async function sendTelegramMessage(token, chatId, text, inlineKeyboard = null) {
   if (!token || !chatId || !text) return false;
@@ -858,8 +869,21 @@ export async function sendTelegramMessage(token, chatId, text, inlineKeyboard = 
     await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, payload, { timeout: 6000 });
     return true;
   } catch (err) {
-    console.warn(`[TELEGRAM] Failed to send message to ${chatId}:`, err.response?.data?.description || err.message);
-    return false;
+    console.warn(`[TELEGRAM HTML ERR] ${err.response?.data?.description || err.message} ➔ Attempting plaintext fallback`);
+    try {
+      const cleanPlain = text.replace(/<[^>]+>/g, '');
+      const plainPayload = {
+        chat_id: chatId,
+        text: cleanPlain,
+        disable_web_page_preview: true
+      };
+      if (inlineKeyboard) plainPayload.reply_markup = { inline_keyboard: inlineKeyboard };
+      await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, plainPayload, { timeout: 6000 });
+      return true;
+    } catch (plainErr) {
+      console.warn(`[TELEGRAM PLAIN ERR] ${plainErr.response?.data?.description || plainErr.message}`);
+      return false;
+    }
   }
 }
 
@@ -891,7 +915,7 @@ export async function editTelegramMessage(token, chatId, messageId, text, inline
       const payloadCap = {
         chat_id: chatId,
         message_id: messageId,
-        caption: text,
+        caption: text.length > 1020 ? text.slice(0, 1017) + '...' : text,
         parse_mode: 'HTML'
       };
       if (replyMarkup) payloadCap.reply_markup = replyMarkup;
@@ -927,7 +951,7 @@ export async function answerCallbackQuery(token, callbackQueryId, notificationTe
 }
 
 /**
- * 🖼️ Send Telegram Photo with Caption (Instant text fallback if invalid URL)
+ * 🖼️ Send Telegram Photo with Caption (Instant text fallback if invalid URL or caption error)
  */
 export async function sendTelegramPhoto(token, chatId, photoUrl, caption, inlineKeyboard = null) {
   if (!token || !chatId) return false;
@@ -938,10 +962,11 @@ export async function sendTelegramPhoto(token, chatId, photoUrl, caption, inline
   }
 
   try {
+    const safeCaption = caption.length > 1020 ? caption.slice(0, 1017) + '...' : caption;
     const payload = {
       chat_id: chatId,
       photo: photoUrl,
-      caption: caption,
+      caption: safeCaption,
       parse_mode: 'HTML'
     };
     if (inlineKeyboard) {
@@ -950,6 +975,7 @@ export async function sendTelegramPhoto(token, chatId, photoUrl, caption, inline
     await axios.post(`https://api.telegram.org/bot${token}/sendPhoto`, payload, { timeout: 6000 });
     return true;
   } catch (err) {
+    console.warn(`[TELEGRAM PHOTO ERR] ${err.response?.data?.description || err.message} ➔ Falling back to text message`);
     return sendTelegramMessage(token, chatId, caption, inlineKeyboard);
   }
 }
@@ -975,13 +1001,18 @@ export async function dispatchPrivateSnipeAlert(userEngine, snipeData) {
 
   const isSim = !!snipeData.isDryRun;
   const modeBadge = isSim ? '🧪 <b>PAPER SNIPE SIMULATED</b>' : '⚡ <b>LIVE ON-CHAIN SNIPE CONFIRMED!</b>';
-  const tokenName = snipeData.name || `#${snipeData.tokenId}`;
+  const tokenName = escapeHtml(snipeData.name || `#${snipeData.tokenId}`);
+  const colName = escapeHtml(snipeData.collectionName || userEngine?.slug || 'Collection');
   const priceEth = formatDisplayEth(snipeData.price || 0);
   const usdPrice = (parseFloat(snipeData.price || 0) * cachedEthPrice).toFixed(2);
   const floorDisp = formatDisplayEth(snipeData.floorEth || 0);
   const txHash = snipeData.txHash || '';
   const txShort = txHash.length > 18 ? `${txHash.slice(0, 10)}...${txHash.slice(-8)}` : txHash;
   const blockNum = snipeData.blockNumber ? `#${snipeData.blockNumber}` : 'Mined';
+  const discountStr = escapeHtml(snipeData.discountStr || 'Target Price Met');
+  const reasonStr = escapeHtml(snipeData.reason || 'Auto-Rule Trigger');
+  const buyerNameStr = escapeHtml(snipeData.buyerName || 'Primary');
+  const buyerAddressShort = escapeHtml(snipeData.buyerAddressShort || '');
   const explorerUrl = `https://explorer.mainnet.robinhood.com/tx/${txHash}`;
   const openseaUrl = `https://opensea.io/assets/robinhood/${snipeData.contractAddress || ''}/${snipeData.tokenId}`;
 
@@ -989,13 +1020,13 @@ export async function dispatchPrivateSnipeAlert(userEngine, snipeData) {
 🏆 ${modeBadge}
 
 🎯 <b>Token:</b> <code>${tokenName}</code>
-🏷️ <b>Collection:</b> <code>${snipeData.collectionName || userEngine?.slug || 'Collection'}</code>
+🏷️ <b>Collection:</b> <code>${colName}</code>
 💎 <b>Market Floor:</b> <b>${floorDisp} ETH</b>
 💰 <b>Price Bought:</b> <b>${priceEth} ETH</b> (~$${usdPrice} USD)
-📉 <b>Advantage:</b> <b>${snipeData.discountStr || 'Target Price Met'}</b>
-🎯 <b>Strategy:</b> <code>${snipeData.reason || 'Auto-Rule Trigger'}</code>
+📉 <b>Advantage:</b> <b>${discountStr}</b>
+🎯 <b>Strategy:</b> <code>${reasonStr}</code>
 ⚡ <b>Compute Latency:</b> <b>${snipeData.computeLatencyMs || '5.0'} ms</b>
-🛡️ <b>Worker Wallet:</b> <code>${snipeData.buyerName || 'Primary'} ${snipeData.buyerAddressShort ? '(' + snipeData.buyerAddressShort + ')' : ''}</code>
+🛡️ <b>Worker Wallet:</b> <code>${buyerNameStr} ${buyerAddressShort ? '(' + buyerAddressShort + ')' : ''}</code>
 📦 <b>Robinhood Block:</b> <code>${blockNum}</code>
 🔗 <b>TxHash:</b> <code>${txShort}</code>
 
@@ -1009,7 +1040,9 @@ ${isSim ? '<i>Simulation Mode — Zero funds spent</i>' : '<i>Successfully secur
     ]
   ];
 
-  sendTelegramPhoto(token, chatId, snipeData.image || snipeData.imageUrl, caption, keyboard).catch(() => {});
+  sendTelegramPhoto(token, chatId, snipeData.image || snipeData.imageUrl, caption, keyboard).catch((err) => {
+    console.warn('[PRIVATE ALERT DISPATCH ERR]', err.message);
+  });
 }
 
 /**
@@ -1047,29 +1080,34 @@ export async function dispatchGlobalMasterFeedAlert(snipeData) {
   const targetChatIds = await getAdminNotificationChatIds();
   if (!targetChatIds || targetChatIds.length === 0) return;
 
-  const tokenName = snipeData.name || `#${snipeData.tokenId}`;
+  const tokenName = escapeHtml(snipeData.name || `#${snipeData.tokenId}`);
+  const colName = escapeHtml(snipeData.collectionName || snipeData.slug || 'Collection');
   const priceEth = formatDisplayEth(snipeData.price || 0);
   const usdPrice = (parseFloat(snipeData.price || 0) * cachedEthPrice).toFixed(2);
   const floorDisp = formatDisplayEth(snipeData.floorEth || 0);
   const floorUsd = (parseFloat(snipeData.floorEth || 0) * cachedEthPrice).toFixed(2);
+  const discountStr = escapeHtml(snipeData.discountStr || 'Trigger Met');
+  const reasonStr = escapeHtml(snipeData.reason || 'Auto-Rule');
+  const buyerNameStr = escapeHtml(snipeData.buyerName || 'Worker');
+  const buyerAddressShort = escapeHtml(snipeData.buyerAddressShort || '');
+  const userTag = escapeHtml(snipeData.userEmail ? snipeData.userEmail : (snipeData.userId ? `UID: ${snipeData.userIdShort}` : 'VIP Member'));
   const explorerUrl = `https://explorer.mainnet.robinhood.com/tx/${snipeData.txHash}`;
   const openseaUrl = `https://opensea.io/assets/robinhood/${snipeData.contractAddress || ''}/${snipeData.tokenId}`;
-  const userTag = snipeData.userEmail ? `<code>${snipeData.userEmail}</code>` : (snipeData.userId ? `<code>UID: ${snipeData.userIdShort}</code>` : 'VIP Member');
 
   const text = `
 👑 <b>AERO-SNIPER V2 • MASTER ADMIN FEED</b> ⚡
 <i>Institutional Real-Time Subscriber Activity</i>
 
 ━━━━━━━━━━━━━━━━━━━━━
-👤 <b>Subscriber:</b> ${userTag}
-💼 <b>Fleet Wallet:</b> <code>${snipeData.buyerName || 'Worker'} ${snipeData.buyerAddressShort ? '(' + snipeData.buyerAddressShort + ')' : ''}</code>
-🏷️ <b>Collection:</b> <code>${snipeData.collectionName || snipeData.slug || 'Collection'}</code>
+👤 <b>Subscriber:</b> <code>${userTag}</code>
+💼 <b>Fleet Wallet:</b> <code>${buyerNameStr} ${buyerAddressShort ? '(' + buyerAddressShort + ')' : ''}</code>
+🏷️ <b>Collection:</b> <code>${colName}</code>
 🎯 <b>NFT Sniped:</b> <b>${tokenName}</b>
 💎 <b>Collection Floor:</b> <b>${floorDisp} ETH</b> (~$${floorUsd} USD)
 💰 <b>Price Bought:</b> <b>${priceEth} ETH</b> (~$${usdPrice} USD)
-📉 <b>Advantage:</b> <b>${snipeData.discountStr || 'Trigger Met'}</b>
-🎯 <b>Strategy:</b> <code>${snipeData.reason || 'Auto-Rule'}</code>
-⚡ <b>Compute Latency:</b> <b>${snipeData.computeLatencyMs || '5.0'} ms</b>
+📉 <b>Advantage:</b> <b>${discountStr}</b>
+🎯 <b>Strategy:</b> <code>${reasonStr}</code>
+⚡ <b>Mempool Blast Latency:</b> <b>${snipeData.computeLatencyMs || '5.0'} ms</b>
 🔗 <b>Tx:</b> <a href="${explorerUrl}">View Robinhood Block Receipt</a>
 ━━━━━━━━━━━━━━━━━━━━━
 🌐 <i>Aero-Sniper Pro Multi-Tenant Engine</i>
@@ -1083,7 +1121,9 @@ export async function dispatchGlobalMasterFeedAlert(snipeData) {
   ];
 
   for (const cId of targetChatIds) {
-    sendTelegramPhoto(token, cId, snipeData.image || snipeData.imageUrl, text, keyboard).catch(() => {});
+    sendTelegramPhoto(token, cId, snipeData.image || snipeData.imageUrl, text, keyboard).catch((err) => {
+      console.warn('[MASTER FEED DISPATCH ERR]', err.message);
+    });
   }
 }
 
