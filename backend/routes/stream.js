@@ -290,6 +290,8 @@ router.get('/listings/live', async (req, res) => {
       const isAnyArmed = Array.from(activeSniperEngines.values()).some(e => e && e.isArmed) || Boolean(activeSniperEngine && activeSniperEngine.isArmed);
       if (isAnyArmed) {
         for (const item of listings) {
+          // 🛡️ Skip old historical listings from past hours/days — only evaluate live fresh listings
+          if (typeof item.ageSeconds === 'number' && item.ageSeconds > 35) continue;
           const hasHash = Boolean(item.orderHash && item.orderHash.length > 10);
           const hasParams = Boolean(item.protocolData?.parameters && item.protocolData?.signature);
           if (!hasHash && !hasParams) continue;

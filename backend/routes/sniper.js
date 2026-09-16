@@ -75,9 +75,8 @@ export async function fetchSeaportFulfillmentWithShop(orderHash, chain, buyerAdd
       if (status === 429) {
         config.opensea.markKeyCooldown(apiKey, 3000);
       }
-      // 🛡️ DO NOT treat temporary indexing delay ('not found', 'not valid') as permanent dead order!
-      // Only mark dead if explicitly cancelled, already filled, or expired.
-      const isDead = /cancelled|already_filled|expired/i.test(errDetail);
+      // 🛡️ Mark dead if explicitly cancelled, already filled, expired, or invalid order hash
+      const isDead = /cancelled|already_filled|expired|order not valid|not valid|not found/i.test(errDetail);
       throw { isDead, errDetail, status };
     }
   };
@@ -720,6 +719,11 @@ export async function sweepAndSnipeActiveListings(slug, targetEngine = null) {
       const contract = item.asset?.contract || item.protocol_data?.parameters?.offer?.[0]?.token || '';
       const seller = item.protocol_data?.parameters?.offerer || item.maker?.address || '';
 
+      const eventTime = item.order_created_at ? (item.order_created_at * 1000) : Date.now();
+      const ageSec = Math.max(0, Math.round((Date.now() - eventTime) / 1000));
+      // 🛡️ Skip old historical listings from past hours/days
+      if (ageSec > 45) continue;
+
       const parsed = {
         tokenId,
         slug: cleanSlug,
@@ -730,7 +734,7 @@ export async function sweepAndSnipeActiveListings(slug, targetEngine = null) {
         orderHash: item.order_hash,
         protocolData: item.protocol_data || null,
         seller: seller,
-        eventTimestamp: item.order_created_at ? (item.order_created_at * 1000) : Date.now(),
+        eventTimestamp: eventTime,
         receivedAt: Date.now()
       };
 
