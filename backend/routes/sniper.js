@@ -20,8 +20,13 @@ import {
 } from '../state.js';
 import { apiClient, fetchOpenSeaWithFallback, formatEthPrecise } from '../openSeaClient.js';
 import { dbGetUserById, dbRecordUserSnipe, dbGetUserConfig, OWNER_EMAIL } from '../db.js';
-import { subscribeSlugToOpenSea } from './stream.js';
-import { dispatchPrivateSnipeAlert, dispatchGlobalMasterFeedAlert } from '../telegramBot.js';
+import { 
+  dispatchPrivateSnipeAlert, 
+  dispatchGlobalMasterFeedAlert,
+  buildMainMenu,
+  sendTelegramMessage,
+  TELEGRAM_BOT_TOKEN
+} from '../telegramBot.js';
 
 const router = express.Router();
 
@@ -900,6 +905,18 @@ router.post('/snipe/arm', async (req, res) => {
       maxLimit: userEngine.maxSnipesLimit,
       activeEnginesCount: activeSniperEngines.size
     });
+
+    // 📱 INSTANT TWO-WAY TELEGRAM SYNC: Push live terminal update to user's Telegram
+    if (userEngine.telegramChatId) {
+      buildMainMenu(userEngine.telegramChatId).then(menu => {
+        sendTelegramMessage(
+          TELEGRAM_BOT_TOKEN,
+          userEngine.telegramChatId,
+          `⚡ <b>AERO-SNIPER ARMED (Via Web Dashboard)</b>\n\n` + menu.text,
+          menu.keyboard
+        ).catch(() => {});
+      }).catch(() => {});
+    }
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }
@@ -959,6 +976,18 @@ router.post('/snipe/disarm', (req, res) => {
     if (engine.slug && engine.slug !== '*') {
       const isAnyOtherWatching = Array.from(activeSniperEngines.values()).some(e => e.isArmed && (e.slug === engine.slug || e.slug === '*'));
       if (!isAnyOtherWatching) streamListener.unsubscribe(engine.slug);
+    }
+
+    // 📱 INSTANT TWO-WAY TELEGRAM SYNC: Push pause terminal update to user's Telegram
+    if (engine.telegramChatId) {
+      buildMainMenu(engine.telegramChatId).then(menu => {
+        sendTelegramMessage(
+          TELEGRAM_BOT_TOKEN,
+          engine.telegramChatId,
+          `⏸ <b>AERO-SNIPER PAUSED (Via Web Dashboard)</b>\n\n` + menu.text,
+          menu.keyboard
+        ).catch(() => {});
+      }).catch(() => {});
     }
   } else {
     // Global disarm fallback
