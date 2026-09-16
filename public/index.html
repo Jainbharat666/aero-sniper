@@ -2452,6 +2452,78 @@
   </footer>
   </div><!-- End of #authenticated-app -->
 
+  <!-- ================= 5C. TELEGRAM SUBSCRIBER SYNC MODAL ================= -->
+  <div id="modal-telegram-sync" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 transition-all duration-300 hidden">
+    <div class="relative w-full max-w-[480px] bg-[#121622] border border-slate-700/80 rounded-3xl p-6 sm:p-7 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] text-slate-100 font-sans">
+      
+      <!-- Top Bar -->
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center text-white text-lg shadow-lg shadow-sky-500/30">
+            <i class="fa-brands fa-telegram"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-black text-white tracking-tight flex items-center gap-2">
+              Telegram Remote Sync
+            </h2>
+            <p class="text-[11px] text-slate-400 font-mono-code">24/7 Mobile Cloud Controller</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeTelegramLinkModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer text-sm">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Sync Status Badge -->
+      <div id="tg-status-card" class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 mb-5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-slate-400 font-semibold font-mono-code">Connection Status:</span>
+          <span id="tg-connection-badge" class="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono-code flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+            Awaiting Telegram Link
+          </span>
+        </div>
+      </div>
+
+      <!-- Token Box & Actions -->
+      <div class="space-y-4 mb-5 font-mono-code">
+        <div>
+          <label class="text-[11px] font-bold text-slate-300 block mb-1.5 uppercase tracking-wider">
+            Your Secret Link Token:
+          </label>
+          <div class="flex items-center gap-2 bg-[#0d1019] border border-sky-500/40 rounded-2xl p-2.5 shadow-inner">
+            <div class="flex-1 font-black text-base tracking-widest text-sky-400 text-center select-all" id="tg-token-display">
+              GENERATING...
+            </div>
+            <button type="button" onclick="copyTelegramToken()" class="px-3.5 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-bold text-xs transition-all shadow-md shadow-sky-500/30 cursor-pointer flex items-center gap-1.5">
+              <i class="fa-regular fa-copy"></i>
+              <span>Copy</span>
+            </button>
+          </div>
+        </div>
+
+        <a id="tg-deep-link-btn" href="#" target="_blank" class="w-full py-3 rounded-2xl bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 active:scale-[0.98] text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-sky-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer">
+          <i class="fa-brands fa-telegram text-base"></i>
+          <span>1-Click Open in Telegram Bot</span>
+        </a>
+      </div>
+
+      <!-- Security & Instructions Deck -->
+      <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 text-[11px] text-slate-300 space-y-2.5 font-sans">
+        <div class="font-bold text-slate-100 flex items-center gap-1.5 font-mono-code text-xs">
+          <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+          <span>Subscriber 24/7 Companion Benefits:</span>
+        </div>
+        <ul class="space-y-1.5 text-slate-400 list-disc list-inside">
+          <li><b>PC Shutdown Ready:</b> Cloud engine runs 24/7 even after you shut down your browser/PC.</li>
+          <li><b>Live Fleet Sync:</b> Access all your configured wallets, target collections, and 4 sniper rules.</li>
+          <li><b>Zero-Risk Vault:</b> Private keys are never exposed in Telegram. Only public addresses & balances are visible.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ================= 5. FLOATING TOAST NOTIFICATION (GLOBAL) ================= -->
   <div id="toast-notification" class="fixed bottom-6 right-6 z-[99999] bg-slate-900/95 text-white border border-slate-700 rounded-2xl px-4 py-3 shadow-2xl flex items-center gap-3 font-mono-code text-xs backdrop-blur-md">
     <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 pulse-ring"></span>

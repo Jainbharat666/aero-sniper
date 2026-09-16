@@ -766,6 +766,10 @@
               <span>Admin Console</span>
             </button>
           ` : ''}
+          <button onclick="openTelegramLinkModal()" class="flex items-center gap-1.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white px-3 py-1.5 rounded-xl font-mono-code text-xs font-black shadow-md shadow-sky-500/20 transition-all cursor-pointer" title="Sync with Telegram Mobile Bot">
+            <i class="fa-brands fa-telegram text-sm text-white"></i>
+            <span>Telegram Sync</span>
+          </button>
           <div onclick="openUserProfileModal('overview')" class="flex items-center gap-2.5 bg-white/90 hover:bg-white border border-slate-200/80 text-slate-800 px-2.5 py-1.5 rounded-2xl font-mono-code text-xs font-bold shadow-sm hover:shadow-md transition-all cursor-pointer select-none">
             <div class="w-6 h-6 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[11px] font-black shadow-sm">
               ${initial}
@@ -788,6 +792,74 @@
 
       startGlobalValidityClock();
     }
+
+    // ================= 📱 TELEGRAM SUBSCRIBER SYNC MODAL CONTROLLER =================
+    let currentTelegramToken = '';
+    let currentTelegramDeepLink = '';
+
+    window.openTelegramLinkModal = async function() {
+      if (!currentUser) {
+        showToast('⚠️ Please log in to connect Telegram.', true);
+        return;
+      }
+      const modal = document.getElementById('modal-telegram-sync');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+
+      const tokenDisplay = document.getElementById('tg-token-display');
+      const deepLinkBtn = document.getElementById('tg-deep-link-btn');
+      const badge = document.getElementById('tg-connection-badge');
+
+      if (tokenDisplay) tokenDisplay.innerText = 'GENERATING...';
+
+      try {
+        const tokenToUse = (typeof currentSessionToken !== 'undefined' && currentSessionToken) || currentUser.session_token;
+        const res = await fetch('/api/user/generate-telegram-token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${tokenToUse}`
+          }
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentTelegramToken = data.token;
+          currentTelegramDeepLink = data.deepLink;
+          if (tokenDisplay) tokenDisplay.innerText = data.token;
+          if (deepLinkBtn) deepLinkBtn.href = data.deepLink;
+
+          if (badge) {
+            if (data.isLinked) {
+              badge.className = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono-code flex items-center gap-1.5';
+              badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Connected to Telegram (${data.telegramChatId || 'Linked'})`;
+            } else {
+              badge.className = 'bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono-code flex items-center gap-1.5';
+              badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span> Awaiting Telegram Link`;
+            }
+          }
+        } else {
+          if (tokenDisplay) tokenDisplay.innerText = 'ERROR';
+          showToast('❌ Failed: ' + (data.error || 'Server error'), true);
+        }
+      } catch (err) {
+        if (tokenDisplay) tokenDisplay.innerText = 'ERROR';
+        showToast('❌ Connection error while generating token', true);
+      }
+    };
+
+    window.closeTelegramLinkModal = function() {
+      const modal = document.getElementById('modal-telegram-sync');
+      if (modal) modal.classList.add('hidden');
+    };
+
+    window.copyTelegramToken = function() {
+      if (!currentTelegramToken) return;
+      navigator.clipboard.writeText(currentTelegramToken).then(() => {
+        showToast(`📋 Token "${currentTelegramToken}" copied! Paste in @AeroSniperProBot`);
+      }).catch(() => {
+        showToast('⚠️ Could not copy token to clipboard', true);
+      });
+    };
 
     // --- 2. USER PROFILE & CLOUD VAULT MODAL (5 TABS) ---
     function openUserProfileModal(tab = 'overview') {

@@ -458,4 +458,78 @@ router.delete('/user-config', userAuthMiddleware, async (req, res) => {
   }
 });
 
+// ─── 7. TELEGRAM SUBSCRIBER SYNC & TOKEN GENERATION ─────────────────────────
+router.post('/user/generate-telegram-token', userAuthMiddleware, async (req, res) => {
+  try {
+    const user = req.authenticatedUser;
+    if (!user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+    // Generate random 6-hex token e.g. TG-A8F291
+    const randomHex = crypto.randomBytes(3).toString('hex').toUpperCase();
+    const token = `TG-${randomHex}`;
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24h expiration
+
+    // Load existing user config
+    const currentConfig = (await dbGetUserConfig(user.id)) || {};
+    currentConfig.telegram_link_token = token;
+    currentConfig.telegram_token_expires_at = expiresAt;
+
+    await dbSaveUserConfig(user.id, currentConfig);
+
+    const botUsername = 'AeroSniperProBot';
+    const deepLink = `https://t.me/${botUsername}?start=${token}`;
+
+    return res.json({
+      success: true,
+      token,
+      expiresAt,
+      deepLink,
+      isLinked: !!currentConfig.telegram_chat_id,
+      telegramChatId: currentConfig.telegram_chat_id || null
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/user/telegram-status', userAuthMiddleware, async (req, res) => {
+  try {
+    const user = req.authenticatedUser;
+    if (!user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+    const currentConfig = (await dbGetUserConfig(user.id)) || {};
+    return res.json({
+      success: true,
+      isLinked: !!currentConfig.telegram_chat_id,
+      telegramChatId: currentConfig.telegram_chat_id || null,
+      activeToken: currentConfig.telegram_link_token || null,
+      expiresAt: currentConfig.telegram_token_expires_at || null,
+      deepLink: currentConfig.telegram_link_token ? `https://t.me/AeroSniperProBot?start=${currentConfig.telegram_link_token}` : null
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/user/unlink-telegram', userAuthMiddleware, async (req, res) => {
+  try {
+    const user = req.authenticatedUser;
+    if (!user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+    const currentConfig = (await dbGetUserConfig(user.id)) || {};
+    delete currentConfig.telegram_chat_id;
+    delete currentConfig.telegram_link_token;
+    delete currentConfig.telegram_token_expires_at;
+
+    await dbSaveUserConfig(user.id, currentConfig);
+
+    return res.json({
+      success: true,
+      message: 'Telegram link disconnected successfully.'
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 export default router;
