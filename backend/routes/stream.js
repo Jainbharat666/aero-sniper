@@ -13,7 +13,7 @@ import {
   dynamicRarityCalc
 } from '../state.js';
 import { fetchOpenSeaWithFallback, formatEthPrecise } from '../openSeaClient.js';
-import { evaluateAndSnipe } from './sniper.js';
+import { evaluateAndSnipe, sweepAndSnipeActiveListings } from './sniper.js';
 import { fetchOpenSeaAuthoritativeStats } from './scan.js';
 import { getNow } from '../../src/timeSync.js';
 
@@ -130,6 +130,27 @@ export function subscribeSlugToOpenSea(slug) {
     });
   } catch (e) {}
 }
+
+// ─── ⚡ 24/7 AUTONOMOUS CLOUD POLLER FOR ARMED TARGETS (ROBINHOOD CHAIN & OPENSEA) ───
+setInterval(async () => {
+  const armedSlugs = new Set();
+  for (const [k, engine] of activeSniperEngines.entries()) {
+    if (engine && engine.isArmed && engine.slug && engine.slug !== '*') {
+      armedSlugs.add(engine.slug.toLowerCase());
+    }
+  }
+  if (activeSniperEngine && activeSniperEngine.isArmed && activeSniperEngine.slug && activeSniperEngine.slug !== '*') {
+    armedSlugs.add(activeSniperEngine.slug.toLowerCase());
+  }
+
+  if (armedSlugs.size === 0) return;
+
+  for (const slug of armedSlugs) {
+    try {
+      await sweepAndSnipeActiveListings(slug);
+    } catch(e) {}
+  }
+}, 2500);
 
 // ─── PERIODIC 45s STATS SYNC (Optimized: Idle Guarded & Anti-Cloudflare Block) ───
 setInterval(async () => {

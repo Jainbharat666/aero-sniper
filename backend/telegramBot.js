@@ -10,6 +10,7 @@ import {
 import { fetchOpenSeaWithFallback, formatEthPrecise } from './openSeaClient.js';
 import { subscribeSlugToOpenSea } from './routes/stream.js';
 import { resolveClosestCollectionSlug } from './routes/scan.js';
+import { armEngineForUser, sweepAndSnipeActiveListings } from './routes/sniper.js';
 import { 
   dbGetUserByEmail, 
   dbGetUsers, 
@@ -299,6 +300,7 @@ export async function executeScanForBot(input) {
 export function syncRulesToEngines(slug = null, contract = null) {
   const targetSlug = slug || activeCollectionStats?.slug;
   const targetContract = contract || activeCollectionStats?.contract;
+  const tokenSet = new Set((botRuleConfig.tokenId.tokens || []).map(t => String(t).replace(/[^0-9]/g, '')).filter(Boolean));
 
   for (const [k, engine] of activeSniperEngines.entries()) {
     if (targetSlug) engine.slug = targetSlug;
@@ -308,9 +310,9 @@ export function syncRulesToEngines(slug = null, contract = null) {
     engine.maxRareRank = botRuleConfig.rarity.maxRank;
     engine.maxRareEth = botRuleConfig.rarity.maxEth;
     engine.traitFilters = [...botRuleConfig.trait.filters];
-    engine.maxTraitEth = botRuleConfig.trait.maxEth;
-    engine.targetTokenIds = [...botRuleConfig.tokenId.tokens];
-    engine.maxTokenEth = botRuleConfig.tokenId.maxEth;
+    engine.traitMaxEth = botRuleConfig.trait.maxEth;
+    engine.specificTokenIds = tokenSet;
+    engine.specificTokenMaxEth = botRuleConfig.tokenId.maxEth;
     engine.gasSpeed = botActiveGasPreset;
     engine.isDryRun = botPaperSnipeMode;
   }
@@ -322,9 +324,9 @@ export function syncRulesToEngines(slug = null, contract = null) {
   activeSniperEngine.maxRareRank = botRuleConfig.rarity.maxRank;
   activeSniperEngine.maxRareEth = botRuleConfig.rarity.maxEth;
   activeSniperEngine.traitFilters = [...botRuleConfig.trait.filters];
-  activeSniperEngine.maxTraitEth = botRuleConfig.trait.maxEth;
-  activeSniperEngine.targetTokenIds = [...botRuleConfig.tokenId.tokens];
-  activeSniperEngine.maxTokenEth = botRuleConfig.tokenId.maxEth;
+  activeSniperEngine.traitMaxEth = botRuleConfig.trait.maxEth;
+  activeSniperEngine.specificTokenIds = tokenSet;
+  activeSniperEngine.specificTokenMaxEth = botRuleConfig.tokenId.maxEth;
   activeSniperEngine.gasSpeed = botActiveGasPreset;
   activeSniperEngine.isDryRun = botPaperSnipeMode;
 }
@@ -1079,11 +1081,15 @@ async function handleCallbackQuery(callbackQuery) {
       const menu = buildTargetMenu();
       return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
     }
+
+    const { user, config } = authInfo;
+    await armEngineForUser(user.id, config, activeCollectionStats.slug, botRuleConfig, {
+      dryRun: botPaperSnipeMode,
+      gasSpeed: botActiveGasPreset,
+      telegramChatId: String(chatId)
+    });
     syncRulesToEngines();
-    for (const [k, engine] of activeSniperEngines.entries()) {
-      engine.isArmed = true;
-    }
-    activeSniperEngine.isArmed = true;
+
     await answerCallbackQuery(TELEGRAM_BOT_TOKEN, callbackQuery.id, '⚡ Sniper ARMED in Cloud 24/7!');
     const menu = await buildMainMenu(chatId);
     return editTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, messageId, menu.text, menu.keyboard);
@@ -1774,16 +1780,18 @@ async function handleTextMessage(message) {
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '🗑️ <b>Target Cleared! Reset to Fresh Standby.</b>\n\n' + menu.text, menu.keyboard);
   }
 
-  if (text === '/arm') {
+  if (text === '/arm' || text === '/start_sniper') {
     if (!activeCollectionStats?.slug) {
       const menu = buildTargetMenu();
       return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚠️ <b>Please set a target collection before arming!</b>\n\n' + menu.text, menu.keyboard);
     }
+    const { user, config } = authInfo;
+    await armEngineForUser(user.id, config, activeCollectionStats.slug, botRuleConfig, {
+      dryRun: botPaperSnipeMode,
+      gasSpeed: botActiveGasPreset,
+      telegramChatId: String(chatId)
+    });
     syncRulesToEngines();
-    for (const [k, engine] of activeSniperEngines.entries()) {
-      engine.isArmed = true;
-    }
-    activeSniperEngine.isArmed = true;
     const menu = await buildMainMenu(chatId);
     return sendTelegramMessage(TELEGRAM_BOT_TOKEN, chatId, '⚡ <b>SNIPER ARMED (24/7 Live Cloud Engine)!</b>\n\n' + menu.text, menu.keyboard);
   }

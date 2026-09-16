@@ -18,8 +18,8 @@ import {
   getRecentLogs,
   inFlightEvaluationTokens
 } from '../state.js';
-import { apiClient } from '../openSeaClient.js';
-import { dbGetUserById, dbRecordUserSnipe, OWNER_EMAIL } from '../db.js';
+import { apiClient, fetchOpenSeaWithFallback, formatEthPrecise } from '../openSeaClient.js';
+import { dbGetUserById, dbRecordUserSnipe, dbGetUserConfig, OWNER_EMAIL } from '../db.js';
 import { subscribeSlugToOpenSea } from './stream.js';
 import { dispatchPrivateSnipeAlert, dispatchGlobalMasterFeedAlert } from '../telegramBot.js';
 
@@ -578,6 +578,177 @@ export async function evaluateAndSnipe(parsed, incomingSlug, tTriggerStart = per
   }
 }
 
+/**
+ * ⚡ INSTANT ACTIVE LISTING SWEEPER
+ * Sweeps current active collection listings and snipes immediately if any matches trigger rules.
+ */
+export async function sweepAndSnipeActiveListings(slug, targetEngine = null) {
+  if (!slug || slug === '*') return;
+  const cleanSlug = slug.trim().toLowerCase();
+
+  try {
+    const pageRes = await fetchOpenSeaWithFallback(`/listings/collection/${cleanSlug}/all?limit=30`);
+    const listings = Array.isArray(pageRes?.listings) ? pageRes.listings : [];
+    if (listings.length === 0) return;
+
+    for (const item of listings) {
+      if (!item || !item.order_hash) continue;
+      const tokenId = String(item.asset?.identifier || item.protocol_data?.parameters?.offer?.[0]?.identifierOrCriteria || '');
+      if (!tokenId || tokenId === '0') continue;
+
+      const rawPriceVal = item.price?.current?.value || item.protocol_data?.parameters?.consideration?.[0]?.startAmount || '0';
+      const decimals = item.price?.current?.decimals || 18;
+      const priceEth = Number(BigInt(rawPriceVal)) / (10 ** decimals);
+      if (priceEth <= 0) continue;
+
+      const contract = item.asset?.contract || item.protocol_data?.parameters?.offer?.[0]?.token || '';
+      const seller = item.protocol_data?.parameters?.offerer || item.maker?.address || '';
+
+      const parsed = {
+        tokenId,
+        slug: cleanSlug,
+        contractAddress: contract.toLowerCase(),
+        chain: 'robinhood',
+        price: priceEth,
+        priceFormatted: formatEthPrecise(priceEth),
+        orderHash: item.order_hash,
+        protocolData: item.protocol_data || null,
+        seller: seller,
+        eventTimestamp: item.order_created_at ? (item.order_created_at * 1000) : Date.now(),
+        receivedAt: Date.now()
+      };
+
+      await evaluateAndSnipe(parsed, cleanSlug, performance.now());
+    }
+  } catch (err) {
+    // Non-blocking log
+  }
+}
+
+/**
+ * 🎯 UNIFIED SNIPER ARMING ENGINE (Used by Web UI & Telegram Bot)
+ */
+export async function armEngineForUser(userId, userConfig = {}, targetSlug = '*', ruleConfig = {}, options = {}) {
+  const userKey = String(userId || options.buyerAddress || 'default');
+  const slug = (targetSlug || '*').trim().toLowerCase();
+
+  const provider = seaportExecutor.providers[0];
+  const rawWallets = options.workers || userConfig?.walletFleet || userConfig?.wallets || [];
+  const workerPool = [];
+
+  if (Array.isArray(rawWallets) && rawWallets.length > 0) {
+    rawWallets.forEach((w, idx) => {
+      const pk = (w.privateKey || w.pk || w.key || '').trim();
+      if (pk) {
+        try {
+          const signer = new ethers.Wallet(pk, provider);
+          workerPool.push({
+            signer,
+            address: signer.address,
+            name: w.name || `Worker #${idx + 1}`,
+            privateKey: pk
+          });
+        } catch (e) {}
+      }
+    });
+  }
+
+  // Fallback to options.buyerPrivateKey if workerPool is empty
+  if (workerPool.length === 0 && options.buyerPrivateKey) {
+    try {
+      const signer = new ethers.Wallet(options.buyerPrivateKey.trim(), provider);
+      workerPool.push({
+        signer,
+        address: signer.address,
+        name: options.buyerName || 'Primary Worker',
+        privateKey: options.buyerPrivateKey.trim()
+      });
+    } catch (e) {}
+  }
+
+  const primarySigner = workerPool[0]?.signer || null;
+  const buyerAddress = workerPool[0]?.address || options.buyerAddress || '0x0000000000000000000000000000000000000001';
+  const buyerName = workerPool[0]?.name || options.buyerName || 'Worker';
+
+  const tokenSet = new Set();
+  const rawTokens = ruleConfig.tokenId?.tokens || ruleConfig.specificTokenIds || options.specificTokenIds || [];
+  const tokenItems = Array.isArray(rawTokens) ? rawTokens : String(rawTokens).split(/[\s,]+/);
+  tokenItems.forEach(id => {
+    const clean = String(id).trim().replace(/[^0-9]/g, '');
+    if (clean) tokenSet.add(clean);
+  });
+
+  const traitFilters = Array.isArray(ruleConfig.trait?.filters || ruleConfig.traitFilters || options.traitFilters)
+    ? (ruleConfig.trait?.filters || ruleConfig.traitFilters || options.traitFilters)
+    : (ruleConfig.traitFilter ? [ruleConfig.traitFilter] : []);
+
+  const userEngine = {
+    userId: userKey,
+    telegramChatId: options.telegramChatId || userConfig?.telegram_chat_id || null,
+    isArmed: true,
+    armedTimestamp: Date.now(),
+    slug: slug,
+    triggerMode: options.triggerMode || 'both',
+    maxFloorEth: parseFloat(ruleConfig.floor?.maxEth !== undefined ? ruleConfig.floor.maxEth : ruleConfig.maxFloorEth) || 0,
+    maxRareRank: parseInt(ruleConfig.rarity?.maxRank !== undefined ? ruleConfig.rarity.maxRank : ruleConfig.maxRareRank, 10) || 1200,
+    maxRareEth: parseFloat(ruleConfig.rarity?.maxEth !== undefined ? ruleConfig.rarity.maxEth : ruleConfig.maxRareEth) || 0,
+    gasSpeed: options.gasSpeed || ruleConfig.gasSpeed || 'turbo',
+    customGas: options.customGas || null,
+    buyerPrivateKey: workerPool[0]?.privateKey || options.buyerPrivateKey || '',
+    buyerAddress: buyerAddress,
+    buyerName: buyerName,
+    walletSigner: primarySigner,
+    workerPool: workerPool,
+    workerStrategy: options.workerStrategy || 'single',
+    workerIndex: 0,
+    snipedTokenIds: new Set(),
+    invalidOrderHashes: new Set(),
+    pendingSnipes: new Set(),
+    maxSnipesLimit: options.maxSnipesLimit !== undefined ? parseInt(options.maxSnipesLimit, 10) : 1,
+    snipesExecutedCount: 0,
+    specificTokenIds: tokenSet,
+    specificTokenMaxEth: parseFloat(ruleConfig.tokenId?.maxEth !== undefined ? ruleConfig.tokenId.maxEth : ruleConfig.specificTokenMaxEth) || 0,
+    traitFilter: traitFilters[0] || null,
+    traitFilters: traitFilters,
+    traitMaxEth: parseFloat(ruleConfig.trait?.maxEth !== undefined ? ruleConfig.trait.maxEth : ruleConfig.traitMaxEth) || 0,
+    ruleStates: {
+      floor: ruleConfig.ruleStates?.floor !== false,
+      rarity: ruleConfig.ruleStates?.rarity !== false,
+      trait: !!ruleConfig.ruleStates?.trait || traitFilters.length > 0,
+      tokenId: !!ruleConfig.ruleStates?.tokenId || tokenSet.size > 0
+    },
+    dryRun: !!options.dryRun
+  };
+
+  activeSniperEngines.set(userKey, userEngine);
+  setActiveSniperEngine(userEngine, userKey);
+
+  console.log(`🎯 ⚡ [MULTI-USER SNIPER ARMED: User "${userKey}"]`);
+  console.log(`   Target Slug: "${userEngine.slug}" | Mode: ${userEngine.dryRun ? '🧪 PAPER SNIPE' : '⚡ LIVE MAINNET'}`);
+  console.log(`   Signers Loaded: ${workerPool.length} wallet(s) | Limit: ${userEngine.maxSnipesLimit}`);
+
+  if (slug && slug !== '*') {
+    subscribeSlugToOpenSea(slug);
+  }
+
+  // Pre-warm nonces in RAM
+  if (provider && Array.isArray(workerPool)) {
+    for (const w of workerPool) {
+      if (w.address) {
+        provider.getTransactionCount(w.address, 'pending').then(n => {
+          walletNonceMap.set(w.address, n);
+          console.log(`⚡ [RAM NONCE PRE-WARMED] ${w.name} (${w.address.slice(0, 6)}...): Nonce ${n}`);
+        }).catch(() => {});
+      }
+    }
+  }
+
+  // 🚀 INSTANT ACTIVE LISTINGS SWEEP (Don't wait for new stream events!)
+  sweepAndSnipeActiveListings(slug, userEngine).catch(() => {});
+
+  return userEngine;
+}
+
 // ─── ROUTES ───────────────────────────────────────────────────────────────────
 
 // POST /api/snipe/arm
@@ -621,137 +792,39 @@ router.post('/snipe/arm', async (req, res) => {
     } catch (e) {}
   }
 
-  if (!buyerPrivateKey && !dryRun) {
-    return res.status(400).json({ success: false, error: 'Buyer wallet private key is required' });
-  }
+  const userConfig = userId ? ((await dbGetUserConfig(userId)) || {}) : {};
 
   try {
-    const provider = seaportExecutor.providers[0];
-    let signer = null;
-    let buyerAddress = '0x0000000000000000000000000000000000000001';
-
-    if (buyerPrivateKey) {
-      const cleanPk = buyerPrivateKey.trim();
-      signer = new ethers.Wallet(cleanPk, provider);
-      buyerAddress = signer.address;
-    }
-
-    // Build worker pool for multi-worker strategy
-    const workerPool = [];
-    if (Array.isArray(workers) && workers.length > 0) {
-      workers.forEach(w => {
-        if (w.privateKey) {
-          try {
-            const s = new ethers.Wallet(w.privateKey.trim(), provider);
-            workerPool.push({
-              signer: s,
-              address: s.address,
-              name: w.name || 'Worker',
-              privateKey: w.privateKey.trim()
-            });
-          } catch(e) {}
-        }
-      });
-    }
-    if (workerPool.length === 0 && signer) {
-      workerPool.push({ signer, address: buyerAddress, name: buyerName || 'Worker', privateKey: buyerPrivateKey });
-    }
-
-    // Parse specific token IDs set with regex split and full sanitization
-    const tokenSet = new Set();
-    if (specificTokenIds) {
-      const items = Array.isArray(specificTokenIds) 
-        ? specificTokenIds 
-        : String(specificTokenIds).split(/[\s,]+/);
-      items.forEach(id => {
-        const clean = String(id).trim().replace(/[^0-9]/g, '');
-        if (clean) tokenSet.add(clean);
-      });
-    }
-
-    const userKey = String(userId || buyerAddress || 'default');
-    const targetSlug = (slug || '*').trim().toLowerCase();
-
-    const userEngine = {
-      userId: userKey,
-      isArmed: true,
-      armedTimestamp: Date.now(),
-      slug: targetSlug,
-      triggerMode: triggerMode || 'both',
-      maxFloorEth: parseFloat(maxFloorEth) || 0,
-      maxRareRank: parseInt(maxRareRank, 10) || 1200,
-      maxRareEth: parseFloat(maxRareEth) || 0,
-      gasSpeed: gasSpeed || 'turbo',
-      customGas: customGas || null,
-      buyerPrivateKey: buyerPrivateKey || '',
-      buyerAddress: buyerAddress,
-      buyerName: buyerName || 'Worker',
-      walletSigner: signer,
-      snipedTokenIds: new Set(),
-      invalidOrderHashes: new Set(),
-      pendingSnipes: new Set(),
-      maxSnipesLimit: (maxSnipesLimit !== undefined && maxSnipesLimit !== null) ? parseInt(maxSnipesLimit, 10) : 1,
-      snipesExecutedCount: 0,
-      specificTokenIds: tokenSet,
-      specificTokenMaxEth: parseFloat(specificTokenMaxEth) || 0,
-      traitFilter: (traitFilter && (traitFilter.traitType || traitFilter.traitValue)) ? {
-        traitType: (traitFilter.traitType || '').trim(),
-        traitValue: (traitFilter.traitValue || '').trim(),
-        maxEth: parseFloat(traitFilter.maxEth) || 0
-      } : null,
-      traitFilters: Array.isArray(traitFilters) ? traitFilters.map(f => ({
-        traitType: String(f.traitType || '').trim(),
-        traitValue: String(f.traitValue || '').trim()
-      })).filter(f => f.traitType || f.traitValue) : [],
-      traitMaxEth: parseFloat(traitMaxEth) || (traitFilter?.maxEth ? parseFloat(traitFilter.maxEth) : 0),
-      dryRun: !!dryRun,
-      workerStrategy: workerStrategy || 'single',
-      workerPool: workerPool,
-      workerIndex: 0,
-      ruleStates: {
-        floor: ruleStates?.floor !== false,
-        rarity: ruleStates?.rarity !== false,
-        trait: !!ruleStates?.trait || (Array.isArray(traitFilters) && traitFilters.length > 0) || !!traitFilter,
-        tokenId: !!ruleStates?.tokenId || (tokenSet.size > 0)
-      },
-      authenticatedUserId: userId || null,
-      userValidUntil: armedDbUser ? armedDbUser.valid_until : null,
-      userEmail: armedDbUser ? armedDbUser.email : ''
-    };
-
-    activeSniperEngines.set(userKey, userEngine);
-    setActiveSniperEngine(userEngine, userKey);
-
-    console.log(`🎯 ⚡ [MULTI-USER SNIPER ARMED: User "${userKey}"]`);
-    console.log(`   Target Slug: "${userEngine.slug}" | Mode: ${userEngine.dryRun ? '🧪 PAPER SNIPE' : '⚡ LIVE MAINNET'}`);
-    console.log(`   Limit: ${userEngine.maxSnipesLimit === 0 ? 'Unlimited' : userEngine.maxSnipesLimit + ' Snipes'} | Active Fleet Total: ${activeSniperEngines.size} users`);
-
-    if (targetSlug && targetSlug !== '*') {
-      subscribeSlugToOpenSea(targetSlug);
-    }
-
-    // ⚡ PRE-WARM ATOMIC NONCES & RPC SOCKETS IN RAM
-    seaportExecutor.preWarmConnections().catch(() => {});
-    const activeProvider = seaportExecutor.providers[0];
-    if (activeProvider && Array.isArray(workerPool)) {
-      for (const w of workerPool) {
-        if (w.address) {
-          activeProvider.getTransactionCount(w.address, 'pending').then(n => {
-            walletNonceMap.set(w.address, n);
-            console.log(`⚡ [RAM NONCE PRE-WARMED] ${w.name || 'Worker'} (${w.address.slice(0, 6)}...): Nonce ${n} locked in RAM`);
-          }).catch(() => {});
-        }
-      }
-    }
+    const userEngine = await armEngineForUser(userId, userConfig, slug, {
+      maxFloorEth,
+      maxRareRank,
+      maxRareEth,
+      specificTokenIds,
+      specificTokenMaxEth,
+      traitFilter,
+      traitFilters,
+      traitMaxEth,
+      ruleStates
+    }, {
+      buyerPrivateKey,
+      buyerName,
+      workers,
+      workerStrategy,
+      maxSnipesLimit,
+      dryRun,
+      gasSpeed,
+      customGas,
+      triggerMode
+    });
 
     res.json({
       success: true,
       message: 'Ultra-Fast Multi-Tenant Sniper Engine ARMED in Node.js backend memory',
-      userId: userKey,
-      buyerAddress: buyerAddress,
-      targetSlug: targetSlug,
+      userId: userEngine.userId,
+      buyerAddress: userEngine.buyerAddress,
+      targetSlug: userEngine.slug,
       isDryRun: userEngine.dryRun,
-      workersLoaded: workerPool.length,
+      workersLoaded: userEngine.workerPool.length,
       maxLimit: userEngine.maxSnipesLimit,
       activeEnginesCount: activeSniperEngines.size
     });
