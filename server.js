@@ -16,7 +16,7 @@ import rarityRouter from './backend/routes/rarity.js';
 import streamRouter from './backend/routes/stream.js';
 import sniperRouter from './backend/routes/sniper.js';
 import { startTelegramBotPolling } from './backend/telegramBot.js';
-import { sseClients } from './backend/state.js';
+import { sseClients, activeSniperEngines } from './backend/state.js';
 
 dotenv.config();
 
@@ -66,13 +66,34 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
-// Root diagnostic API
-app.get('/api', (req, res) => {
+// Root diagnostic & live memory health API
+app.get(['/api', '/api/system/health'], (req, res) => {
+  const mem = process.memoryUsage();
+  const rssMb = Math.round(mem.rss / 1024 / 1024);
+  const heapUsedMb = Math.round(mem.heapUsed / 1024 / 1024);
+  const heapTotalMb = Math.round(mem.heapTotal / 1024 / 1024);
+  const externalMb = Math.round(mem.external / 1024 / 1024);
+  const pct = ((rssMb / 512) * 100).toFixed(1);
+
+  const uptimeSec = Math.round(process.uptime());
+  const uptimeStr = uptimeSec > 3600 ? `${(uptimeSec / 3600).toFixed(1)} hrs` : `${Math.round(uptimeSec / 60)} mins`;
+
   res.json({
     status: 'online',
     service: 'Aero-Sniper V2 Modular API',
-    architecture: 'AeroMint-Style Route Modularization',
-    url: req.url
+    health: rssMb < 350 ? 'HEALTHY (OPTIMAL)' : 'ELEVATED',
+    memory: {
+      rss: `${rssMb} MB`,
+      heapUsed: `${heapUsedMb} MB`,
+      heapTotal: `${heapTotalMb} MB`,
+      external: `${externalMb} MB`,
+      percentOfRenderLimit: `${pct}%`,
+      renderMemoryCeiling: '512 MB'
+    },
+    uptime: uptimeStr,
+    activeSseClients: sseClients ? sseClients.size : 0,
+    activeEnginesCount: activeSniperEngines ? activeSniperEngines.size : 0,
+    timestamp: new Date().toISOString()
   });
 });
 
