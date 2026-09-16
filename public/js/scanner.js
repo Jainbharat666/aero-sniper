@@ -493,6 +493,17 @@
         }).catch(() => {});
       }
 
+      if (typeof isArmed !== 'undefined' && isArmed) {
+        isArmed = false;
+        window.sniperArmed = false;
+      }
+
+      fetch('/api/snipe/disarm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: (typeof currentUser !== 'undefined' && currentUser?.id) ? currentUser.id : '' })
+      }).catch(() => {});
+
       document.getElementById('scan-input').value = '';
       document.getElementById('proj-name').innerText = 'No Collection Loaded';
       document.getElementById('proj-chain-badge').innerText = 'IDLE';
