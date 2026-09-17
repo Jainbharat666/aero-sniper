@@ -38,12 +38,10 @@ import {
   OWNER_EMAIL 
 } from './db.js';
 
-// Environment Bindings
-export const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8849256750:AAGL6tEK_2tatSxgS-RjWp2ngE7B6lh29RI';
+// Environment Bindings (Safely loaded from process.env to prevent GitHub Secret Alerts)
+export const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 export const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || '1683360811';
-export const ADMIN_UPDATE_BOT_TOKEN = (process.env.TELEGRAM_FEED_BOT_TOKEN && process.env.TELEGRAM_FEED_BOT_TOKEN !== (process.env.TELEGRAM_BOT_TOKEN || '8849256750:AAGL6tEK_2tatSxgS-RjWp2ngE7B6lh29RI'))
-  ? process.env.TELEGRAM_FEED_BOT_TOKEN
-  : '8890886636:AAFHz6T-Yxc_1EqjTggZcg2HpepYvNC7tvY';
+export const ADMIN_UPDATE_BOT_TOKEN = process.env.TELEGRAM_FEED_BOT_TOKEN || '';
 export const TELEGRAM_FEED_CHANNEL_ID = process.env.TELEGRAM_FEED_CHANNEL_ID || null;
 export const adminRegisteredChatIds = new Set([TELEGRAM_ADMIN_CHAT_ID]);
 const WEBAPP_URL = process.env.RENDER_EXTERNAL_URL || 'https://aero-sniper.onrender.com';
