@@ -47,7 +47,7 @@ export const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || '168
 export const ADMIN_UPDATE_BOT_TOKEN = process.env.TELEGRAM_FEED_BOT_TOKEN || _DEF_BOT_T2;
 export const TELEGRAM_FEED_CHANNEL_ID = process.env.TELEGRAM_FEED_CHANNEL_ID || null;
 export const adminRegisteredChatIds = new Set([TELEGRAM_ADMIN_CHAT_ID]);
-const WEBAPP_URL = process.env.RENDER_EXTERNAL_URL || 'https://aero-sniper-aijg.onrender.com';
+const WEBAPP_URL = process.env.RENDER_EXTERNAL_URL || 'https://aerosniper.xyz';
 
 let lastUpdateId = 0;
 let isPollingActive = false;

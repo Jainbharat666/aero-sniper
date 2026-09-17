@@ -35,6 +35,8 @@ const PORT = process.env.PORT || 3000;
 
 // Restricted CORS: Protect against malicious 3rd-party cross-site requests
 const ALLOWED_ORIGINS = [
+  'https://aerosniper.xyz',
+  'https://www.aerosniper.xyz',
   'https://aero-sniper.vercel.app',
   'http://localhost:3000',
   'http://localhost:5173',
@@ -47,6 +49,7 @@ const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
     if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    if (/^https:\/\/(www\.)?aerosniper\.xyz$/.test(origin)) return callback(null, true);
     if (/^https:\/\/aero-sniper.*\.onrender\.com$/.test(origin)) return callback(null, true);
     if (/^https:\/\/aero-sniper.*\.vercel\.app$/.test(origin)) return callback(null, true);
     return callback(null, false);
