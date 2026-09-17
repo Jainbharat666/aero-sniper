@@ -992,10 +992,33 @@
       if (cM && document.getElementById('param-custom-max-fee')) document.getElementById('param-custom-max-fee').value = cM;
     } catch(e) {}
 
+    function resetConsoleToDefault(userEmail = '') {
+      const c1 = document.getElementById('console-logs');
+      const c2 = document.getElementById('wallet-console-logs');
+      const userTag = userEmail ? `<span class="text-indigo-400 font-bold">[${userEmail}]</span> ` : '';
+      const defaultHtml = `<div><span class="text-slate-500 font-bold">[INIT]</span> <span class="text-sky-400 font-bold">⚡ Aero-Sniper Pro Engine Loaded.</span> ${userTag}</div>
+<div><span class="text-slate-500 font-bold">[INIT]</span> <span class="text-purple-400 font-bold">OpenSea 21-Key Fleet Active:</span> [24/7 Carousel Load Balanced]</div>
+<div><span class="text-slate-500 font-bold">[INIT]</span> <span class="text-emerald-400 font-bold">Mainnet RPC Fleet Ready.</span> Awaiting target collection...</div>`;
+      if (c1) {
+        c1.innerHTML = defaultHtml;
+        c1.scrollTop = 0;
+      }
+      if (c2) {
+        c2.innerHTML = defaultHtml;
+        c2.scrollTop = 0;
+      }
+      loggedStreamTokensSet.clear();
+    }
+    window.resetConsoleToDefault = resetConsoleToDefault;
+
     // ─── 🔄 AUTO-RESTORE ARMED STATE & PERSISTENT LOGS ON REFRESH / TAB REOPEN ───
     async function restoreSniperStateAndLogs() {
       try {
         const uid = (typeof currentUser !== 'undefined' && currentUser?.id) ? currentUser.id : '';
+        if (!uid) {
+          resetConsoleToDefault('');
+          return;
+        }
         
         // 1. Fetch Backend Telemetry
         const telRes = await fetch(`/api/snipe/telemetry?userId=${encodeURIComponent(uid)}`);
@@ -1026,7 +1049,7 @@
           }
         }
 
-        // 2. Fetch Persistent Ring Buffer Logs
+        // 2. Fetch Persistent Ring Buffer Logs for this isolated user
         const logRes = await fetch(`/api/snipe/logs?userId=${encodeURIComponent(uid)}&limit=150`);
         const logData = await logRes.json();
         if (logData.success && Array.isArray(logData.logs) && logData.logs.length > 0) {
@@ -1045,6 +1068,8 @@
             c2.innerHTML = logsHtml;
             c2.scrollTop = c2.scrollHeight;
           }
+        } else {
+          resetConsoleToDefault(currentUser?.email || '');
         }
       } catch (err) {
         console.warn('[RESTORE STATE] Error restoring sniper state:', err);

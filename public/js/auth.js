@@ -557,10 +557,16 @@
 
         setTimeout(async () => {
           checkAuthState();
+          if (typeof window.resetConsoleToDefault === 'function') {
+            window.resetConsoleToDefault(currentUser?.email || '');
+          }
           await Promise.all([
             loadUserScopedWallets(),
             loadUserRpcsAndFleet(currentUser)
           ]);
+          if (typeof window.restoreSniperStateAndLogs === 'function') {
+            await window.restoreSniperStateAndLogs();
+          }
           showToast(`Welcome ${currentUser.email}! Workspace loaded in <1s with ${walletFleet.length} wallets.`);
         }, 50);
 
@@ -1604,6 +1610,10 @@
       localStorage.removeItem('sniper_user');
       localStorage.removeItem('sniper_wallet_fleet');
       localStorage.removeItem('sniper_master_wallet_idx');
+
+      if (typeof window.resetConsoleToDefault === 'function') {
+        window.resetConsoleToDefault('');
+      }
 
       closeUserProfileModal();
       closeAdminModal();

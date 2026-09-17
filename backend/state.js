@@ -139,14 +139,14 @@ export function recordLogToBuffer(msg, targetUserId = null) {
 }
 
 export function getRecentLogs(targetUserId = null, limit = 100) {
-  if (targetUserId) {
-    const key = String(targetUserId);
-    if (userLogBuffers.has(key)) {
-      return userLogBuffers.get(key).slice(-limit);
+  const cleanId = String(targetUserId || '').trim();
+  if (cleanId) {
+    if (userLogBuffers.has(cleanId)) {
+      return userLogBuffers.get(cleanId).slice(-limit);
     }
-    return []; // 🛡️ Strict multi-tenant isolation: Fresh log state for new subscribers
+    return []; // 🛡️ Strict multi-tenant isolation: Fresh empty log state for new subscribers
   }
-  return globalLogBuffer.slice(-limit);
+  return []; // 🛡️ Never leak global server logs to unauthenticated / empty sessions
 }
 
 export function broadcastSnipeLog(msg, targetUserId = null) {
