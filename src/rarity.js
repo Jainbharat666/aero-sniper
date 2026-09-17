@@ -176,45 +176,57 @@ export class RarityEngine {
     const targetSlug = (slug || this.collectionSlug || '').toLowerCase();
     const targetContract = (contract || this.contractAddress || '').toLowerCase();
 
-    // 🛡️ PER-COLLECTION ISOLATION: Wipe in-memory token map when loading collection
-    if (!this.currentCollectionSlug || this.currentCollectionSlug !== targetSlug) {
-      this.tokenRarityMap.clear();
-      this.traitIndexMap.clear();
+    // 🛡️ IN-RAM GUARD: If this collection is ALREADY loaded in memory, do NOT re-read disk!
+    if (this.currentCollectionSlug === targetSlug && this.tokenRarityMap.size > 0) {
+      return true;
     }
+
+    // 🛡️ PER-COLLECTION ISOLATION: Wipe previous collection before loading new one
+    this.tokenRarityMap.clear();
+    this.traitIndexMap.clear();
     if (targetSlug) this.currentCollectionSlug = targetSlug;
     if (targetContract) this.currentContractAddress = targetContract;
 
-    const candidateFiles = [];
+    const candidateFiles = new Set();
     if (targetSlug) {
-      candidateFiles.push(path.join(this.bundleCacheDir, `${targetSlug}-rarity.json`));
-      candidateFiles.push(path.join(this.writeCacheDir, `${targetSlug}-rarity.json`));
+      candidateFiles.add(path.join(this.bundleCacheDir, `${targetSlug}-rarity.json`));
+      candidateFiles.add(path.join(this.writeCacheDir, `${targetSlug}-rarity.json`));
     }
     if (targetContract) {
-      candidateFiles.push(path.join(this.bundleCacheDir, `${targetContract}-rarity.json`));
-      candidateFiles.push(path.join(this.writeCacheDir, `${targetContract}-rarity.json`));
+      candidateFiles.add(path.join(this.bundleCacheDir, `${targetContract}-rarity.json`));
+      candidateFiles.add(path.join(this.writeCacheDir, `${targetContract}-rarity.json`));
     }
 
     let loadedCount = 0;
-    const checked = new Set();
     for (const cacheFile of candidateFiles) {
-      if (!cacheFile || checked.has(cacheFile)) continue;
-      checked.add(cacheFile);
-      if (fs.existsSync(cacheFile)) {
-        try {
-          const raw = fs.readFileSync(cacheFile, 'utf8');
-          const data = JSON.parse(raw);
-          for (const [id, item] of Object.entries(data)) {
-            if (!item) continue;
-            this.tokenRarityMap.set(String(id), item);
-            if (item.traits && Array.isArray(item.traits) && item.traits.length > 0) {
-              this.indexTokenTraits(id, item.traits);
-            }
-            if (item.rank != null && item.rank > 0) loadedCount++;
+      if (!cacheFile || !fs.existsSync(cacheFile)) continue;
+      try {
+        const raw = fs.readFileSync(cacheFile, 'utf8');
+        const data = JSON.parse(raw);
+        for (const [id, item] of Object.entries(data)) {
+          if (!item) continue;
+          const compact = {
+            tokenId: String(id),
+            rank: (typeof item.rank === 'number' && item.rank > 0 && item.rank < 999999) ? item.rank : null,
+            name: item.name ? String(item.name).slice(0, 48) : undefined,
+            image: item.image || undefined
+          };
+          this.tokenRarityMap.set(String(id), compact);
+          if (item.traits && Array.isArray(item.traits) && item.traits.length > 0) {
+            this.indexTokenTraits(id, item.traits);
           }
-          console.log(chalk.green(`✔ [RARITY ENGINE V2] Loaded cached token ranks from disk: ${path.basename(cacheFile)} (${loadedCount} validated ranks)`));
-        } catch (e) {}
-      }
+          if (compact.rank != null) loadedCount++;
+        }
+        console.log(chalk.green(`✔ [RARITY ENGINE V2] Loaded cached token ranks from disk: ${path.basename(cacheFile)} (${loadedCount} validated ranks)`));
+        break; // Stop after loading from the first valid file
+      } catch (e) {}
     }
+
+    // Immediately reclaim temporary JSON parse tree & raw file strings
+    if (global.gc && loadedCount > 0) {
+      try { global.gc(); } catch (e) {}
+    }
+
     return loadedCount > 0;
   }
 
