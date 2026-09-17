@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -66,6 +67,19 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
+function getLinuxCGroupMemoryMb() {
+  try {
+    if (fs.existsSync('/sys/fs/cgroup/memory.current')) {
+      const bytes = parseInt(fs.readFileSync('/sys/fs/cgroup/memory.current', 'utf8').trim(), 10);
+      return Math.round(bytes / 1024 / 1024);
+    } else if (fs.existsSync('/sys/fs/cgroup/memory/memory.usage_in_bytes')) {
+      const bytes = parseInt(fs.readFileSync('/sys/fs/cgroup/memory/memory.usage_in_bytes', 'utf8').trim(), 10);
+      return Math.round(bytes / 1024 / 1024);
+    }
+  } catch (e) {}
+  return null;
+}
+
 // Root diagnostic & live memory health API
 app.get(['/api', '/api/system/health'], (req, res) => {
   const mem = process.memoryUsage();
@@ -73,7 +87,9 @@ app.get(['/api', '/api/system/health'], (req, res) => {
   const heapUsedMb = Math.round(mem.heapUsed / 1024 / 1024);
   const heapTotalMb = Math.round(mem.heapTotal / 1024 / 1024);
   const externalMb = Math.round(mem.external / 1024 / 1024);
-  const pct = ((rssMb / 512) * 100).toFixed(1);
+  const cgroupMb = getLinuxCGroupMemoryMb();
+  const reportedTotalMb = cgroupMb || rssMb;
+  const pct = ((reportedTotalMb / 512) * 100).toFixed(1);
 
   const uptimeSec = Math.round(process.uptime());
   const uptimeStr = uptimeSec > 3600 ? `${(uptimeSec / 3600).toFixed(1)} hrs` : `${Math.round(uptimeSec / 60)} mins`;
@@ -81,14 +97,16 @@ app.get(['/api', '/api/system/health'], (req, res) => {
   res.json({
     status: 'online',
     service: 'Aero-Sniper V2 Modular API',
-    health: rssMb < 350 ? 'HEALTHY (OPTIMAL)' : 'ELEVATED',
+    health: reportedTotalMb < 350 ? 'HEALTHY (OPTIMAL)' : 'ELEVATED',
     memory: {
+      linuxKernelCGroup: cgroupMb ? `${cgroupMb} MB` : 'N/A',
       rss: `${rssMb} MB`,
-      heapUsed: `${heapUsedMb} MB`,
-      heapTotal: `${heapTotalMb} MB`,
+      nodeHeapUsed: `${heapUsedMb} MB`,
+      nodeHeapTotal: `${heapTotalMb} MB`,
       external: `${externalMb} MB`,
       percentOfRenderLimit: `${pct}%`,
-      renderMemoryCeiling: '512 MB'
+      renderMemoryCeiling: '512 MB',
+      garbageCollector: typeof global.gc === 'function' ? 'ACTIVE & EXPOSED' : 'DISABLED'
     },
     uptime: uptimeStr,
     activeSseClients: sseClients ? sseClients.size : 0,
@@ -149,6 +167,11 @@ if (!process.env.VERCEL) {
         if (global.gc && (rssMb > 130 || heapUsedMb > 80)) {
           global.gc();
         }
+
+        const cgroupMb = getLinuxCGroupMemoryMb();
+        const reportedMb = cgroupMb || rssMb;
+        const pct = ((reportedMb / 512) * 100).toFixed(1);
+        console.log(`[RENDER KERNEL RAM] 📊 Total Used: ${reportedMb} MB / 512 MB (${pct}%) | Heap: ${heapUsedMb} MB | GC: ${typeof global.gc === 'function' ? 'ACTIVE & EXPOSED' : 'OFF'}`);
       } catch (e) {}
     }, 60 * 1000); // Check every 60 seconds
 
