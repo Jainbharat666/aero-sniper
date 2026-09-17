@@ -47,6 +47,7 @@ const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
     if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    if (/^https:\/\/aero-sniper.*\.onrender\.com$/.test(origin)) return callback(null, true);
     if (/^https:\/\/aero-sniper.*\.vercel\.app$/.test(origin)) return callback(null, true);
     return callback(null, false);
   },
@@ -176,7 +177,7 @@ if (!process.env.VERCEL) {
     }, 60 * 1000); // Check every 60 seconds
 
     // 🛡️ 24/7 RENDER KEEP-ALIVE HEARTBEAT LOOP (Prevents Free-Tier Inactivity Sleep)
-    const renderHost = process.env.RENDER_EXTERNAL_URL || 'https://aero-sniper.onrender.com';
+    const renderHost = process.env.RENDER_EXTERNAL_URL || 'https://aero-sniper-aijg.onrender.com';
     setInterval(async () => {
       try {
         const res = await fetch(`${renderHost}/api/system/health`, {
