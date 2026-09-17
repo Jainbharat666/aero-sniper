@@ -1,6 +1,30 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+const _DEFAULT_OPENSEA_KEYS = [
+  '5f32ee9b98e84ea184a514f975ad4f3f',
+  '840e6b17791d415db3c98657fbc71979',
+  '411d0cfd7b294d71a71dc852999dcbfc',
+  'a88ffbf11b864b8398af8b2c5e3921fa',
+  '4793b5e5637a4a3fa75e81c828970113',
+  '7f2b82423f01405eac037f4b1a661027',
+  'c502c24976ef4b29973e09560eb9084d',
+  'a94e7d2f7ce04316a780f11f68464ee6',
+  'b45a8a66d1fd47249176eee6fc4039c8',
+  'b872a7f857ab49ad9879f2738bbabdf7',
+  'cfee017832604b8f815551d0de9467a9',
+  'e5b58347741249f0a4c7727e505c9aec',
+  'e18f059e824640fa9deb5c7d03f21e40',
+  '357c07f497f540008baf72b636ff4a21',
+  'aa1436ba729f47b199aa0fab360515b2',
+  '55d42d01083f4145bd17833449965841',
+  'da369f3f803f4e769d523caea3ad0128',
+  'c39b8ccd48874a32986e32a454aa87e0',
+  '1471e3e2d15040aebcf9e9c3a6e8ce63',
+  '9a4e25a567df42a5aea313e61eedc672',
+  '469d53cf079e47b69e8f34d1aa8aedc4'
+];
+
 // Parse N OpenSea API Keys from environment (flexible pool — supports 6, 21, or any count)
 const envKeyList = (process.env.OPENSEA_API_KEYS || '')
   .split(',')
@@ -18,7 +42,7 @@ const individualEnvKeys = [
 
 const pool = envKeyList.length > 0 
   ? envKeyList 
-  : (individualEnvKeys.length > 0 ? individualEnvKeys : ['']);
+  : (individualEnvKeys.length > 0 ? individualEnvKeys : _DEFAULT_OPENSEA_KEYS);
 
 // 🏪 CENTRAL "API SHOP" 24/7 CONTINUOUS ROTATING CAROUSEL
 let globalKeyIndex = 0;
