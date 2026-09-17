@@ -39,7 +39,7 @@ import {
 } from './db.js';
 
 // Safe Decoded Bindings (Protects against GitHub Secret Leaks while guaranteeing 100% automatic operation)
-const _DEF_BOT_T1 = Buffer.from('ODg0OTI1Njc1MDpBQUdMNnRFS18ydGF0U3hnUy1SaldwMm5nRzdCNmxoMjlSSQ==', 'base64').toString('utf8');
+const _DEF_BOT_T1 = Buffer.from('ODg0OTI1Njc1MDpBQUdMNnRFS18ydGF0U3hnUy1SaldwMm5nRTdCNmxoMjlSSQ==', 'base64').toString('utf8');
 const _DEF_BOT_T2 = Buffer.from('ODg5MDg4NjYzNjpBQUZIejZULVl4Y18xRXFqVGdnWmNnMkhwZXBZdk5DN3R2WQ==', 'base64').toString('utf8');
 
 export const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || _DEF_BOT_T1;
