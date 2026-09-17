@@ -1,5 +1,19 @@
 import axios from 'axios';
+import https from 'https';
 import { ethers } from 'ethers';
+
+const telegramHttpsAgent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 10,
+  maxFreeSockets: 5,
+  timeout: 30000
+});
+
+export const telegramClient = axios.create({
+  httpsAgent: telegramHttpsAgent,
+  timeout: 25000
+});
+
 import {
   activeSniperEngine,
   activeSniperEngines,
@@ -868,7 +882,7 @@ export async function sendTelegramMessage(token, chatId, text, inlineKeyboard = 
     if (inlineKeyboard) {
       payload.reply_markup = { inline_keyboard: inlineKeyboard };
     }
-    await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, payload, { timeout: 6000 });
+    await telegramClient.post(`https://api.telegram.org/bot${token}/sendMessage`, payload, { timeout: 6000 });
     return true;
   } catch (err) {
     console.warn(`[TELEGRAM HTML ERR] ${err.response?.data?.description || err.message} ➔ Attempting plaintext fallback`);
@@ -880,7 +894,7 @@ export async function sendTelegramMessage(token, chatId, text, inlineKeyboard = 
         disable_web_page_preview: true
       };
       if (inlineKeyboard) plainPayload.reply_markup = { inline_keyboard: inlineKeyboard };
-      await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, plainPayload, { timeout: 6000 });
+      await telegramClient.post(`https://api.telegram.org/bot${token}/sendMessage`, plainPayload, { timeout: 6000 });
       return true;
     } catch (plainErr) {
       console.warn(`[TELEGRAM PLAIN ERR] ${plainErr.response?.data?.description || plainErr.message}`);
@@ -906,7 +920,7 @@ export async function editTelegramMessage(token, chatId, messageId, text, inline
       disable_web_page_preview: true
     };
     if (replyMarkup) payload.reply_markup = replyMarkup;
-    await axios.post(`https://api.telegram.org/bot${token}/editMessageText`, payload, { timeout: 6000 });
+    await telegramClient.post(`https://api.telegram.org/bot${token}/editMessageText`, payload, { timeout: 6000 });
     return true;
   } catch (err) {
     const desc = err.response?.data?.description || '';
@@ -921,7 +935,7 @@ export async function editTelegramMessage(token, chatId, messageId, text, inline
         parse_mode: 'HTML'
       };
       if (replyMarkup) payloadCap.reply_markup = replyMarkup;
-      await axios.post(`https://api.telegram.org/bot${token}/editMessageCaption`, payloadCap, { timeout: 6000 });
+      await telegramClient.post(`https://api.telegram.org/bot${token}/editMessageCaption`, payloadCap, { timeout: 6000 });
       return true;
     } catch (errCap) {
       const descCap = errCap.response?.data?.description || '';
@@ -944,7 +958,7 @@ export async function editTelegramMessage(token, chatId, messageId, text, inline
 export async function answerCallbackQuery(token, callbackQueryId, notificationText = '') {
   if (!token || !callbackQueryId) return;
   try {
-    await axios.post(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
+    await telegramClient.post(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
       callback_query_id: callbackQueryId,
       text: notificationText,
       show_alert: false
@@ -974,7 +988,7 @@ export async function sendTelegramPhoto(token, chatId, photoUrl, caption, inline
     if (inlineKeyboard) {
       payload.reply_markup = { inline_keyboard: inlineKeyboard };
     }
-    await axios.post(`https://api.telegram.org/bot${token}/sendPhoto`, payload, { timeout: 6000 });
+    await telegramClient.post(`https://api.telegram.org/bot${token}/sendPhoto`, payload, { timeout: 6000 });
     return true;
   } catch (err) {
     console.warn(`[TELEGRAM PHOTO ERR] ${err.response?.data?.description || err.message} ➔ Falling back to text message`);
@@ -2041,7 +2055,7 @@ export async function startTelegramBotPolling() {
   const pollLoop = async () => {
     while (isPollingActive) {
       try {
-        const res = await axios.get(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates`, {
+        const res = await telegramClient.get(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates`, {
           params: { offset: lastUpdateId + 1, timeout: 20 },
           timeout: 25000
         });
@@ -2080,7 +2094,7 @@ export async function startTelegramBotPolling() {
     if (!ADMIN_UPDATE_BOT_TOKEN || ADMIN_UPDATE_BOT_TOKEN === TELEGRAM_BOT_TOKEN) return;
     while (isPollingActive) {
       try {
-        const res = await axios.get(`https://api.telegram.org/bot${ADMIN_UPDATE_BOT_TOKEN}/getUpdates`, {
+        const res = await telegramClient.get(`https://api.telegram.org/bot${ADMIN_UPDATE_BOT_TOKEN}/getUpdates`, {
           params: { offset: lastAdminUpdateId + 1, timeout: 20 },
           timeout: 25000
         });

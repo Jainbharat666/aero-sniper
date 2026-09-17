@@ -58,6 +58,13 @@ export class StreamListener {
         return resolve(this.client);
       }
 
+      if (this.client) {
+        try {
+          if (typeof this.client.disconnect === 'function') this.client.disconnect();
+        } catch (e) {}
+        this.client = null;
+      }
+
       this._notifyStatus('connecting', 'Initiating WebSocket handshake...');
       console.log(chalk.cyan(`🔌 [STREAM V2] Connecting to OpenSea WebSocket (Dedicated Key #1)...`));
 

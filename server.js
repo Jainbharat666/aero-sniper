@@ -145,24 +145,27 @@ if (!process.env.VERCEL) {
           }
         }
 
-        // Proactive garbage collection trigger if near threshold
-        if (global.gc && rssMb > 180) {
+        // Proactive garbage collection trigger (Keeps baseline ~70MB-110MB)
+        if (global.gc && (rssMb > 130 || heapUsedMb > 80)) {
           global.gc();
         }
       } catch (e) {}
-    }, 2 * 60 * 1000); // Check every 2 minutes
+    }, 60 * 1000); // Check every 60 seconds
 
     // 🛡️ 24/7 RENDER KEEP-ALIVE HEARTBEAT LOOP (Prevents Free-Tier Inactivity Sleep)
     const renderHost = process.env.RENDER_EXTERNAL_URL || 'https://aero-sniper.onrender.com';
     setInterval(async () => {
       try {
-        const res = await fetch(`${renderHost}/api/snipe/telemetry`);
+        const res = await fetch(`${renderHost}/api/system/health`, {
+          headers: { 'User-Agent': 'AeroSniper-KeepAlive/2.0' },
+          signal: AbortSignal.timeout(5000)
+        });
         const data = await res.json();
-        console.log(`[KEEP-ALIVE] 💓 Heartbeat sent to ${renderHost} (Active Engines: ${data.activeEnginesCount || 0})`);
+        console.log(`[KEEP-ALIVE] 💓 Heartbeat sent (RSS: ${data.memory?.rss || 'OK'}, Active: ${data.activeEnginesCount || 0})`);
       } catch (e) {
-        console.warn(`[KEEP-ALIVE] Ping error: ${e.message}`);
+        console.warn(`[KEEP-ALIVE] Ping warning: ${e.message}`);
       }
-    }, 7 * 60 * 1000); // Ping every 7 minutes
+    }, 4 * 60 * 1000); // Ping every 4 minutes
   });
 }
 
