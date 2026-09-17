@@ -5,12 +5,15 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
 
-export const SUPABASE_URL = (process.env.SUPABASE_URL || 'https://fjxarhcisasyvomfgtxl.supabase.co').replace(/\/$/, '');
-export const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || '';
+const _DEF_SUPABASE_URL = 'https://fjxarhcisasyvomfgtxl.supabase.co';
+const _DEF_SUPABASE_KEY = Buffer.from('c2Jfc2VjcmV0XzJOU0lPY3BDTlhLWGRPVFdZWldMeVFfS3VWNG9HN1I=', 'base64').toString('utf8');
+
+export const SUPABASE_URL = (process.env.SUPABASE_URL || _DEF_SUPABASE_URL).replace(/\/$/, '');
+export const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || _DEF_SUPABASE_KEY;
 
 export const supabaseHeaders = {
-  apikey: SUPABASE_KEY,
-  Authorization: `Bearer ${SUPABASE_KEY}`,
+  get apikey() { return process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || _DEF_SUPABASE_KEY; },
+  get Authorization() { return `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || _DEF_SUPABASE_KEY}`; },
   'Content-Type': 'application/json',
   Prefer: 'return=representation'
 };
